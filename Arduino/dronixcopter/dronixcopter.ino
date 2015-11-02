@@ -21,8 +21,6 @@
 #define REMOTECTRL_CH5                      (2)
 #define REMOTECTRL_CHPWR                    (A0)
 
-#define SAMPLING_TIME                       (0.01)              // seconds
-
 // ESC configuration
 #define ESC_MIN                             (800)
 #define ESC_MAX (2200)
@@ -41,8 +39,6 @@
 #define REMOTECTRL_HIGH_CH5                 (1900)
 #define REMOTECTRL_LOW_CH5                  (1050)
 
-#define ROUNDING_BASE                       (50)
-
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)             // angle control
 #define PITCH_INNER_P_GAIN                  (2.933)             // rate control
@@ -54,7 +50,6 @@
 #define ROLL_INNER_D_GAIN                   (0.335)
 #define YAW_P_GAIN                          (2.325)             // yaw -> rate control
 #define YAW_I_GAIN                          (0.650)
-
 
 // Flight parameters
 #define PITCH_ANG_MIN                       (-30)
@@ -68,10 +63,8 @@
 #define PITCH_ANG_OFFSET                    (-4)
 #define ROLL_ANG_OFFSET                     (1.6)
 
-MPU6050                 mpu;                                    // mpu interface object
-Quaternion              q;
-VectorFloat             gravity;
-Servo                   a,b,c,d;
+#define ROUNDING_BASE                       (50)
+#define SAMPLING_TIME                       (0.01)              // seconds
 
 bool                    dmpReady = false;                       // set true if DMP init was successful
 uint8_t                 mpuIntStatus;                           // holds actual interrupt status byte from MPU
@@ -86,22 +79,20 @@ volatile bool           mpuInterrupt = false;
 boolean                 interruptLock = false;                  // Interrupt lock
 
 
-
-void dmpDataReady()
-{
-    mpuInterrupt = true;
-}
-
-
 float                   ch1, ch2, ch3, ch4, ch5;                // RC channel inputs
-unsigned long           rcLastChange1 = micros();
-unsigned long           rcLastChange2 = micros();
-unsigned long           rcLastChange3 = micros();
-unsigned long           rcLastChange4 = micros();
-unsigned long           rcLastChange5 = micros();
+unsigned long           nRCLastChangeTime1 = micros();
+unsigned long           nRCLastChangeTime2 = micros();
+unsigned long           nRCLastChangeTime3 = micros();
+unsigned long           nRCLastChangeTime4 = micros();
+unsigned long           nRCLastChangeTime5 = micros();
 
 // Motor controll variables
 int                     Throttle, ThrottleLast;                 // global throttle
+
+MPU6050                 mpu;                                    // mpu interface object
+Quaternion              q;
+VectorFloat             gravity;
+Servo                  a,b,c,d;
 
 typedef struct _AxisErrRate_T
 {
@@ -116,9 +107,9 @@ typedef struct _AxisErrRate_T
 }AxisErrRate_T;
 
 
-AxisErrRate_T           nPitchErrRate = {0, };
-AxisErrRate_T           nRollErrRate = {0, };
-AxisErrRate_T           nYawErrRate = {0, };
+AxisErrRate_T           nPitch = {0, };
+AxisErrRate_T           nRoll = {0, };
+AxisErrRate_T           nYaw = {0, };
 
 
 /////////////////////////////
@@ -127,34 +118,6 @@ int                     Ta, Tb, Tc, Td;                         //throttles
 
 // Filter variables
 float                   ch1Last, ch2Last, ch4Last;
-
-
-//ERR_I limit to prevent divergence
-void Clip3_FLOAT(float *value, int MIN, int MAX)
-{
-    if(*value < MIN)
-    {
-        *value = MIN;
-    }
-    else if(*value > MAX)
-    {
-        *value = MAX;
-    }
-}
-
-
-void Clip3_INT(int *value, int MIN, int MAX)
-{
-    if(*value < MIN)
-    {
-        *value = MIN;
-    }
-    else if(*value > MAX)
-    {
-        *value = MAX;
-    }
-}
-
 
 // Setup function
 void setup()
@@ -311,12 +274,12 @@ void loop()
             ch2 = floor(ch2/ROUNDING_BASE)*ROUNDING_BASE;
             ch4 = floor(ch4/ROUNDING_BASE)*ROUNDING_BASE;
             
-            ch2 = map(ch2, REMOTECTRL_LOW_CH2, REMOTECTRL_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
             ch1 = map(ch1, REMOTECTRL_LOW_CH1, REMOTECTRL_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+            ch2 = map(ch2, REMOTECTRL_LOW_CH2, REMOTECTRL_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
             ch4 = map(ch4, REMOTECTRL_LOW_CH4, REMOTECTRL_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
             
-            if((ch2 < PITCH_ANG_MIN) || (ch2 > PITCH_ANG_MAX)) ch2 = ch2Last;
             if((ch1 < ROLL_ANG_MIN) || (ch1 > ROLL_ANG_MAX)) ch1 = ch1Last;
+            if((ch2 < PITCH_ANG_MIN) || (ch2 > PITCH_ANG_MAX)) ch2 = ch2Last;
             if((ch4 < YAW_RATE_MIN) || (ch4 > YAW_RATE_MAX)) ch4 = ch4Last;
             
             ch1Last = ch1;
@@ -336,31 +299,31 @@ void loop()
             yprLast[2] = ypr[2];
             
             //ROLL control
-            nRollErrRate.nAngleErr = ch1 - ypr[2];
-            nRollErrRate.nCurrErrRate = nRollErrRate.nAngleErr * ROLL_OUTER_P_GAIN - gyro[0];
-            nRollErrRate.nP_ErrRate = nRollErrRate.nCurrErrRate * ROLL_INNER_P_GAIN;
-            nRollErrRate.nI_ErrRate = nRollErrRate.nI_ErrRate + (nRollErrRate.nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
-            Clip3_FLOAT(&nRollErrRate.nI_ErrRate, -100, 100);
-            nRollErrRate.nD_ErrRate = (nRollErrRate.nCurrErrRate - nRollErrRate.nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
-            nRollErrRate.nPrevErrRate = nRollErrRate.nCurrErrRate;
-            nRollErrRate.nBalance = nRollErrRate.nP_ErrRate + nRollErrRate.nI_ErrRate + nRollErrRate.nD_ErrRate;
+            nRoll.nAngleErr = ch1 - ypr[2];
+            nRoll.nCurrErrRate = nRoll.nAngleErr * ROLL_OUTER_P_GAIN - gyro[0];
+            nRoll.nP_ErrRate = nRoll.nCurrErrRate * ROLL_INNER_P_GAIN;
+            nRoll.nI_ErrRate = nRoll.nI_ErrRate + (nRoll.nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
+            Clip3_FLOAT(&nRoll.nI_ErrRate, -100, 100);
+            nRoll.nD_ErrRate = (nRoll.nCurrErrRate - nRoll.nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
+            nRoll.nPrevErrRate = nRoll.nCurrErrRate;
+            nRoll.nBalance = nRoll.nP_ErrRate + nRoll.nI_ErrRate + nRoll.nD_ErrRate;
             
             //PITCH control
-            nPitchErrRate.nAngleErr = ch2 - ypr[1];
-            nPitchErrRate.nCurrErrRate = nPitchErrRate.nAngleErr * PITCH_OUTER_P_GAIN + gyro[1];
-            nPitchErrRate.nP_ErrRate = nPitchErrRate.nCurrErrRate * PITCH_INNER_P_GAIN;
-            nPitchErrRate.nI_ErrRate = nPitchErrRate.nI_ErrRate + (nPitchErrRate.nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
-            Clip3_FLOAT(&nPitchErrRate.nI_ErrRate, -100, 100);
-            nPitchErrRate.nD_ErrRate = (nPitchErrRate.nCurrErrRate - nPitchErrRate.nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
-            nPitchErrRate.nPrevErrRate = nPitchErrRate.nCurrErrRate;
-            nPitchErrRate.nBalance = nPitchErrRate.nP_ErrRate + nPitchErrRate.nI_ErrRate + nPitchErrRate.nD_ErrRate;
+            nPitch.nAngleErr = ch2 - ypr[1];
+            nPitch.nCurrErrRate = nPitch.nAngleErr * PITCH_OUTER_P_GAIN + gyro[1];
+            nPitch.nP_ErrRate = nPitch.nCurrErrRate * PITCH_INNER_P_GAIN;
+            nPitch.nI_ErrRate = nPitch.nI_ErrRate + (nPitch.nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
+            Clip3_FLOAT(&nPitch.nI_ErrRate, -100, 100);
+            nPitch.nD_ErrRate = (nPitch.nCurrErrRate - nPitch.nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
+            nPitch.nPrevErrRate = nPitch.nCurrErrRate;
+            nPitch.nBalance = nPitch.nP_ErrRate + nPitch.nI_ErrRate + nPitch.nD_ErrRate;
             
             //YAW control
-            nYawErrRate.nCurrErrRate = ch4 - gyro[2];
-            nYawErrRate.nP_ErrRate = nYawErrRate.nCurrErrRate * YAW_P_GAIN;
-            nYawErrRate.nI_ErrRate = nYawErrRate.nI_ErrRate + nYawErrRate.nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
-            Clip3_FLOAT(&nYawErrRate.nI_ErrRate, -50, 50);
-            nYawErrRate.nTorque = nYawErrRate.nP_ErrRate + nYawErrRate.nI_ErrRate;
+            nYaw.nCurrErrRate = ch4 - gyro[2];
+            nYaw.nP_ErrRate = nYaw.nCurrErrRate * YAW_P_GAIN;
+            nYaw.nI_ErrRate = nYaw.nI_ErrRate + nYaw.nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
+            Clip3_FLOAT(&nYaw.nI_ErrRate, -50, 50);
+            nYaw.nTorque = nYaw.nP_ErrRate + nYaw.nI_ErrRate;
             
             releaseLock();
         }
@@ -379,10 +342,10 @@ void loop()
             releaseLock();
         }
         
-        Ta = ( nPitchErrRate.nBalance - nRollErrRate.nBalance) * 0.5 + nYawErrRate.nTorque + (float)Throttle;
-        Tb = (-nPitchErrRate.nBalance - nRollErrRate.nBalance) * 0.5 - nYawErrRate.nTorque + (float)Throttle;
-        Tc = (-nPitchErrRate.nBalance + nRollErrRate.nBalance) * 0.5 + nYawErrRate.nTorque + (float)Throttle;
-        Td = ( nPitchErrRate.nBalance + nRollErrRate.nBalance) * 0.5 - nYawErrRate.nTorque + (float)Throttle;
+        Ta = ( nPitch.nBalance - nRoll.nBalance) * 0.5 + nYaw.nTorque + (float)Throttle;
+        Tb = (-nPitch.nBalance - nRoll.nBalance) * 0.5 - nYaw.nTorque + (float)Throttle;
+        Tc = (-nPitch.nBalance + nRoll.nBalance) * 0.5 + nYaw.nTorque + (float)Throttle;
+        Td = ( nPitch.nBalance + nRoll.nBalance) * 0.5 - nYaw.nTorque + (float)Throttle;
         
         Clip3_INT(&Ta, ESC_MIN, ESC_MAX);
         Clip3_INT(&Tb, ESC_MIN, ESC_MAX);
@@ -427,7 +390,7 @@ void loop()
         Serial.print("    Pitch Gyro : ");
         Serial.print(gyro[1]);
         Serial.print("    Yaw Gyro : ");
-        Serial.println(gyro[2]);
+        Serial.print(gyro[2]);
         
         /*
          Serial.print("Roll cmd : ");
@@ -437,6 +400,8 @@ void loop()
          Serial.print("Yaw cmd : ");
          Serial.println(ch4);
          */
+
+         _print_RC_Signals();
     }
 }
 
@@ -471,56 +436,56 @@ inline void initRC()
     digitalWrite(REMOTECTRL_CHPWR, HIGH);
     
     // FIVE FUCKING INTERRUPTS !!!
-    PCintPort::attachInterrupt(REMOTECTRL_CH1, rcInterrupt1, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH2, rcInterrupt2, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH3, rcInterrupt3, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH4, rcInterrupt4, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH5, rcInterrupt5, CHANGE);   
+    PCintPort::attachInterrupt(REMOTECTRL_CH1, nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(REMOTECTRL_CH2, nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(REMOTECTRL_CH3, nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(REMOTECTRL_CH4, nRCInterrupt_CB4, CHANGE);
+    PCintPort::attachInterrupt(REMOTECTRL_CH5, nRCInterrupt_CB5, CHANGE);   
 }
 
 
-inline void rcInterrupt1()
+inline void nRCInterrupt_CB1()
 {
     if(!interruptLock)
-        ch1 = micros() - rcLastChange1;
+        ch1 = micros() - nRCLastChangeTime1;
     
-    rcLastChange1 = micros();
+    nRCLastChangeTime1 = micros();
 }
 
 
-inline void rcInterrupt2()
+inline void nRCInterrupt_CB2()
 {
     if(!interruptLock)
-        ch2 = micros() - rcLastChange2;
+        ch2 = micros() - nRCLastChangeTime2;
     
-    rcLastChange2 = micros();
+    nRCLastChangeTime2 = micros();
 }
 
 
-inline void rcInterrupt3()
+inline void nRCInterrupt_CB3()
 {
     if(!interruptLock)
-        ch3 = micros() - rcLastChange3;
+        ch3 = micros() - nRCLastChangeTime3;
     
-    rcLastChange3 = micros();
+    nRCLastChangeTime3 = micros();
 }
 
 
-inline void rcInterrupt4()
+inline void nRCInterrupt_CB4()
 {
     if(!interruptLock)
-        ch4 = micros() - rcLastChange4;
+        ch4 = micros() - nRCLastChangeTime4;
     
-    rcLastChange4 = micros();
+    nRCLastChangeTime4 = micros();
 }
 
 
-inline void rcInterrupt5()
+inline void nRCInterrupt_CB5()
 {
     if(!interruptLock)
-        ch5 = micros() - rcLastChange5;
+        ch5 = micros() - nRCLastChangeTime5;
     
-    rcLastChange5 = micros();
+    nRCLastChangeTime5 = micros();
 }
 
 
@@ -535,4 +500,70 @@ inline void releaseLock()
     interruptLock = false;
 }
 
+
+void dmpDataReady()
+{
+    mpuInterrupt = true;
+}
+
+
+//ERR_I limit to prevent divergence
+void Clip3_FLOAT(float *value, int MIN, int MAX)
+{
+    if(*value < MIN)
+    {
+        *value = MIN;
+    }
+    else if(*value > MAX)
+    {
+        *value = MAX;
+    }
+}
+
+
+void Clip3_INT(int *value, int MIN, int MAX)
+{
+    if(*value < MIN)
+    {
+        *value = MIN;
+    }
+    else if(*value > MAX)
+    {
+        *value = MAX;
+    }
+}
+
+//Subroutine for displaying the receiver signals
+void _print_RC_Signals()
+{
+    Serial.print("   Roll:");
+    if(ch1 - 1480 < 0)Serial.print("<<<");
+    else if(ch1 - 1520 > 0)Serial.print(">>>");
+    else Serial.print("-+-");
+    Serial.print(ch1);
+  
+    Serial.print("  Pitch:");
+    if(ch2 - 1480 < 0)Serial.print("^^^");
+    else if(ch2 - 1520 > 0)Serial.print("vvv");
+    else Serial.print("-+-");
+    Serial.print(ch2);
+  
+    Serial.print("  Throttle:");
+    if(ch3 - 1480 < 0)Serial.print("vvv");
+    else if(ch3 - 1520 > 0)Serial.print("^^^");
+    else Serial.print("-+-");
+    Serial.print(ch3);
+  
+    Serial.print("  Yaw:");
+    if(ch4 - 1480 < 0)Serial.print("<<<");
+    else if(ch4 - 1520 > 0)Serial.print(">>>");
+    else Serial.print("-+-");
+    Serial.print(ch4);
+
+    Serial.print("  Gear:");
+    if(ch5 - 1480 < 0)Serial.print("<<<");
+    else if(ch5 - 1520 > 0)Serial.print(">>>");
+    else Serial.print("-+-");
+    Serial.println(ch5);
+}
 #endif
