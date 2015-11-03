@@ -2,12 +2,14 @@
 #define DronixCopter(RC)
 
 #include <Servo.h>
-#include <Wire.h>
 #include <I2Cdev.h>
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <PinChangeInt.h>
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+  #include <Wire.h>
+#endif
 
-#define DEBUG
+#define __DEBUG__                           (0)
 
 // Arduino Pin configuration
 #define ESC_1                               (11)
@@ -25,7 +27,7 @@
 #define ESC_MIN                             (800)
 #define ESC_MAX (2200)
 #define ESC_TAKEOFF_OFFSET                  (900)
-#define ESC_ARM_DELAY                       (5000)
+#define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
 #define REMOTECTRL_HIGH_CH1                 (1900)
@@ -72,22 +74,21 @@ uint8_t                 nDevStatus;                             // return status
 uint16_t                nPacketSize;                            // expected DMP packet size (default is 42 bytes)
 uint16_t                nFIFOCnt;                               // count of all bytes currently in FIFO
 uint8_t                 nFIFOBuf[64];                           // FIFO storage buffer
-float                   ypr[3];                                 // yaw pitch roll values
-float                   yprLast[3];
+float                   nRPY[3];                                 // yaw pitch roll values
+float                   nPrevRPY[3];
 int16_t                 nGyro[3];                               // gyro values
 volatile bool           nMPUInterruptFlag = false;
 boolean                 nInterruptLockFlag = false;             // Interrupt lock
 
-
 float                   nRC_Ch1, nRC_Ch2, nRC_Ch3, nRC_Ch4, nRC_Ch5;        // RC channel inputs
 int                     nThrottle[4];                                       //throttles
-float                   nRC_Ch1Last, nRC_Ch2Last, nRC_Ch4Last;              // Filter variables
+float                   nRC_Ch1Prev, nRC_Ch2Prev, nRC_Ch4Prev;              // Filter variables
 
-unsigned long           nRCLastChangeTime1 = micros();
-unsigned long           nRCLastChangeTime2 = micros();
-unsigned long           nRCLastChangeTime3 = micros();
-unsigned long           nRCLastChangeTime4 = micros();
-unsigned long           nRCLastChangeTime5 = micros();
+unsigned long           nRCPrevChangeTime1 = micros();
+unsigned long           nRCPrevChangeTime2 = micros();
+unsigned long           nRCPrevChangeTime3 = micros();
+unsigned long           nRCPrevChangeTime4 = micros();
+unsigned long           nRCPrevChangeTime5 = micros();
 
 // Motor controll variables
 int                     nPrevEstimatedThrottle;                  // global throttle
@@ -177,7 +178,7 @@ void setup()
         nDMPReadyFlag = true;
         
         // get expected DMP packet size for later comparison
-        //nPacketSize = nMPU.dmpGetFIFOpacketSize();
+        nPacketSize = nMPU.dmpGetFIFOPacketSize();
     }
     else
     {
@@ -196,19 +197,11 @@ void setup()
 
 void loop()
 {
-    while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
-    {
-        /* Do nothing while MPU is not working
-         * This should be a VERY short period
-         */
-        Serial.println("Loop1");
-    }
-    
     ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
     // if programming failed, don't try to do anything
     if(!nDMPReadyFlag)
     {
-        Serial.println("DMP Not Ready    return");
+        Serial.println("DMP Not Ready    Loop Run Fails");
         return;
     }
     
@@ -225,7 +218,6 @@ void loop()
         // .
         // .
         // .
-        Serial.println("      Loop2");
     }
     
     // reset interrupt flag and get INT_STATUS byte
@@ -260,7 +252,7 @@ void loop()
         nMPU.dmpGetGyro(nGyro, nFIFOBuf);
         nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
         nMPU.dmpGetGravity(&nGravity, &nQuater);
-        nMPU.dmpGetYawPitchRoll(ypr, &nQuater, &nGravity);
+        nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);
     
         ////////////////////////////////// PID Computation ////////////////////////////////////////////////////////
         {
@@ -275,30 +267,30 @@ void loop()
             nRC_Ch4 = map(nRC_Ch4, REMOTECTRL_LOW_CH4, REMOTECTRL_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
             
             if((nRC_Ch1 < ROLL_ANG_MIN) || (nRC_Ch1 > ROLL_ANG_MAX)) 
-                nRC_Ch1 = nRC_Ch1Last;
+                nRC_Ch1 = nRC_Ch1Prev;
             if((nRC_Ch2 < PITCH_ANG_MIN) || (nRC_Ch2 > PITCH_ANG_MAX)) 
-                nRC_Ch2 = nRC_Ch2Last;
+                nRC_Ch2 = nRC_Ch2Prev;
             if((nRC_Ch4 < YAW_RATE_MIN) || (nRC_Ch4 > YAW_RATE_MAX)) 
-                nRC_Ch4 = nRC_Ch4Last;
+                nRC_Ch4 = nRC_Ch4Prev;
             
-            nRC_Ch1Last = nRC_Ch1;
-            nRC_Ch2Last = nRC_Ch2;
-            nRC_Ch4Last = nRC_Ch4;
+            nRC_Ch1Prev = nRC_Ch1;
+            nRC_Ch2Prev = nRC_Ch2;
+            nRC_Ch4Prev = nRC_Ch4;
             
-            ypr[1] = ypr[1] * 180/M_PI + PITCH_ANG_OFFSET;
-            ypr[2] = ypr[2] * 180/M_PI + ROLL_ANG_OFFSET;
+            nRPY[1] = nRPY[1] * 180/M_PI + PITCH_ANG_OFFSET;
+            nRPY[2] = nRPY[2] * 180/M_PI + ROLL_ANG_OFFSET;
             
-            if(abs(ypr[1]-yprLast[1])>30)
-                ypr[1] = yprLast[1];
+            if(abs(nRPY[1]-nPrevRPY[1])>30)
+                nRPY[1] = nPrevRPY[1];
             
-            if(abs(ypr[2]-yprLast[2])>30)
-                ypr[2] = yprLast[2];
+            if(abs(nRPY[2]-nPrevRPY[2])>30)
+                nRPY[2] = nPrevRPY[2];
             
-            yprLast[1] = ypr[1];
-            yprLast[2] = ypr[2];
+            nPrevRPY[1] = nRPY[1];
+            nPrevRPY[2] = nRPY[2];
             
             //ROLL control
-            nRoll.nAngleErr = nRC_Ch1 - ypr[2];
+            nRoll.nAngleErr = nRC_Ch1 - nRPY[2];
             nRoll.nCurrErrRate = nRoll.nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
             nRoll.nP_ErrRate = nRoll.nCurrErrRate * ROLL_INNER_P_GAIN;
             nRoll.nI_ErrRate = nRoll.nI_ErrRate + (nRoll.nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
@@ -308,7 +300,7 @@ void loop()
             nRoll.nBalance = nRoll.nP_ErrRate + nRoll.nI_ErrRate + nRoll.nD_ErrRate;
             
             //PITCH control
-            nPitch.nAngleErr = nRC_Ch2 - ypr[1];
+            nPitch.nAngleErr = nRC_Ch2 - nRPY[1];
             nPitch.nCurrErrRate = nPitch.nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
             nPitch.nP_ErrRate = nPitch.nCurrErrRate * PITCH_INNER_P_GAIN;
             nPitch.nI_ErrRate = nPitch.nI_ErrRate + (nPitch.nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
@@ -369,42 +361,13 @@ void loop()
         //nESC[2].writeMicroseconds(nThrottle[2]);
         //nESC[4].writeMicroseconds(nThrottle[3]);
         
-        
-        /*
-        Serial.print("Thrt1 : ");
-        Serial.print(nThrottle[1]);
-        Serial.print("Thrt2 : ");
-        Serial.print(nThrottle[2]);
-        Serial.print("Thrt3 : ");
-        Serial.print(nThrottle[2]);
-        Serial.print("Thrt4 : ");
-        Serial.println(nThrottle[3]);
-        */
-        
-        /*
-        Serial.print("Roll : ");
-        Serial.print(ypr[2]);
-        Serial.print("Pitch : ");
-        Serial.println(ypr[1]);
-        */
-        
-        Serial.print("Roll Gyro : ");
-        Serial.print(nGyro[0]);
-        Serial.print("    Pitch Gyro : ");
-        Serial.print(nGyro[1]);
-        Serial.print("    Yaw Gyro : ");
-        Serial.print(nGyro[2]);
-        
-        /*
-        Serial.print("Roll cmd : ");
-        Serial.print(ch1);
-        Serial.print("Pitch cmd : ");
-        Serial.print(ch2);
-        Serial.print("Yaw cmd : ");
-        Serial.println(ch4);
-        */
-
-        _print_RC_Signals();
+        #if __DEBUG__
+            _print_RPY_Signals();
+            _print_Throttle_Signals();
+            _print_Gyro_Signals();
+            _print_RC_Signals();
+            Serial.println(" ");
+        #endif
     }
 }
 
@@ -449,45 +412,45 @@ inline void initRC()
 inline void nRCInterrupt_CB1()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch1 = micros() - nRCLastChangeTime1;
+        nRC_Ch1 = micros() - nRCPrevChangeTime1;
     
-    nRCLastChangeTime1 = micros();
+    nRCPrevChangeTime1 = micros();
 }
 
 
 inline void nRCInterrupt_CB2()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch2 = micros() - nRCLastChangeTime2;
+        nRC_Ch2 = micros() - nRCPrevChangeTime2;
     
-    nRCLastChangeTime2 = micros();
+    nRCPrevChangeTime2 = micros();
 }
 
 
 inline void nRCInterrupt_CB3()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch3 = micros() - nRCLastChangeTime3;
+        nRC_Ch3 = micros() - nRCPrevChangeTime3;
     
-    nRCLastChangeTime3 = micros();
+    nRCPrevChangeTime3 = micros();
 }
 
 
 inline void nRCInterrupt_CB4()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch4 = micros() - nRCLastChangeTime4;
+        nRC_Ch4 = micros() - nRCPrevChangeTime4;
     
-    nRCLastChangeTime4 = micros();
+    nRCPrevChangeTime4 = micros();
 }
 
 
 inline void nRCInterrupt_CB5()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch5 = micros() - nRCLastChangeTime5;
+        nRC_Ch5 = micros() - nRCPrevChangeTime5;
     
-    nRCLastChangeTime5 = micros();
+    nRCPrevChangeTime5 = micros();
 }
 
 
@@ -535,37 +498,71 @@ void Clip3Int(int *value, int MIN, int MAX)
     }
 }
 
-//Subroutine for displaying the receiver signals
+#if __DEBUG__
 void _print_RC_Signals()
 {
-    Serial.print("   Roll:");
+    Serial.print("   //   RC_Roll:");
     if(nRC_Ch1 - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch1 - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch1);
   
-    Serial.print("  Pitch:");
+    Serial.print("   RC_Pitch:");
     if(nRC_Ch2 - 1480 < 0)Serial.print("^^^");
     else if(nRC_Ch2 - 1520 > 0)Serial.print("vvv");
     else Serial.print("-+-");
     Serial.print(nRC_Ch2);
   
-    Serial.print("  Throttle:");
+    Serial.print("   RC_Throttle:");
     if(nRC_Ch3 - 1480 < 0)Serial.print("vvv");
     else if(nRC_Ch3 - 1520 > 0)Serial.print("^^^");
     else Serial.print("-+-");
     Serial.print(nRC_Ch3);
   
-    Serial.print("  Yaw:");
+    Serial.print("   RC_Yaw:");
     if(nRC_Ch4 - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch4 - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch4);
 
-    Serial.print("  Gear:");
+    Serial.print("   RC_Gear:");
     if(nRC_Ch5 - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch5 - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.println(nRC_Ch5);
 }
+
+void _print_Gyro_Signals()
+{
+    Serial.print("   //    Roll Gyro : ");
+    Serial.print(nGyro[0]);
+    Serial.print("   Pitch Gyro : ");
+    Serial.print(nGyro[1]);
+    Serial.print("   Yaw Gyro : ");
+    Serial.print(nGyro[2]);
+}
+
+void _print_Throttle_Signals()
+{
+    Serial.print("   //    Thrt1 : ");
+    Serial.print(nThrottle[1]);
+    Serial.print("  Thrt2 : ");
+    Serial.print(nThrottle[2]);
+    Serial.print("  Thrt3 : ");
+    Serial.print(nThrottle[2]);
+    Serial.print("  Thrt4 : ");
+    Serial.print(nThrottle[3]);
+}
+
+
+void _print_RPY_Signals()
+{
+    Serial.print("   //    Roll : ");
+    Serial.print(nRPY[2]);
+    Serial.print("   Pitch : ");
+    Serial.print(nRPY[1]);
+    Serial.print("   Yaw : ");
+    Serial.print(nRPY[0]);    
+}
+#endif
 #endif
