@@ -41,7 +41,7 @@
 
 // ESC configuration
 #define ESC_MIN                             (800)
-#define ESC_MAX (2200)
+#define ESC_MAX                             (2200)
 #define ESC_TAKEOFF_OFFSET                  (900)
 #define ESC_ARM_DELAY                       (1000)
 
@@ -108,7 +108,6 @@ unsigned long           nRCPrevChangeTime3 = micros();
 unsigned long           nRCPrevChangeTime4 = micros();
 unsigned long           nRCPrevChangeTime5 = micros();
 
-// Motor controll variables
 int                     nPrevEstimatedThrottle;                 // global throttle
 
 Servo                   nESC[4];
@@ -161,7 +160,7 @@ void setup()
     Serial.begin(115200);
     Serial.flush();
     
-    while (!Serial); // wait for Leonardo enumeration, others continue immediately
+    while(!Serial); // wait for Leonardo enumeration, others continue immediately
     
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
