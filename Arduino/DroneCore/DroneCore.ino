@@ -3,10 +3,12 @@
 
 #include <Servo.h>
 #include <I2Cdev.h>
+#include <HMC5883L.h>
+//#include <MPU6050.h>
 #include <MPU6050_6Axis_MotionApps20.h>
 #include <PinChangeInt.h>
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  #include <Wire.h>
+#include <Wire.h>
 #endif
 
 #define __DEBUG__                           (0)
@@ -91,9 +93,10 @@ unsigned long           nRCPrevChangeTime4 = micros();
 unsigned long           nRCPrevChangeTime5 = micros();
 
 // Motor controll variables
-int                     nPrevEstimatedThrottle;                  // global throttle
+int                     nPrevEstimatedThrottle;                 // global throttle
 
-MPU6050                 nMPU;                                    // mpu interface object
+MPU6050                 nMPU;                                   // MPU6050 Gyroscope Interface
+HMC5883L                nCompass;                               // HMC58x3 Compass Interface
 Quaternion              nQuater;
 VectorFloat             nGravity;
 Servo                   nESC[4];
@@ -137,29 +140,70 @@ void setup()
     // 38400 or slower in these cases, or use some kind of external separate
     // crystal solution for the UART timer.
     
-    // initialize device
-    Serial.println(F("Initializing I2C devices..."));
-    nMPU.initialize();
-    
-    // verify connection
-    Serial.println(F("Testing device connections..."));
-    Serial.println(nMPU.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-    
-    // wait for ready
-    //Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    //while (Serial.available() && Serial.read()); // empty buffer
-    //while (!Serial.available());                                 // wait for data
-    //while (Serial.available() && Serial.read()); // empty buffer again
-    
-    // load and configure the DMP
-    Serial.println(F("Initializing DMP..."));
-    nDevStatus = nMPU.dmpInitialize();
-    
-    // supply your own gyro offsets here, scaled for min sensitivity
-    nMPU.setXGyroOffset(220);
-    nMPU.setYGyroOffset(76);
-    nMPU.setZGyroOffset(-85);
-    nMPU.setZAccelOffset(1788); // 1688 factory default for my test chip
+    {
+        #if 0
+        while(!nMPU.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
+        {
+            Serial.println("Can Not Find a Valid MPU6050, Check H/W");
+            delay(500);
+        }
+        nMPU.setI2CMasterModeEnabled(false);
+        nMPU.setI2CBypassEnabled(true);
+        nMPU.setSleepEnabled(false);
+        #else
+        // initialize MPU
+        Serial.println(F("Initializing MPU..."));
+        nMPU.initialize();
+        
+        // verify connection
+        Serial.println(F("Testing device connections..."));
+        Serial.println(nMPU.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+        
+        // wait for ready
+        //Serial.println(F("\nSend any character to begin DMP programming and demo: "));
+        //while (Serial.available() && Serial.read()); // empty buffer
+        //while (!Serial.available());                                 // wait for data
+        //while (Serial.available() && Serial.read()); // empty buffer again
+        
+        // load and configure the DMP
+        Serial.println(F("Initializing DMP..."));
+        nDevStatus = nMPU.dmpInitialize();
+        
+        // supply your own gyro offsets here, scaled for min sensitivity
+        nMPU.setXGyroOffset(220);
+        nMPU.setYGyroOffset(76);
+        nMPU.setZGyroOffset(-85);
+        nMPU.setZAccelOffset(1788); // 1688 factory default for my test chip
+        #endif
+    }
+
+    #if 0
+    {
+        // initialize Compass
+        Serial.println(F("Initializing Compass..."));
+
+        while(!nCompass.begin())
+        {
+            Serial.println("Can Not Find a Valid HMC5883L, Check H/W");
+            delay(500);
+        }
+
+        // Set Measurement Range
+        nCompass.setRange(HMC5883L_RANGE_1_3GA);
+        
+        // Set Measurement Mode
+        nCompass.setMeasurementMode(HMC5883L_CONTINOUS);
+        
+        // Set Data Rate
+        nCompass.setDataRate(HMC5883L_DATARATE_30HZ);
+        
+        // Set Number of Samples Averaged
+        nCompass.setSamples(HMC5883L_SAMPLES_8);
+        
+        // Set Calibration Offset (Ref. HMC5883L_calibraton.ion)
+        nCompass.setOffset(0, 0);
+    }
+    #endif
     
     // make sure it worked (returns 0 if so)
     if(0 == nDevStatus)
@@ -239,7 +283,7 @@ void loop()
     else if (nMPUInterruptStat & 0x02)
     {
         // wait for correct available data length, should be a VERY short wait
-        while (nFIFOCnt < nPacketSize) 
+        while (nFIFOCnt < nPacketSize)
             nFIFOCnt = nMPU.getFIFOCount();
         
         // read a packet from FIFO
@@ -253,7 +297,7 @@ void loop()
         nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
         nMPU.dmpGetGravity(&nGravity, &nQuater);
         nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);
-    
+        
         ////////////////////////////////// PID Computation ////////////////////////////////////////////////////////
         {
             acquireLock();
@@ -266,11 +310,11 @@ void loop()
             nRC_Ch2 = map(nRC_Ch2, REMOTECTRL_LOW_CH2, REMOTECTRL_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
             nRC_Ch4 = map(nRC_Ch4, REMOTECTRL_LOW_CH4, REMOTECTRL_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
             
-            if((nRC_Ch1 < ROLL_ANG_MIN) || (nRC_Ch1 > ROLL_ANG_MAX)) 
+            if((nRC_Ch1 < ROLL_ANG_MIN) || (nRC_Ch1 > ROLL_ANG_MAX))
                 nRC_Ch1 = nRC_Ch1Prev;
-            if((nRC_Ch2 < PITCH_ANG_MIN) || (nRC_Ch2 > PITCH_ANG_MAX)) 
+            if((nRC_Ch2 < PITCH_ANG_MIN) || (nRC_Ch2 > PITCH_ANG_MAX))
                 nRC_Ch2 = nRC_Ch2Prev;
-            if((nRC_Ch4 < YAW_RATE_MIN) || (nRC_Ch4 > YAW_RATE_MAX)) 
+            if((nRC_Ch4 < YAW_RATE_MIN) || (nRC_Ch4 > YAW_RATE_MAX))
                 nRC_Ch4 = nRC_Ch4Prev;
             
             nRC_Ch1Prev = nRC_Ch1;
@@ -318,7 +362,7 @@ void loop()
             
             releaseLock();
         }
-
+        
         /////////////////////////////////////Throttle Calculation //////////////////////////////////////////////////
         {
             float nEstimatedThrottle = 0.0f;
@@ -333,14 +377,14 @@ void loop()
             nPrevEstimatedThrottle = nEstimatedThrottle;
             
             releaseLock();
-
+            
             if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
             {
                 nThrottle[0] = ( nPitch.nBalance - nRoll.nBalance) * 0.5 + nYaw.nTorque + nEstimatedThrottle;
                 nThrottle[1] = (-nPitch.nBalance - nRoll.nBalance) * 0.5 - nYaw.nTorque + nEstimatedThrottle;
                 nThrottle[2] = (-nPitch.nBalance + nRoll.nBalance) * 0.5 + nYaw.nTorque + nEstimatedThrottle;
                 nThrottle[3] = ( nPitch.nBalance + nRoll.nBalance) * 0.5 - nYaw.nTorque + nEstimatedThrottle;
-        
+                
                 Clip3Int(&nThrottle[0], ESC_MIN, ESC_MAX);
                 Clip3Int(&nThrottle[1], ESC_MIN, ESC_MAX);
                 Clip3Int(&nThrottle[2], ESC_MIN, ESC_MAX);
@@ -361,13 +405,13 @@ void loop()
         //nESC[2].writeMicroseconds(nThrottle[2]);
         //nESC[4].writeMicroseconds(nThrottle[3]);
         
-        #if __DEBUG__
-            _print_RPY_Signals();
-            _print_Throttle_Signals();
-            _print_Gyro_Signals();
-            _print_RC_Signals();
-            Serial.println(" ");
-        #endif
+#if __DEBUG__
+        _print_RPY_Signals();
+        _print_Throttle_Signals();
+        _print_Gyro_Signals();
+        _print_RC_Signals();
+        Serial.println(" ");
+#endif
     }
 }
 
@@ -405,7 +449,7 @@ inline void initRC()
     PCintPort::attachInterrupt(REMOTECTRL_CH2, nRCInterrupt_CB2, CHANGE);
     PCintPort::attachInterrupt(REMOTECTRL_CH3, nRCInterrupt_CB3, CHANGE);
     PCintPort::attachInterrupt(REMOTECTRL_CH4, nRCInterrupt_CB4, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH5, nRCInterrupt_CB5, CHANGE);   
+    PCintPort::attachInterrupt(REMOTECTRL_CH5, nRCInterrupt_CB5, CHANGE);
 }
 
 
@@ -506,25 +550,25 @@ void _print_RC_Signals()
     else if(nRC_Ch1 - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch1);
-  
+    
     Serial.print("   RC_Pitch:");
     if(nRC_Ch2 - 1480 < 0)Serial.print("^^^");
     else if(nRC_Ch2 - 1520 > 0)Serial.print("vvv");
     else Serial.print("-+-");
     Serial.print(nRC_Ch2);
-  
+    
     Serial.print("   RC_Throttle:");
     if(nRC_Ch3 - 1480 < 0)Serial.print("vvv");
     else if(nRC_Ch3 - 1520 > 0)Serial.print("^^^");
     else Serial.print("-+-");
     Serial.print(nRC_Ch3);
-  
+    
     Serial.print("   RC_Yaw:");
     if(nRC_Ch4 - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch4 - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch4);
-
+    
     Serial.print("   RC_Gear:");
     if(nRC_Ch5 - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch5 - 1520 > 0)Serial.print(">>>");
