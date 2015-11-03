@@ -10,7 +10,7 @@
 #include <Servo.h>
 #include <I2Cdev.h>
 #include <PinChangeInt.h>
-    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     #include <Wire.h>
 #endif
 
