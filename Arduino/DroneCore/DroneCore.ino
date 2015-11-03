@@ -36,7 +36,7 @@
 #define REMOTECTRL_CH2                      (5)
 #define REMOTECTRL_CH3                      (4)
 #define REMOTECTRL_CH4                      (3)
-#define REMOTECTRL_CH5                      (2)
+#define REMOTECTRL_CH5                      (7)
 #define REMOTECTRL_CHPWR                    (A0)
 
 // ESC configuration
@@ -214,7 +214,7 @@ void setup()
         
             // enable Arduino interrupt detection
             Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
-            attachInterrupt(0, dmpDataReady, RISING);
+            attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
             nMPUInterruptStat = nMPU.getIntStatus();
         
             // set our DMP Ready flag so the main loop() function knows it's okay to use it
