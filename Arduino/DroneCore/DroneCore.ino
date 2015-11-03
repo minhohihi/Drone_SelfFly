@@ -37,7 +37,7 @@
 #define REMOTECTRL_CH3                      (4)
 #define REMOTECTRL_CH4                      (3)
 #define REMOTECTRL_CH5                      (7)
-#define REMOTECTRL_CHPWR                    (A0)
+#define CHECK_POWER_STAT                    (A0)
 
 // ESC configuration
 #define ESC_MIN                             (800)
@@ -420,8 +420,8 @@ inline void initESCs()
 
 inline void initRC()
 {
-    pinMode(REMOTECTRL_CHPWR, OUTPUT);
-    digitalWrite(REMOTECTRL_CHPWR, HIGH);
+    pinMode(CHECK_POWER_STAT, OUTPUT);
+    digitalWrite(CHECK_POWER_STAT, HIGH);
     
     PCintPort::attachInterrupt(REMOTECTRL_CH1, nRCInterrupt_CB1, CHANGE);
     PCintPort::attachInterrupt(REMOTECTRL_CH2, nRCInterrupt_CB2, CHANGE);
