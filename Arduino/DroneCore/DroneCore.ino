@@ -206,18 +206,11 @@ void setup()
     
     #if __GYROSCOPE_ENABLED__
     {
-        #if 0
-        while(!nMPU.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
-        {
-            Serial.println("Can Not Find a Valid MPU6050, Check H/W");
-            delay(500);
-        }
+        // initialize MPU
+        Serial.println(F("Initializing MPU..."));
         nMPU.setI2CMasterModeEnabled(false);
         nMPU.setI2CBypassEnabled(true);
         nMPU.setSleepEnabled(false);
-        #else
-        // initialize MPU
-        Serial.println(F("Initializing MPU..."));
         nMPU.initialize();
         
         // verify connection
@@ -271,7 +264,6 @@ void setup()
             Serial.print(nDevStatus);
             Serial.println(F(")"));
         }
-        #endif
     }
     #endif
 
@@ -293,7 +285,7 @@ void setup()
         nCompass.setMeasurementMode(HMC5883L_CONTINOUS);
         
         // Set Data Rate
-        nCompass.setDataRate(HMC5883L_DATARATE_30HZ);
+        nCompass.setDataRate(HMC5883L_DATARATE_75HZ);
         
         // Set Number of Samples Averaged
         nCompass.setSamples(HMC5883L_SAMPLES_8);
