@@ -331,12 +331,12 @@ void setup()
 void loop()
 {
     bool                    bSkipFlag = false;
-    uint8_t                 nMPUInterruptStat;                      // holds actual interrupt status byte from MPU
-    uint16_t                nFIFOCnt;                               // count of all bytes currently in FIFO
-    uint8_t                 nFIFOBuf[64];                           // FIFO storage buffer
-    int                     nThrottle[4];                           // throttles
-    int16_t                 nGyro[3];                               // Gyroscope Value
-    float                   nRPY[3];                                // yaw pitch roll values
+    uint8_t                 nMPUInterruptStat;                                          // holds actual interrupt status byte from MPU
+    uint16_t                nFIFOCnt;                                                   // count of all bytes currently in FIFO
+    uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
+    int                     nThrottle[4] = {ESC_MIN, ESC_MIN, ESC_MIN, ESC_MIN};        // throttles
+    int16_t                 nGyro[3];                                                   // Gyroscope Value
+    float                   nRPY[3];                                                    // yaw pitch roll values
     
     ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
     // if programming failed, don't try to do anything
@@ -517,35 +517,33 @@ inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pP
     if(abs(nRPY[2] - nPrevRPY[2]) > 30)
         nRPY[2] = nPrevRPY[2];
     
-    nPrevRPY[1] = nRPY[1];
-    nPrevRPY[2] = nRPY[2];
-    
     //ROLL control
     pRoll->nAngleErr = nRC_Ch[0] - nRPY[2];
     pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
-    pRoll->nI_ErrRate = pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
-    Clip3Float(&pRoll->nI_ErrRate, -100, 100);
+    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
     pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / SAMPLING_TIME;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
-    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
     
     //PITCH control
     pPitch->nAngleErr = nRC_Ch[1] - nRPY[1];
     pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
-    pPitch->nI_ErrRate = pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
-    Clip3Float(&pPitch->nI_ErrRate, -100, 100);
+    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / SAMPLING_TIME;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
-    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
     
     //YAW control
     pYaw->nCurrErrRate = nRC_Ch[3] - nGyro[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
-    pYaw->nI_ErrRate = pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
-    Clip3Float(&pYaw->nI_ErrRate, -50, 50);
+    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
+
+    // Backup for Next
+    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
+    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
+    nPrevRPY[1] = nRPY[1];
+    nPrevRPY[2] = nRPY[2];
     
     releaseLock();
 }
@@ -560,6 +558,7 @@ inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRa
     
     nRC_Ch[2] = floor(nRC_Ch[2] / ROUNDING_BASE) * ROUNDING_BASE;
     nEstimatedThrottle = (float)(map(nRC_Ch[2], RC_LOW_CH3, RC_HIGH_CH3, ESC_MIN, ESC_MAX));
+    
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
     
@@ -569,22 +568,10 @@ inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRa
     
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
-        nThrottle[0] = ( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle;
-        nThrottle[1] = (-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle;
-        nThrottle[2] = (-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle;
-        nThrottle[3] = ( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle;
-        
-        Clip3Int(&nThrottle[0], ESC_MIN, ESC_MAX);
-        Clip3Int(&nThrottle[1], ESC_MIN, ESC_MAX);
-        Clip3Int(&nThrottle[2], ESC_MIN, ESC_MAX);
-        Clip3Int(&nThrottle[3], ESC_MIN, ESC_MAX);
-    }
-    else
-    {
-        nThrottle[0] = ESC_MIN;
-        nThrottle[1] = ESC_MIN;
-        nThrottle[2] = ESC_MIN;
-        nThrottle[3] = ESC_MIN;
+        nThrottle[0] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        nThrottle[1] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        nThrottle[2] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        nThrottle[3] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
     }
 }
 
@@ -662,29 +649,29 @@ void dmpDataReady()
 
 
 //ERR_I limit to prevent divergence
-void Clip3Float(float *value, int MIN, int MAX)
+float Clip3Float(const float nValue, const int MIN, const int MAX)
 {
-    if(*value < MIN)
-    {
-        *value = MIN;
-    }
-    else if(*value > MAX)
-    {
-        *value = MAX;
-    }
+    float           nClipVal = nValue;
+    
+    if(nValue < MIN)
+        nClipVal = MIN;
+    else if(nValue > MAX)
+        nClipVal = MAX;
+
+    return nClipVal;
 }
 
 
-void Clip3Int(int *value, int MIN, int MAX)
+int Clip3Int(const int nValue, const int MIN, const int MAX)
 {
-    if(*value < MIN)
-    {
-        *value = MIN;
-    }
-    else if(*value > MAX)
-    {
-        *value = MAX;
-    }
+    int             nClipVal = nValue;
+    
+    if(nValue < MIN)
+        nClipVal = MIN;
+    else if(nValue > MAX)
+        nClipVal = MAX;
+    
+    return nClipVal;
 }
 
 
