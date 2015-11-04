@@ -1,10 +1,10 @@
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
-#define __DEBUG__                           (0)
+#define __DEBUG__                           (1)
 #define __GYROSCOPE_ENABLED__               (1)
 #define __COMPASS_ENABLED__                 (0)
-#define __BAROMETER_ENABLED__               (0)
+#define __BAROMETER_ENABLED__               (1)
 
 // Arduino Pin configuration
 #define PIN_GY86_EXT_INTERRUPT              (13)
@@ -175,7 +175,7 @@ Servo                   nESC[4];
 #endif
 
 #if __COMPASS_ENABLED__
-    HMC5883L            nCompass;                               // HMC58x3 Compass Interface
+    HMC5883L            nCompass;                               // HMC5883 Compass Interface
     CompassParam_T      nCompassParam;
 #endif
 
@@ -253,7 +253,6 @@ void setup()
             Serialprintln(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
             pinMode(PIN_GY86_EXT_INTERRUPT, INPUT);
             digitalWrite(PIN_GY86_EXT_INTERRUPT, HIGH);
-            //attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
             PCintPort::attachInterrupt(PIN_GY86_EXT_INTERRUPT, dmpDataReady, RISING);
             
             // set our DMP Ready flag so the main loop() function knows it's okay to use it
@@ -347,7 +346,7 @@ void loop()
     }
     
     // wait for MPU interrupt or extra packet(s) available
-    while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
+    //while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
     {
         // other program behavior stuff here
         // .
@@ -380,7 +379,7 @@ void loop()
         
         bSkipFlag = true;
     }
-    else if (nMPUInterruptStat & 0x02)
+    else if(nMPUInterruptStat & 0x02)
     {
         // wait for correct available data length, should be a VERY short wait
         while (nFIFOCnt < nPacketSize)
@@ -403,6 +402,10 @@ void loop()
     #if __COMPASS_ENABLED__
     nCompassParam.nRawData = nCompass.readRaw();
     nCompassParam.nNormData = nCompass.readNormalize();
+
+    Serialprint("Compass: ");
+    Serialprintln(nCompassParam.nRawData.XAxis);
+    Serialprintln(nCompassParam.nNormData.XAxis);
     #endif
 
     #if __BAROMETER_ENABLED__
@@ -417,6 +420,9 @@ void loop()
     // Calculate altitude
     nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
     nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefBarometerVal);
+    
+    Serialprint("Barometer: ");
+    Serialprint(nBaroParam.nRelativeAltitude);
     #endif
     
     if(false == bSkipFlag)
@@ -437,9 +443,9 @@ void loop()
     
     #if __DEBUG__
     _print_RPY_Signals(nRPY);
-    _print_Throttle_Signals(nThrottle);
-    _print_Gyro_Signals(nGyro);
-    _print_RC_Signals();
+    //_print_Throttle_Signals(nThrottle);
+    //_print_Gyro_Signals(nGyro);
+    //_print_RC_Signals();
     Serialprintln(" ");
     #endif
 }
