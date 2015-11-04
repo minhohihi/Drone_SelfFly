@@ -1,43 +1,27 @@
-#ifndef DronixCopter(RC)
-#define DronixCopter(RC)
-
+/*----------------------------------------------------------------------------------------
+ Constant Definitions
+ ----------------------------------------------------------------------------------------*/
 #define __DEBUG__                           (0)
-
 #define __GYROSCOPE_ENABLED__               (1)
 #define __COMPASS_ENABLED__                 (0)
 #define __BAROMETER_ENABLED__               (0)
 
-#include <Servo.h>
-#include <I2Cdev.h>
-#include <PinChangeInt.h>
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include <Wire.h>
-#endif
-
-#if __GYROSCOPE_ENABLED__
-    //#include <MPU6050.h>
-    #include <MPU6050_6Axis_MotionApps20.h>
-#endif
-
-#if __COMPASS_ENABLED__
-    #include <HMC5883L.h>
-#endif
-
-#if __BAROMETER_ENABLED__
-    #include <MS5611.h>
-#endif
-
 // Arduino Pin configuration
-#define ESC_1                               (11)
-#define ESC_2                               (10)
-#define ESC_3                               (9)
-#define ESC_4                               (8)
-#define REMOTECTRL_CH1                      (6)
-#define REMOTECTRL_CH2                      (5)
-#define REMOTECTRL_CH3                      (4)
-#define REMOTECTRL_CH4                      (3)
-#define REMOTECTRL_CH5                      (7)
-#define CHECK_POWER_STAT                    (A0)
+#define PIN_GY86_EXT_INTERRUPT              (13)
+#define PIN_RESERVED_12                     (12)
+#define PIN_ESC_1                           (11)
+#define PIN_ESC_2                           (10)
+#define PIN_ESC_3                           (9)
+#define PIN_ESC_4                           (8)
+#define PIN_RESERVED_07                     (7)
+#define PIN_RC_CH1                          (6)
+#define PIN_RC_CH2                          (5)
+#define PIN_RC_CH3                          (4)
+#define PIN_RC_CH4                          (3)
+#define PIN_RC_CH5                          (2)
+#define PIN_RESERVED_01                     (1)
+#define PIN_RESERVED_00                     (0)
+#define PIN_CHECK_POWER_STAT                (A0)
 
 // ESC configuration
 #define ESC_MIN                             (800)
@@ -46,16 +30,16 @@
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
-#define REMOTECTRL_HIGH_CH1                 (1900)
-#define REMOTECTRL_LOW_CH1                  (1050)
-#define REMOTECTRL_HIGH_CH2                 (1900)
-#define REMOTECTRL_LOW_CH2                  (1050)
-#define REMOTECTRL_HIGH_CH3                 (1900)
-#define REMOTECTRL_LOW_CH3                  (1050)
-#define REMOTECTRL_HIGH_CH4                 (1900)
-#define REMOTECTRL_LOW_CH4                  (1050)
-#define REMOTECTRL_HIGH_CH5                 (1900)
-#define REMOTECTRL_LOW_CH5                  (1050)
+#define RC_HIGH_CH1                         (1900)
+#define RC_LOW_CH1                          (1050)
+#define RC_HIGH_CH2                         (1900)
+#define RC_LOW_CH2                          (1050)
+#define RC_HIGH_CH3                         (1900)
+#define RC_LOW_CH3                          (1050)
+#define RC_HIGH_CH4                         (1900)
+#define RC_LOW_CH4                          (1050)
+#define RC_HIGH_CH5                         (1900)
+#define RC_LOW_CH5                          (1050)
 
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)             // angle control
@@ -84,51 +68,39 @@
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)              // seconds
 
-bool                    nDMPReadyFlag = false;                  // set true if DMP init was successful
-uint8_t                 nMPUInterruptStat;                      // holds actual interrupt status byte from MPU
-uint8_t                 nDevStatus;                             // return status after each device operation (0 = success, !0 = error)
-uint16_t                nPacketSize;                            // expected DMP packet size (default is 42 bytes)
-uint16_t                nFIFOCnt;                               // count of all bytes currently in FIFO
-uint8_t                 nFIFOBuf[64];                           // FIFO storage buffer
-float                   nRPY[3];                                 // yaw pitch roll values
-float                   nPrevRPY[3];
-int16_t                 nGyro[3];                               // Gyroscope Value
-double                  nRefBarometerVal;                       // Reference Barometer Value
 
-volatile bool           nMPUInterruptFlag = false;
-boolean                 nInterruptLockFlag = false;             // Interrupt lock
+/*----------------------------------------------------------------------------------------
+ File Inclusions
+ ----------------------------------------------------------------------------------------*/
+#include <Servo.h>
+#include <I2Cdev.h>
+#include <PinChangeInt.h>
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include <Wire.h>
+#endif
 
-float                   nRC_Ch1, nRC_Ch2, nRC_Ch3, nRC_Ch4, nRC_Ch5;        // RC channel inputs
-int                     nThrottle[4];                                       //throttles
-float                   nRC_Ch1Prev, nRC_Ch2Prev, nRC_Ch4Prev;              // Filter variables
-
-unsigned long           nRCPrevChangeTime1 = micros();
-unsigned long           nRCPrevChangeTime2 = micros();
-unsigned long           nRCPrevChangeTime3 = micros();
-unsigned long           nRCPrevChangeTime4 = micros();
-unsigned long           nRCPrevChangeTime5 = micros();
-
-int                     nPrevEstimatedThrottle;                 // global throttle
-
-Servo                   nESC[4];
 #if __GYROSCOPE_ENABLED__
-    MPU6050               nMPU;                                 // MPU6050 Gyroscope Interface
-    Quaternion            nQuater;
-    VectorFloat           nGravity;
-#endif
-#if __COMPASS_ENABLED__
-    HMC5883L              nCompass;                             // HMC58x3 Compass Interface
-#endif
-#if __BAROMETER_ENABLED__
-    MS5611                nBarometer;                           // MS5611 Barometer Interface
-    uint32_t              nRawTemp;                             // Raw Temperature Data
-    uint32_t              nRawPressure;                         // Raw Pressure Data
-    double                nRealTemperature;                     // Real Temperature Data
-    long                  nRealPressure;                        // Real Pressure Data
-    float                 nAbsoluteAltitude;                    // Estimated Absolute Altitude
-    float                 nRelativeAltitude;                    // Estimated Relative Altitude
+    //#include <MPU6050.h>
+    #include <MPU6050_6Axis_MotionApps20.h>
 #endif
 
+#if __COMPASS_ENABLED__
+    #include <HMC5883L.h>
+#endif
+
+#if __BAROMETER_ENABLED__
+    #include <MS5611.h>
+#endif
+
+
+/*----------------------------------------------------------------------------------------
+ Macro Definitions
+ ----------------------------------------------------------------------------------------*/
+
+
+/*----------------------------------------------------------------------------------------
+ Type Definitions
+ ----------------------------------------------------------------------------------------*/
 typedef struct _AxisErrRate_T
 {
     float               nAngleErr;
@@ -141,22 +113,76 @@ typedef struct _AxisErrRate_T
     float               nTorque;
 }AxisErrRate_T;
 
-AxisErrRate_T           nPitch = {0, };
-AxisErrRate_T           nRoll = {0, };
-AxisErrRate_T           nYaw = {0, };
+typedef struct _BaroParam_T
+{
+    uint32_t            nRawTemp;                               // Raw Temperature Data
+    uint32_t            nRawPressure;                           // Raw Pressure Data
+    double              nRealTemperature;                       // Real Temperature Data
+    long                nRealPressure;                          // Real Pressure Data
+    float               nAbsoluteAltitude;                      // Estimated Absolute Altitude
+    float               nRelativeAltitude;                      // Estimated Relative Altitude
+    double              nRefBarometerVal;                       // Reference Barometer Value
+}BaroParam_T;
 
 
-// Setup function
+/*----------------------------------------------------------------------------------------
+ Static Function
+ ----------------------------------------------------------------------------------------*/
+
+
+/*----------------------------------------------------------------------------------------
+ Static Variable
+ ----------------------------------------------------------------------------------------*/
+
+
+/*----------------------------------------------------------------------------------------
+ Global Variable
+ ----------------------------------------------------------------------------------------*/
+volatile bool           nMPUInterruptFlag = false;
+bool                    nInterruptLockFlag = false;             // Interrupt lock
+bool                    nDMPReadyFlag = false;                  // set true if DMP init was successful
+uint16_t                nPacketSize;                            // expected DMP packet size (default is 42 bytes)
+
+
+float                   nRC_Ch[5] = {0, };                      // RC channel inputs
+unsigned long           nRCPrevChangeTime1 = micros();
+unsigned long           nRCPrevChangeTime2 = micros();
+unsigned long           nRCPrevChangeTime3 = micros();
+unsigned long           nRCPrevChangeTime4 = micros();
+unsigned long           nRCPrevChangeTime5 = micros();
+
+Servo                   nESC[4];
+#if __GYROSCOPE_ENABLED__
+    MPU6050             nMPU;                                   // MPU6050 Gyroscope Interface
+    Quaternion          nQuater;
+    VectorFloat         nGravity;
+#endif
+
+#if __COMPASS_ENABLED__
+    HMC5883L            nCompass;                               // HMC58x3 Compass Interface
+#endif
+
+#if __BAROMETER_ENABLED__
+    MS5611              nBarometer;                             // MS5611 Barometer Interface
+    BaroParam_T         nBaroParam;
+#endif
+
+
+/*----------------------------------------------------------------------------------------
+ Function Implementation
+ ----------------------------------------------------------------------------------------*/
 void setup()
 {
+    uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
+    
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-        Wire.begin();
-        TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    Wire.begin();
+    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-        Fastwire::setup(400, true);
+    Fastwire::setup(400, true);
     #endif
-    
+
     Serial.begin(115200);
     Serial.flush();
     
@@ -167,7 +193,7 @@ void setup()
     // the baud timing being too misaligned with processor ticks. You must use
     // 38400 or slower in these cases, or use some kind of external separate
     // crystal solution for the UART timer.
-
+    
     #if __GYROSCOPE_ENABLED__
     {
         #if 0
@@ -210,16 +236,18 @@ void setup()
             // turn on the DMP, now that it's ready
             Serial.println(F("Enabling DMP..."));
             nMPU.setDMPEnabled(true);
-        
+            
             // enable Arduino interrupt detection
             Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
-            attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
-            nMPUInterruptStat = nMPU.getIntStatus();
-        
+            pinMode(PIN_GY86_EXT_INTERRUPT, INPUT);
+            digitalWrite(PIN_GY86_EXT_INTERRUPT, HIGH);
+            //attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
+            PCintPort::attachInterrupt(PIN_GY86_EXT_INTERRUPT, dmpDataReady, RISING);
+            
             // set our DMP Ready flag so the main loop() function knows it's okay to use it
             Serial.println(F("DMP ready! Waiting for first interrupt..."));
             nDMPReadyFlag = true;
-        
+            
             // get expected DMP packet size for later comparison
             nPacketSize = nMPU.dmpGetFIFOPacketSize();
         }
@@ -241,13 +269,13 @@ void setup()
     {
         // initialize Compass
         Serial.println(F("Initializing Compass..."));
-
+        
         while(!nCompass.begin())
         {
             Serial.println("Can Not Find a Valid HMC5883L (Compass), Check H/W");
             delay(500);
         }
-
+        
         // Set Measurement Range
         nCompass.setRange(HMC5883L_RANGE_1_3GA);
         
@@ -269,15 +297,15 @@ void setup()
     {
         // initialize Barometer
         Serial.println(F("Initializing Barometer..."));
-
+        
         while(!nBarometer.begin())
         {
             Serial.println("Can Not Find a Valid MS5611 (Barometer), Check H/W");
             delay(500);
         }
-
+        
         // Set Measurement Range
-        nRefBarometerVal = nBarometer.readPressure();
+        nBaroParam.nRefBarometerVal = nBarometer.readPressure();
         
         Serial.print("Barometer Oversampling: ");
         Serial.println(nBarometer.getOversampling());
@@ -290,8 +318,14 @@ void setup()
 
 void loop()
 {
-    bool bSkipFlag = false;
-  
+    bool                    bSkipFlag = false;
+    uint8_t                 nMPUInterruptStat;                      // holds actual interrupt status byte from MPU
+    uint16_t                nFIFOCnt;                               // count of all bytes currently in FIFO
+    uint8_t                 nFIFOBuf[64];                           // FIFO storage buffer
+    int                     nThrottle[4];                           // throttles
+    int16_t                 nGyro[3];                               // Gyroscope Value
+    float                   nRPY[3];                                // yaw pitch roll values
+    
     ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
     // if programming failed, don't try to do anything
     if(!nDMPReadyFlag)
@@ -314,82 +348,86 @@ void loop()
         // .
         // .
     }
-
+    
     #if __GYROSCOPE_ENABLED__
-        // reset interrupt flag and get INT_STATUS byte
-        nMPUInterruptFlag = false;
-        nMPUInterruptStat = nMPU.getIntStatus();
+    // reset interrupt flag and get INT_STATUS byte
+    nMPUInterruptFlag = false;
+    nMPUInterruptStat = nMPU.getIntStatus();
+    
+    // get current FIFO count
+    nFIFOCnt = nMPU.getFIFOCount();
+    
+    // check for overflow (this should never happen unless our code is too inefficient)
+    if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
+    {
+        // reset so we can continue cleanly
+        nMPU.resetFIFO();
+        //Serial.println(F("FIFO overflow!"));
         
-        // get current FIFO count
-        nFIFOCnt = nMPU.getFIFOCount();
+        // otherwise, check for DMP data ready interrupt (this should happen frequently)
         
-        // check for overflow (this should never happen unless our code is too inefficient)
-        if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
-        {
-            // reset so we can continue cleanly
-            nMPU.resetFIFO();
-            //Serial.println(F("FIFO overflow!"));
-            
-            // otherwise, check for DMP data ready interrupt (this should happen frequently)
-
-            bSkipFlag = true;
-        }
-        else if (nMPUInterruptStat & 0x02)
-        {
-            // wait for correct available data length, should be a VERY short wait
-            while (nFIFOCnt < nPacketSize)
-                nFIFOCnt = nMPU.getFIFOCount();
-            
-            // read a packet from FIFO
-            nMPU.getFIFOBytes(nFIFOBuf, nPacketSize);
-            
-            // track FIFO count here in case there is > 1 packet available
-            // (this lets us immediately read more without waiting for an interrupt)
-            nFIFOCnt -= nPacketSize;
-            
-            nMPU.dmpGetGyro(nGyro, nFIFOBuf);
-            nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
-            nMPU.dmpGetGravity(&nGravity, &nQuater);
-            nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);    
-        }
+        bSkipFlag = true;
+    }
+    else if (nMPUInterruptStat & 0x02)
+    {
+        // wait for correct available data length, should be a VERY short wait
+        while (nFIFOCnt < nPacketSize)
+            nFIFOCnt = nMPU.getFIFOCount();
+        
+        // read a packet from FIFO
+        nMPU.getFIFOBytes(nFIFOBuf, nPacketSize);
+        
+        // track FIFO count here in case there is > 1 packet available
+        // (this lets us immediately read more without waiting for an interrupt)
+        nFIFOCnt -= nPacketSize;
+        
+        nMPU.dmpGetGyro(nGyro, nFIFOBuf);
+        nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
+        nMPU.dmpGetGravity(&nGravity, &nQuater);
+        nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);
+    }
     #endif
 
     #if __COMPASS_ENABLED__
     #endif
 
     #if __BAROMETER_ENABLED__
-        // Read raw values
-        nRawTemp = nBarometer.readRawTemperature();
-        nRawPressure = nBarometer.readRawPressure();
-
-        // Read true temperature & Pressure
-        nRealTemperature = nBarometer.readTemperature();
-        nRealPressure = nBarometer.readPressure();
-
-        // Calculate altitude
-        nAbsoluteAltitude = nBarometer.getAltitude(nRealPressure);
-        nRelativeAltitude = nBarometer.getAltitude(nRealPressure, nRefBarometerVal);
+    // Read raw values
+    nBaroParam.nRawTemp = nBarometer.readRawTemperature();
+    nBaroParam.nRawPressure = nBarometer.readRawPressure();
+    
+    // Read true temperature & Pressure
+    nBaroParam.nRealTemperature = nBarometer.readTemperature();
+    nBaroParam.nRealPressure = nBarometer.readPressure();
+    
+    // Calculate altitude
+    nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
+    nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefBarometerVal);
     #endif
-
+    
     if(false == bSkipFlag)
     {
+        AxisErrRate_T           nPitch = {0, };
+        AxisErrRate_T           nRoll = {0, };
+        AxisErrRate_T           nYaw = {0, };
+        
         // PID Computation
-        CalculatePID();
-    
+        CalculatePID(&nRoll, &nPitch, &nYaw, nGyro, nRPY);
+        
         //Throttle Calculation
-        CalculateThrottleVal();
-    
+        CalculateThrottleVal(&nRoll, &nPitch, &nYaw, nThrottle);
+        
         //Update BLDCs
-        UpdateESCs();
+        UpdateESCs(nThrottle);
     }
-
+    
     #if __DEBUG__
-        _print_RPY_Signals();
-        _print_Throttle_Signals();
-        _print_Gyro_Signals();
-        _print_RC_Signals();
-        Serial.println(" ");
-    #endif    
+    _print_RPY_Signals(nRPY);
+    _print_Throttle_Signals(nThrottle);
+    _print_Gyro_Signals(nGyro);
+    _print_RC_Signals();
+    Serial.println(" ");
+    #endif
 }
 
 
@@ -406,10 +444,10 @@ inline void arm()
 
 inline void initESCs()
 {
-    nESC[1].attach(ESC_1);
-    nESC[2].attach(ESC_2);
-    nESC[3].attach(ESC_3);
-    nESC[4].attach(ESC_4);
+    nESC[1].attach(PIN_ESC_1);
+    nESC[2].attach(PIN_ESC_2);
+    nESC[3].attach(PIN_ESC_3);
+    nESC[4].attach(PIN_ESC_4);
     
     delay(1000);
     
@@ -419,91 +457,95 @@ inline void initESCs()
 
 inline void initRC()
 {
-    pinMode(CHECK_POWER_STAT, OUTPUT);
-    digitalWrite(CHECK_POWER_STAT, HIGH);
+    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
+    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
     
-    PCintPort::attachInterrupt(REMOTECTRL_CH1, nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH2, nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH3, nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH4, nRCInterrupt_CB4, CHANGE);
-    PCintPort::attachInterrupt(REMOTECTRL_CH5, nRCInterrupt_CB5, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH5, nRCInterrupt_CB5, CHANGE);
 }
 
 
-inline void CalculatePID()
+inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int16_t nGyro[3], float nRPY[3])
 {
+    static float            nRC_PrevCh[5] = {0, };              // Filter variables
+    static float            nPrevRPY[3];
+
     acquireLock();
     
-    nRC_Ch1 = floor(nRC_Ch1 / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch2 = floor(nRC_Ch2 / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch4 = floor(nRC_Ch4 / ROUNDING_BASE) * ROUNDING_BASE;
+    nRC_Ch[1] = floor(nRC_Ch[1] / ROUNDING_BASE) * ROUNDING_BASE;
+    nRC_Ch[2] = floor(nRC_Ch[2] / ROUNDING_BASE) * ROUNDING_BASE;
+    nRC_Ch[4] = floor(nRC_Ch[4] / ROUNDING_BASE) * ROUNDING_BASE;
     
-    nRC_Ch1 = map(nRC_Ch1, REMOTECTRL_LOW_CH1, REMOTECTRL_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    nRC_Ch2 = map(nRC_Ch2, REMOTECTRL_LOW_CH2, REMOTECTRL_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    nRC_Ch4 = map(nRC_Ch4, REMOTECTRL_LOW_CH4, REMOTECTRL_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
+    nRC_Ch[1] = map(nRC_Ch[1], RC_LOW_CH1, RC_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    nRC_Ch[2] = map(nRC_Ch[2], RC_LOW_CH2, RC_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    nRC_Ch[4] = map(nRC_Ch[4], RC_LOW_CH4, RC_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
     
-    if((nRC_Ch1 < ROLL_ANG_MIN) || (nRC_Ch1 > ROLL_ANG_MAX))
-        nRC_Ch1 = nRC_Ch1Prev;
-    if((nRC_Ch2 < PITCH_ANG_MIN) || (nRC_Ch2 > PITCH_ANG_MAX))
-        nRC_Ch2 = nRC_Ch2Prev;
-    if((nRC_Ch4 < YAW_RATE_MIN) || (nRC_Ch4 > YAW_RATE_MAX))
-        nRC_Ch4 = nRC_Ch4Prev;
+    if((nRC_Ch[1] < ROLL_ANG_MIN) || (nRC_Ch[1] > ROLL_ANG_MAX))
+        nRC_Ch[1] = nRC_PrevCh[1];
+    if((nRC_Ch[2] < PITCH_ANG_MIN) || (nRC_Ch[2] > PITCH_ANG_MAX))
+        nRC_Ch[2] = nRC_PrevCh[2];
+    if((nRC_Ch[4] < YAW_RATE_MIN) || (nRC_Ch[4] > YAW_RATE_MAX))
+        nRC_Ch[4] = nRC_PrevCh[4];
     
-    nRC_Ch1Prev = nRC_Ch1;
-    nRC_Ch2Prev = nRC_Ch2;
-    nRC_Ch4Prev = nRC_Ch4;
+    nRC_PrevCh[1] = nRC_Ch[1];
+    nRC_PrevCh[2] = nRC_Ch[2];
+    nRC_PrevCh[4] = nRC_Ch[4];
     
-    nRPY[1] = nRPY[1] * 180/M_PI + PITCH_ANG_OFFSET;
-    nRPY[2] = nRPY[2] * 180/M_PI + ROLL_ANG_OFFSET;
+    nRPY[1] = nRPY[1] * 180 / M_PI + PITCH_ANG_OFFSET;
+    nRPY[2] = nRPY[2] * 180 / M_PI + ROLL_ANG_OFFSET;
     
-    if(abs(nRPY[1]-nPrevRPY[1])>30)
+    if(abs(nRPY[1] - nPrevRPY[1]) > 30)
         nRPY[1] = nPrevRPY[1];
     
-    if(abs(nRPY[2]-nPrevRPY[2])>30)
+    if(abs(nRPY[2] - nPrevRPY[2]) > 30)
         nRPY[2] = nPrevRPY[2];
     
     nPrevRPY[1] = nRPY[1];
     nPrevRPY[2] = nRPY[2];
     
     //ROLL control
-    nRoll.nAngleErr = nRC_Ch1 - nRPY[2];
-    nRoll.nCurrErrRate = nRoll.nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
-    nRoll.nP_ErrRate = nRoll.nCurrErrRate * ROLL_INNER_P_GAIN;
-    nRoll.nI_ErrRate = nRoll.nI_ErrRate + (nRoll.nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
-    Clip3Float(&nRoll.nI_ErrRate, -100, 100);
-    nRoll.nD_ErrRate = (nRoll.nCurrErrRate - nRoll.nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
-    nRoll.nPrevErrRate = nRoll.nCurrErrRate;
-    nRoll.nBalance = nRoll.nP_ErrRate + nRoll.nI_ErrRate + nRoll.nD_ErrRate;
-    
+    pRoll->nAngleErr = nRC_Ch[1] - nRPY[2];
+    pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
+    pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
+    pRoll->nI_ErrRate = pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
+    Clip3Float(&pRoll->nI_ErrRate, -100, 100);
+    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
+    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
+    pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
+
     //PITCH control
-    nPitch.nAngleErr = nRC_Ch2 - nRPY[1];
-    nPitch.nCurrErrRate = nPitch.nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
-    nPitch.nP_ErrRate = nPitch.nCurrErrRate * PITCH_INNER_P_GAIN;
-    nPitch.nI_ErrRate = nPitch.nI_ErrRate + (nPitch.nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
-    Clip3Float(&nPitch.nI_ErrRate, -100, 100);
-    nPitch.nD_ErrRate = (nPitch.nCurrErrRate - nPitch.nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
-    nPitch.nPrevErrRate = nPitch.nCurrErrRate;
-    nPitch.nBalance = nPitch.nP_ErrRate + nPitch.nI_ErrRate + nPitch.nD_ErrRate;
-    
+    pPitch->nAngleErr = nRC_Ch[2] - nRPY[1];
+    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
+    pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
+    pPitch->nI_ErrRate = pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
+    Clip3Float(&pPitch->nI_ErrRate, -100, 100);
+    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
+    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
+    pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
+
     //YAW control
-    nYaw.nCurrErrRate = nRC_Ch4 - nGyro[2];
-    nYaw.nP_ErrRate = nYaw.nCurrErrRate * YAW_P_GAIN;
-    nYaw.nI_ErrRate = nYaw.nI_ErrRate + nYaw.nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
-    Clip3Float(&nYaw.nI_ErrRate, -50, 50);
-    nYaw.nTorque = nYaw.nP_ErrRate + nYaw.nI_ErrRate;
+    pYaw->nCurrErrRate = nRC_Ch[4] - nGyro[2];
+    pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
+    pYaw->nI_ErrRate = pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
+    Clip3Float(&pYaw->nI_ErrRate, -50, 50);
+    pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
     
     releaseLock();
 }
 
 
-inline void CalculateThrottleVal()
+inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int nThrottle[4])
 {
-    float nEstimatedThrottle = 0.0f;
+    float                   nEstimatedThrottle = 0.0f;
+    static float            nPrevEstimatedThrottle = 0.0f;
     
     acquireLock();
     
-    nRC_Ch3 = floor(nRC_Ch3 / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(nRC_Ch3, REMOTECTRL_LOW_CH3, REMOTECTRL_HIGH_CH3, ESC_MIN, ESC_MAX));
+    nRC_Ch[3] = floor(nRC_Ch[3] / ROUNDING_BASE) * ROUNDING_BASE;
+    nEstimatedThrottle = (float)(map(nRC_Ch[3], RC_LOW_CH3, RC_HIGH_CH3, ESC_MIN, ESC_MAX));
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
     
@@ -513,10 +555,10 @@ inline void CalculateThrottleVal()
     
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
-        nThrottle[0] = ( nPitch.nBalance - nRoll.nBalance) * 0.5 + nYaw.nTorque + nEstimatedThrottle;
-        nThrottle[1] = (-nPitch.nBalance - nRoll.nBalance) * 0.5 - nYaw.nTorque + nEstimatedThrottle;
-        nThrottle[2] = (-nPitch.nBalance + nRoll.nBalance) * 0.5 + nYaw.nTorque + nEstimatedThrottle;
-        nThrottle[3] = ( nPitch.nBalance + nRoll.nBalance) * 0.5 - nYaw.nTorque + nEstimatedThrottle;
+        nThrottle[0] = ( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle;
+        nThrottle[1] = (-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle;
+        nThrottle[2] = (-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle;
+        nThrottle[3] = ( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle;
         
         Clip3Int(&nThrottle[0], ESC_MIN, ESC_MAX);
         Clip3Int(&nThrottle[1], ESC_MIN, ESC_MAX);
@@ -533,7 +575,7 @@ inline void CalculateThrottleVal()
 }
 
 
-inline void UpdateESCs()
+inline void UpdateESCs(int nThrottle[4])
 {
     //nESC[1].writeMicroseconds(nThrottle[0]);
     //nESC[3].writeMicroseconds(nThrottle[1]);
@@ -544,7 +586,7 @@ inline void UpdateESCs()
 inline void nRCInterrupt_CB1()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch1 = micros() - nRCPrevChangeTime1;
+        nRC_Ch[1] = micros() - nRCPrevChangeTime1;
     
     nRCPrevChangeTime1 = micros();
 }
@@ -553,7 +595,7 @@ inline void nRCInterrupt_CB1()
 inline void nRCInterrupt_CB2()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch2 = micros() - nRCPrevChangeTime2;
+        nRC_Ch[2] = micros() - nRCPrevChangeTime2;
     
     nRCPrevChangeTime2 = micros();
 }
@@ -562,7 +604,7 @@ inline void nRCInterrupt_CB2()
 inline void nRCInterrupt_CB3()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch3 = micros() - nRCPrevChangeTime3;
+        nRC_Ch[3] = micros() - nRCPrevChangeTime3;
     
     nRCPrevChangeTime3 = micros();
 }
@@ -571,7 +613,7 @@ inline void nRCInterrupt_CB3()
 inline void nRCInterrupt_CB4()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch4 = micros() - nRCPrevChangeTime4;
+        nRC_Ch[4] = micros() - nRCPrevChangeTime4;
     
     nRCPrevChangeTime4 = micros();
 }
@@ -580,7 +622,7 @@ inline void nRCInterrupt_CB4()
 inline void nRCInterrupt_CB5()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch5 = micros() - nRCPrevChangeTime5;
+        nRC_Ch[5] = micros() - nRCPrevChangeTime5;
     
     nRCPrevChangeTime5 = micros();
 }
@@ -634,37 +676,37 @@ void Clip3Int(int *value, int MIN, int MAX)
 void _print_RC_Signals()
 {
     Serial.print("   //   RC_Roll:");
-    if(nRC_Ch1 - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch1 - 1520 > 0)Serial.print(">>>");
+    if(nRC_Ch[1] - 1480 < 0)Serial.print("<<<");
+    else if(nRC_Ch[1] - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
-    Serial.print(nRC_Ch1);
+    Serial.print(nRC_Ch[1]);
     
     Serial.print("   RC_Pitch:");
-    if(nRC_Ch2 - 1480 < 0)Serial.print("^^^");
-    else if(nRC_Ch2 - 1520 > 0)Serial.print("vvv");
+    if(nRC_Ch[2] - 1480 < 0)Serial.print("^^^");
+    else if(nRC_Ch[2] - 1520 > 0)Serial.print("vvv");
     else Serial.print("-+-");
-    Serial.print(nRC_Ch2);
+    Serial.print(nRC_Ch[2]);
     
     Serial.print("   RC_Throttle:");
-    if(nRC_Ch3 - 1480 < 0)Serial.print("vvv");
-    else if(nRC_Ch3 - 1520 > 0)Serial.print("^^^");
+    if(nRC_Ch[3] - 1480 < 0)Serial.print("vvv");
+    else if(nRC_Ch[3] - 1520 > 0)Serial.print("^^^");
     else Serial.print("-+-");
-    Serial.print(nRC_Ch3);
+    Serial.print(nRC_Ch[3]);
     
     Serial.print("   RC_Yaw:");
-    if(nRC_Ch4 - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch4 - 1520 > 0)Serial.print(">>>");
+    if(nRC_Ch[4] - 1480 < 0)Serial.print("<<<");
+    else if(nRC_Ch[4] - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
-    Serial.print(nRC_Ch4);
+    Serial.print(nRC_Ch[4]);
     
     Serial.print("   RC_Gear:");
-    if(nRC_Ch5 - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch5 - 1520 > 0)Serial.print(">>>");
+    if(nRC_Ch[5] - 1480 < 0)Serial.print("<<<");
+    else if(nRC_Ch[5] - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
-    Serial.print(nRC_Ch5);
+    Serial.print(nRC_Ch[5]);
 }
 
-void _print_Gyro_Signals()
+void _print_Gyro_Signals(int16_t nGyro[3])
 {
     Serial.print("   //    Roll Gyro : ");
     Serial.print(nGyro[0]);
@@ -674,7 +716,7 @@ void _print_Gyro_Signals()
     Serial.print(nGyro[2]);
 }
 
-void _print_Throttle_Signals()
+void _print_Throttle_Signals(int nThrottle[4])
 {
     Serial.print("   //    Thrt1 : ");
     Serial.print(nThrottle[1]);
@@ -687,14 +729,13 @@ void _print_Throttle_Signals()
 }
 
 
-void _print_RPY_Signals()
+void _print_RPY_Signals(float nRPY[3])
 {
     Serial.print("   //    Roll : ");
     Serial.print(nRPY[2]);
     Serial.print("   Pitch : ");
     Serial.print(nRPY[1]);
     Serial.print("   Yaw : ");
-    Serial.print(nRPY[0]);    
+    Serial.print(nRPY[0]);
 }
-#endif
 #endif
