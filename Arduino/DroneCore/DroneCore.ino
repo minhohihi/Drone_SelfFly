@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
-#define __DEBUG__                           (1)
+#define __DEBUG__                           (0)
 #define __GYROSCOPE_ENABLED__               (1)
 #define __COMPASS_ENABLED__                 (0)
 #define __BAROMETER_ENABLED__               (0)
@@ -526,7 +526,7 @@ inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pP
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
     pRoll->nI_ErrRate = pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
     Clip3Float(&pRoll->nI_ErrRate, -100, 100);
-    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
+    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / SAMPLING_TIME;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
     pRoll->nPrevErrRate = pRoll->nCurrErrRate;
     
@@ -536,7 +536,7 @@ inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pP
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
     pPitch->nI_ErrRate = pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
     Clip3Float(&pPitch->nI_ErrRate, -100, 100);
-    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
+    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / SAMPLING_TIME;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
     pPitch->nPrevErrRate = pPitch->nCurrErrRate;
     
@@ -596,6 +596,7 @@ inline void UpdateESCs(int nThrottle[4])
     //nESC[2].writeMicroseconds(nThrottle[2]);
     //nESC[4].writeMicroseconds(nThrottle[3]);
 }
+
 
 inline void nRCInterrupt_CB1()
 {
@@ -686,6 +687,7 @@ void Clip3Int(int *value, int MIN, int MAX)
     }
 }
 
+
 #if __DEBUG__
 void _print_RC_Signals()
 {
@@ -720,6 +722,7 @@ void _print_RC_Signals()
     Serialprint(nRC_Ch[4]);
 }
 
+
 void _print_Gyro_Signals(int16_t nGyro[3])
 {
     Serialprint("   //    Roll Gyro : ");
@@ -729,6 +732,7 @@ void _print_Gyro_Signals(int16_t nGyro[3])
     Serialprint("   Yaw Gyro : ");
     Serialprint(nGyro[2]);
 }
+
 
 void _print_Throttle_Signals(int nThrottle[4])
 {
