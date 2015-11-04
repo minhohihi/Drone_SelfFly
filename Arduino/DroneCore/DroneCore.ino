@@ -3,7 +3,7 @@
  ----------------------------------------------------------------------------------------*/
 #define __DEBUG__                           (1)
 #define __GYROSCOPE_ENABLED__               (1)
-#define __COMPASS_ENABLED__                 (0)
+#define __COMPASS_ENABLED__                 (1)
 #define __BAROMETER_ENABLED__               (1)
 
 // Arduino Pin configuration
@@ -137,7 +137,8 @@ typedef struct _BaroParam_T
     long                nRealPressure;                          // Real Pressure Data
     float               nAbsoluteAltitude;                      // Estimated Absolute Altitude
     float               nRelativeAltitude;                      // Estimated Relative Altitude
-    double              nRefBarometerVal;                       // Reference Barometer Value
+    double              nRefTemperature;                        // Reference Temperature Value
+    int32_t             nRefPressure;                           // Reference Pressure Value
 }BaroParam_T;
 #endif
 
@@ -217,9 +218,6 @@ void setup()
     {
         // initialize MPU
         Serialprintln(F("Initializing MPU..."));
-        nMPU.setI2CMasterModeEnabled(false);
-        nMPU.setI2CBypassEnabled(true);
-        nMPU.setSleepEnabled(false);
         nMPU.initialize();
         
         // verify connection
@@ -235,6 +233,10 @@ void setup()
         // load and configure the DMP
         Serialprintln(F("Initializing DMP..."));
         nDevStatus = nMPU.dmpInitialize();
+
+        nMPU.setI2CMasterModeEnabled(false);
+        nMPU.setI2CBypassEnabled(true);
+        nMPU.setSleepEnabled(false);
         
         // supply your own gyro offsets here, scaled for min sensitivity
         nMPU.setXGyroOffset(220);
@@ -308,14 +310,15 @@ void setup()
         // initialize Barometer
         Serialprintln(F("Initializing Barometer..."));
         
-        while(!nBarometer.begin())
+        while(!nBarometer.begin(MS5611_ULTRA_HIGH_RES))
         {
             Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
             delay(500);
         }
         
         // Set Measurement Range
-        nBaroParam.nRefBarometerVal = nBarometer.readPressure();
+        nBaroParam.nRefTemperature = nBarometer.readTemperature();
+        nBaroParam.nRefPressure = nBarometer.readPressure();
         
         Serialprint("Barometer Oversampling: ");
         Serialprintln(nBarometer.getOversampling());
@@ -346,7 +349,7 @@ void loop()
     }
     
     // wait for MPU interrupt or extra packet(s) available
-    //while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
+    while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
     {
         // other program behavior stuff here
         // .
@@ -403,9 +406,9 @@ void loop()
     nCompassParam.nRawData = nCompass.readRaw();
     nCompassParam.nNormData = nCompass.readNormalize();
 
-    Serialprint("Compass: ");
-    Serialprintln(nCompassParam.nRawData.XAxis);
-    Serialprintln(nCompassParam.nNormData.XAxis);
+    Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
+    Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
+    Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
     #endif
 
     #if __BAROMETER_ENABLED__
@@ -419,10 +422,10 @@ void loop()
     
     // Calculate altitude
     nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
-    nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefBarometerVal);
+    nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefPressure);
     
-    Serialprint("Barometer: ");
-    Serialprint(nBaroParam.nRelativeAltitude);
+    Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
+    Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
     #endif
     
     if(false == bSkipFlag)
@@ -444,7 +447,7 @@ void loop()
     #if __DEBUG__
     _print_RPY_Signals(nRPY);
     //_print_Throttle_Signals(nThrottle);
-    //_print_Gyro_Signals(nGyro);
+    _print_Gyro_Signals(nGyro);
     //_print_RC_Signals();
     Serialprintln(" ");
     #endif
