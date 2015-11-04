@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
-#define __DEBUG__                           (0)
+#define __DEBUG__                           (1)
 #define __GYROSCOPE_ENABLED__               (1)
 #define __COMPASS_ENABLED__                 (0)
 #define __BAROMETER_ENABLED__               (0)
@@ -96,6 +96,13 @@
 /*----------------------------------------------------------------------------------------
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
+#if __DEBUG__
+    #define Serialprint(...)                Serial.print(__VA_ARGS__)
+    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
+#else
+    #define Serialprint(...)
+    #define Serialprintln(...)
+#endif
 
 
 /*----------------------------------------------------------------------------------------
@@ -193,10 +200,12 @@ void setup()
     Fastwire::setup(400, true);
     #endif
     
+    #if __DEBUG__
     Serial.begin(115200);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
+    #endif
     
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -207,24 +216,24 @@ void setup()
     #if __GYROSCOPE_ENABLED__
     {
         // initialize MPU
-        Serial.println(F("Initializing MPU..."));
+        Serialprintln(F("Initializing MPU..."));
         nMPU.setI2CMasterModeEnabled(false);
         nMPU.setI2CBypassEnabled(true);
         nMPU.setSleepEnabled(false);
         nMPU.initialize();
         
         // verify connection
-        Serial.println(F("Testing device connections..."));
-        Serial.println(nMPU.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+        Serialprintln(F("Testing device connections..."));
+        Serialprintln(nMPU.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
         
         // wait for ready
-        //Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-        //while (Serial.available() && Serial.read()); // empty buffer
-        //while (!Serial.available());                                 // wait for data
-        //while (Serial.available() && Serial.read()); // empty buffer again
+        //Serialprintln(F("\nSend any character to begin DMP programming and demo: "));
+        //while (Serialavailable() && Serialread()); // empty buffer
+        //while (!Serialavailable());                                 // wait for data
+        //while (Serialavailable() && Serialread()); // empty buffer again
         
         // load and configure the DMP
-        Serial.println(F("Initializing DMP..."));
+        Serialprintln(F("Initializing DMP..."));
         nDevStatus = nMPU.dmpInitialize();
         
         // supply your own gyro offsets here, scaled for min sensitivity
@@ -237,18 +246,18 @@ void setup()
         if(0 == nDevStatus)
         {
             // turn on the DMP, now that it's ready
-            Serial.println(F("Enabling DMP..."));
+            Serialprintln(F("Enabling DMP..."));
             nMPU.setDMPEnabled(true);
             
             // enable Arduino interrupt detection
-            Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
+            Serialprintln(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
             pinMode(PIN_GY86_EXT_INTERRUPT, INPUT);
             digitalWrite(PIN_GY86_EXT_INTERRUPT, HIGH);
             //attachInterrupt(digitalPinToInterrupt(2), dmpDataReady, RISING);
             PCintPort::attachInterrupt(PIN_GY86_EXT_INTERRUPT, dmpDataReady, RISING);
             
             // set our DMP Ready flag so the main loop() function knows it's okay to use it
-            Serial.println(F("DMP ready! Waiting for first interrupt..."));
+            Serialprintln(F("DMP ready! Waiting for first interrupt..."));
             nDMPReadyFlag = true;
             
             // get expected DMP packet size for later comparison
@@ -260,9 +269,9 @@ void setup()
             // 1 = initial memory load failed
             // 2 = DMP configuration updates failed
             // (if it's going to break, usually the code will be 1)
-            Serial.print(F("DMP Initialization failed (code "));
-            Serial.print(nDevStatus);
-            Serial.println(F(")"));
+            Serialprint(F("DMP Initialization failed (code "));
+            Serialprint(nDevStatus);
+            Serialprintln(F(")"));
         }
     }
     #endif
@@ -270,11 +279,11 @@ void setup()
     #if __COMPASS_ENABLED__
     {
         // initialize Compass
-        Serial.println(F("Initializing Compass..."));
+        Serialprintln(F("Initializing Compass..."));
         
         while(!nCompass.begin())
         {
-            Serial.println("Can Not Find a Valid HMC5883L (Compass), Check H/W");
+            Serialprintln("Can Not Find a Valid HMC5883L (Compass), Check H/W");
             delay(500);
         }
         
@@ -298,19 +307,19 @@ void setup()
     #if __BAROMETER_ENABLED__
     {
         // initialize Barometer
-        Serial.println(F("Initializing Barometer..."));
+        Serialprintln(F("Initializing Barometer..."));
         
         while(!nBarometer.begin())
         {
-            Serial.println("Can Not Find a Valid MS5611 (Barometer), Check H/W");
+            Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
             delay(500);
         }
         
         // Set Measurement Range
         nBaroParam.nRefBarometerVal = nBarometer.readPressure();
         
-        Serial.print("Barometer Oversampling: ");
-        Serial.println(nBarometer.getOversampling());
+        Serialprint("Barometer Oversampling: ");
+        Serialprintln(nBarometer.getOversampling());
     }
     #endif
     
@@ -333,7 +342,7 @@ void loop()
     // if programming failed, don't try to do anything
     if(!nDMPReadyFlag)
     {
-        Serial.println("DMP Not Ready    Loop Run Fails");
+        Serialprintln("DMP Not Ready    Loop Run Fails");
         return;
     }
     
@@ -365,7 +374,7 @@ void loop()
     {
         // reset so we can continue cleanly
         nMPU.resetFIFO();
-        //Serial.println(F("FIFO overflow!"));
+        //Serialprintln(F("FIFO overflow!"));
         
         // otherwise, check for DMP data ready interrupt (this should happen frequently)
         
@@ -431,7 +440,7 @@ void loop()
     _print_Throttle_Signals(nThrottle);
     _print_Gyro_Signals(nGyro);
     _print_RC_Signals();
-    Serial.println(" ");
+    Serialprintln(" ");
     #endif
 }
 
@@ -680,67 +689,67 @@ void Clip3Int(int *value, int MIN, int MAX)
 #if __DEBUG__
 void _print_RC_Signals()
 {
-    Serial.print("   //   RC_Roll:");
-    if(nRC_Ch[0] - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch[0] - 1520 > 0)Serial.print(">>>");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[0]);
+    Serialprint("   //   RC_Roll:");
+    if(nRC_Ch[0] - 1480 < 0)Serialprint("<<<");
+    else if(nRC_Ch[0] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(nRC_Ch[0]);
     
-    Serial.print("   RC_Pitch:");
-    if(nRC_Ch[1] - 1480 < 0)Serial.print("^^^");
-    else if(nRC_Ch[1] - 1520 > 0)Serial.print("vvv");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[1]);
+    Serialprint("   RC_Pitch:");
+    if(nRC_Ch[1] - 1480 < 0)Serialprint("^^^");
+    else if(nRC_Ch[1] - 1520 > 0)Serialprint("vvv");
+    else Serialprint("-+-");
+    Serialprint(nRC_Ch[1]);
     
-    Serial.print("   RC_Throttle:");
-    if(nRC_Ch[2] - 1480 < 0)Serial.print("vvv");
-    else if(nRC_Ch[2] - 1520 > 0)Serial.print("^^^");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[2]);
+    Serialprint("   RC_Throttle:");
+    if(nRC_Ch[2] - 1480 < 0)Serialprint("vvv");
+    else if(nRC_Ch[2] - 1520 > 0)Serialprint("^^^");
+    else Serialprint("-+-");
+    Serialprint(nRC_Ch[2]);
     
-    Serial.print("   RC_Yaw:");
-    if(nRC_Ch[3] - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch[3] - 1520 > 0)Serial.print(">>>");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[3]);
+    Serialprint("   RC_Yaw:");
+    if(nRC_Ch[3] - 1480 < 0)Serialprint("<<<");
+    else if(nRC_Ch[3] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(nRC_Ch[3]);
     
-    Serial.print("   RC_Gear:");
-    if(nRC_Ch[4] - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch[4] - 1520 > 0)Serial.print(">>>");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[4]);
+    Serialprint("   RC_Gear:");
+    if(nRC_Ch[4] - 1480 < 0)Serialprint("<<<");
+    else if(nRC_Ch[4] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(nRC_Ch[4]);
 }
 
 void _print_Gyro_Signals(int16_t nGyro[3])
 {
-    Serial.print("   //    Roll Gyro : ");
-    Serial.print(nGyro[0]);
-    Serial.print("   Pitch Gyro : ");
-    Serial.print(nGyro[1]);
-    Serial.print("   Yaw Gyro : ");
-    Serial.print(nGyro[2]);
+    Serialprint("   //    Roll Gyro : ");
+    Serialprint(nGyro[0]);
+    Serialprint("   Pitch Gyro : ");
+    Serialprint(nGyro[1]);
+    Serialprint("   Yaw Gyro : ");
+    Serialprint(nGyro[2]);
 }
 
 void _print_Throttle_Signals(int nThrottle[4])
 {
-    Serial.print("   //    Thrt1 : ");
-    Serial.print(nThrottle[0]);
-    Serial.print("  Thrt2 : ");
-    Serial.print(nThrottle[1]);
-    Serial.print("  Thrt3 : ");
-    Serial.print(nThrottle[2]);
-    Serial.print("  Thrt4 : ");
-    Serial.print(nThrottle[3]);
+    Serialprint("   //    Thrt1 : ");
+    Serialprint(nThrottle[0]);
+    Serialprint("  Thrt2 : ");
+    Serialprint(nThrottle[1]);
+    Serialprint("  Thrt3 : ");
+    Serialprint(nThrottle[2]);
+    Serialprint("  Thrt4 : ");
+    Serialprint(nThrottle[3]);
 }
 
 
 void _print_RPY_Signals(float nRPY[3])
 {
-    Serial.print("   //    Roll : ");
-    Serial.print(nRPY[2]);
-    Serial.print("   Pitch : ");
-    Serial.print(nRPY[1]);
-    Serial.print("   Yaw : ");
-    Serial.print(nRPY[0]);
+    Serialprint("   //    Roll : ");
+    Serialprint(nRPY[2]);
+    Serialprint("   Pitch : ");
+    Serialprint(nRPY[1]);
+    Serialprint("   Yaw : ");
+    Serialprint(nRPY[0]);
 }
 #endif
