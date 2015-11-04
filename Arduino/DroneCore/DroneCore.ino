@@ -113,6 +113,15 @@ typedef struct _AxisErrRate_T
     float               nTorque;
 }AxisErrRate_T;
 
+#if __COMPASS_ENABLED__
+typedef struct _CompassParam_T
+{
+    Vector              nRawData;
+    Vector              nNormData;
+}CompassParam_T;
+#endif
+
+#if __BAROMETER_ENABLED__
 typedef struct _BaroParam_T
 {
     uint32_t            nRawTemp;                               // Raw Temperature Data
@@ -123,7 +132,7 @@ typedef struct _BaroParam_T
     float               nRelativeAltitude;                      // Estimated Relative Altitude
     double              nRefBarometerVal;                       // Reference Barometer Value
 }BaroParam_T;
-
+#endif
 
 /*----------------------------------------------------------------------------------------
  Static Function
@@ -160,6 +169,7 @@ Servo                   nESC[4];
 
 #if __COMPASS_ENABLED__
     HMC5883L            nCompass;                               // HMC58x3 Compass Interface
+    CompassParam_T      nCompassParam;
 #endif
 
 #if __BAROMETER_ENABLED__
@@ -389,6 +399,8 @@ void loop()
     #endif
 
     #if __COMPASS_ENABLED__
+    nCompassParam.nRawData = nCompass.readRaw();
+    nCompassParam.nNormData = nCompass.readNormalize();
     #endif
 
     #if __BAROMETER_ENABLED__
