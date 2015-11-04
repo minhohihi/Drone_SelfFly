@@ -192,7 +192,7 @@ void setup()
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
     Fastwire::setup(400, true);
     #endif
-
+    
     Serial.begin(115200);
     Serial.flush();
     
@@ -317,6 +317,7 @@ void setup()
     initRC();
     initESCs();
 }
+
 
 void loop()
 {
@@ -476,27 +477,27 @@ inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pP
 {
     static float            nRC_PrevCh[5] = {0, };              // Filter variables
     static float            nPrevRPY[3];
-
+    
     acquireLock();
     
+    nRC_Ch[0] = floor(nRC_Ch[0] / ROUNDING_BASE) * ROUNDING_BASE;
     nRC_Ch[1] = floor(nRC_Ch[1] / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch[2] = floor(nRC_Ch[2] / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch[4] = floor(nRC_Ch[4] / ROUNDING_BASE) * ROUNDING_BASE;
+    nRC_Ch[3] = floor(nRC_Ch[3] / ROUNDING_BASE) * ROUNDING_BASE;
     
-    nRC_Ch[1] = map(nRC_Ch[1], RC_LOW_CH1, RC_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    nRC_Ch[2] = map(nRC_Ch[2], RC_LOW_CH2, RC_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    nRC_Ch[4] = map(nRC_Ch[4], RC_LOW_CH4, RC_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
+    nRC_Ch[0] = map(nRC_Ch[0], RC_LOW_CH1, RC_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    nRC_Ch[1] = map(nRC_Ch[1], RC_LOW_CH2, RC_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    nRC_Ch[3] = map(nRC_Ch[3], RC_LOW_CH4, RC_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
     
-    if((nRC_Ch[1] < ROLL_ANG_MIN) || (nRC_Ch[1] > ROLL_ANG_MAX))
+    if((nRC_Ch[0] < ROLL_ANG_MIN) || (nRC_Ch[0] > ROLL_ANG_MAX))
+        nRC_Ch[0] = nRC_PrevCh[0];
+    if((nRC_Ch[1] < PITCH_ANG_MIN) || (nRC_Ch[1] > PITCH_ANG_MAX))
         nRC_Ch[1] = nRC_PrevCh[1];
-    if((nRC_Ch[2] < PITCH_ANG_MIN) || (nRC_Ch[2] > PITCH_ANG_MAX))
-        nRC_Ch[2] = nRC_PrevCh[2];
-    if((nRC_Ch[4] < YAW_RATE_MIN) || (nRC_Ch[4] > YAW_RATE_MAX))
-        nRC_Ch[4] = nRC_PrevCh[4];
+    if((nRC_Ch[3] < YAW_RATE_MIN) || (nRC_Ch[3] > YAW_RATE_MAX))
+        nRC_Ch[3] = nRC_PrevCh[3];
     
+    nRC_PrevCh[0] = nRC_Ch[0];
     nRC_PrevCh[1] = nRC_Ch[1];
-    nRC_PrevCh[2] = nRC_Ch[2];
-    nRC_PrevCh[4] = nRC_Ch[4];
+    nRC_PrevCh[3] = nRC_Ch[3];
     
     nRPY[1] = nRPY[1] * 180 / M_PI + PITCH_ANG_OFFSET;
     nRPY[2] = nRPY[2] * 180 / M_PI + ROLL_ANG_OFFSET;
@@ -511,27 +512,27 @@ inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pP
     nPrevRPY[2] = nRPY[2];
     
     //ROLL control
-    pRoll->nAngleErr = nRC_Ch[1] - nRPY[2];
+    pRoll->nAngleErr = nRC_Ch[0] - nRPY[2];
     pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
     pRoll->nI_ErrRate = pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME;
     Clip3Float(&pRoll->nI_ErrRate, -100, 100);
     pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) / SAMPLING_TIME * ROLL_INNER_D_GAIN;
-    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
-
+    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
+    
     //PITCH control
-    pPitch->nAngleErr = nRC_Ch[2] - nRPY[1];
+    pPitch->nAngleErr = nRC_Ch[1] - nRPY[1];
     pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
     pPitch->nI_ErrRate = pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME;
     Clip3Float(&pPitch->nI_ErrRate, -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) / SAMPLING_TIME * PITCH_INNER_D_GAIN;
-    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
-
+    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
+    
     //YAW control
-    pYaw->nCurrErrRate = nRC_Ch[4] - nGyro[2];
+    pYaw->nCurrErrRate = nRC_Ch[3] - nGyro[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
     pYaw->nI_ErrRate = pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME;
     Clip3Float(&pYaw->nI_ErrRate, -50, 50);
@@ -548,8 +549,8 @@ inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRa
     
     acquireLock();
     
-    nRC_Ch[3] = floor(nRC_Ch[3] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(nRC_Ch[3], RC_LOW_CH3, RC_HIGH_CH3, ESC_MIN, ESC_MAX));
+    nRC_Ch[2] = floor(nRC_Ch[2] / ROUNDING_BASE) * ROUNDING_BASE;
+    nEstimatedThrottle = (float)(map(nRC_Ch[2], RC_LOW_CH3, RC_HIGH_CH3, ESC_MIN, ESC_MAX));
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
     
@@ -590,7 +591,7 @@ inline void UpdateESCs(int nThrottle[4])
 inline void nRCInterrupt_CB1()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch[1] = micros() - nRCPrevChangeTime1;
+        nRC_Ch[0] = micros() - nRCPrevChangeTime1;
     
     nRCPrevChangeTime1 = micros();
 }
@@ -599,7 +600,7 @@ inline void nRCInterrupt_CB1()
 inline void nRCInterrupt_CB2()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch[2] = micros() - nRCPrevChangeTime2;
+        nRC_Ch[1] = micros() - nRCPrevChangeTime2;
     
     nRCPrevChangeTime2 = micros();
 }
@@ -608,7 +609,7 @@ inline void nRCInterrupt_CB2()
 inline void nRCInterrupt_CB3()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch[3] = micros() - nRCPrevChangeTime3;
+        nRC_Ch[2] = micros() - nRCPrevChangeTime3;
     
     nRCPrevChangeTime3 = micros();
 }
@@ -617,7 +618,7 @@ inline void nRCInterrupt_CB3()
 inline void nRCInterrupt_CB4()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch[4] = micros() - nRCPrevChangeTime4;
+        nRC_Ch[3] = micros() - nRCPrevChangeTime4;
     
     nRCPrevChangeTime4 = micros();
 }
@@ -626,7 +627,7 @@ inline void nRCInterrupt_CB4()
 inline void nRCInterrupt_CB5()
 {
     if(!nInterruptLockFlag)
-        nRC_Ch[5] = micros() - nRCPrevChangeTime5;
+        nRC_Ch[4] = micros() - nRCPrevChangeTime5;
     
     nRCPrevChangeTime5 = micros();
 }
@@ -680,34 +681,34 @@ void Clip3Int(int *value, int MIN, int MAX)
 void _print_RC_Signals()
 {
     Serial.print("   //   RC_Roll:");
-    if(nRC_Ch[1] - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch[1] - 1520 > 0)Serial.print(">>>");
+    if(nRC_Ch[0] - 1480 < 0)Serial.print("<<<");
+    else if(nRC_Ch[0] - 1520 > 0)Serial.print(">>>");
+    else Serial.print("-+-");
+    Serial.print(nRC_Ch[0]);
+    
+    Serial.print("   RC_Pitch:");
+    if(nRC_Ch[1] - 1480 < 0)Serial.print("^^^");
+    else if(nRC_Ch[1] - 1520 > 0)Serial.print("vvv");
     else Serial.print("-+-");
     Serial.print(nRC_Ch[1]);
     
-    Serial.print("   RC_Pitch:");
-    if(nRC_Ch[2] - 1480 < 0)Serial.print("^^^");
-    else if(nRC_Ch[2] - 1520 > 0)Serial.print("vvv");
+    Serial.print("   RC_Throttle:");
+    if(nRC_Ch[2] - 1480 < 0)Serial.print("vvv");
+    else if(nRC_Ch[2] - 1520 > 0)Serial.print("^^^");
     else Serial.print("-+-");
     Serial.print(nRC_Ch[2]);
     
-    Serial.print("   RC_Throttle:");
-    if(nRC_Ch[3] - 1480 < 0)Serial.print("vvv");
-    else if(nRC_Ch[3] - 1520 > 0)Serial.print("^^^");
+    Serial.print("   RC_Yaw:");
+    if(nRC_Ch[3] - 1480 < 0)Serial.print("<<<");
+    else if(nRC_Ch[3] - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch[3]);
     
-    Serial.print("   RC_Yaw:");
+    Serial.print("   RC_Gear:");
     if(nRC_Ch[4] - 1480 < 0)Serial.print("<<<");
     else if(nRC_Ch[4] - 1520 > 0)Serial.print(">>>");
     else Serial.print("-+-");
     Serial.print(nRC_Ch[4]);
-    
-    Serial.print("   RC_Gear:");
-    if(nRC_Ch[5] - 1480 < 0)Serial.print("<<<");
-    else if(nRC_Ch[5] - 1520 > 0)Serial.print(">>>");
-    else Serial.print("-+-");
-    Serial.print(nRC_Ch[5]);
 }
 
 void _print_Gyro_Signals(int16_t nGyro[3])
@@ -723,9 +724,9 @@ void _print_Gyro_Signals(int16_t nGyro[3])
 void _print_Throttle_Signals(int nThrottle[4])
 {
     Serial.print("   //    Thrt1 : ");
-    Serial.print(nThrottle[1]);
+    Serial.print(nThrottle[0]);
     Serial.print("  Thrt2 : ");
-    Serial.print(nThrottle[2]);
+    Serial.print(nThrottle[1]);
     Serial.print("  Thrt3 : ");
     Serial.print(nThrottle[2]);
     Serial.print("  Thrt4 : ");
