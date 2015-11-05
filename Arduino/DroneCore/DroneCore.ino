@@ -192,6 +192,80 @@ Servo                   nESC[4];
 /*----------------------------------------------------------------------------------------
  Function Implementation
  ----------------------------------------------------------------------------------------*/
+void MagHMC5883Int()
+{
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x00);                                           // Configuration Register A
+    Wire.write(0x70);                                           // Num samples: 8 ; output rate: 15Hz ; normal measurement mode
+    Wire.endTransmission();
+    delay(1);
+
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x01);                                           // Configuration Register B
+    Wire.write(0x20);                                           // Configuration gain 1.3Ga
+    Wire.endTransmission();
+    delay(1);
+
+    // Put the HMC5883 IC into the correct operating mode
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x02);                                           // Select mode register
+    Wire.write(0x00);                                           // Continuous measurement mode
+    Wire.endTransmission();
+    delay(1);
+}
+
+int MagX,MagY,MagZ;
+float MagXf,MagYf,MagZf;
+float c_magnetom_x;
+float c_magnetom_y;
+float c_magnetom_z;
+int M_X_MIN = -270;    //-654  -693   -688
+int M_X_MAX = 585;     //185   209    170
+int M_Y_MIN = -600;    //-319  -311   -310
+int M_Y_MAX = 260;     //513   563    546
+int M_Z_MIN = -425;    //-363  -374   -377
+int M_Z_MAX = 285;     //386   429    502
+
+void Mag5883Read()
+{
+    int i = 0;
+    byte result[6];
+
+    //Tell the HMC5883 where to begin reading data
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x03);                                           // Select register 3, X MSB register
+    Wire.endTransmission();
+
+    //Read data from each axis, 2 registers per axis
+    Wire.requestFrom(HMC5883L_ADDRESS, 6);
+    while(Wire.available())
+    { 
+        result[i] = Wire.read();
+        i++;
+    }
+    Wire.endTransmission();
+
+    MagX = ((result[0] << 8) | result[1]);                      //offset + 1.05
+    MagZ = ((result[2] << 8) | result[3])*-1;                   // + 0.05
+    MagY = ((result[4] << 8) | result[5])*-1;                   // - 0.55
+    MagXf = MagXf + (MagX - MagXf)*0.55;
+    MagYf = MagYf + (MagY - MagYf)*0.55;
+    MagZf = MagZf + (MagZ - MagZf)*0.55;
+
+    // adjust for  compass axis offsets/sensitivity differences by scaling to +/-5 range
+    c_magnetom_x = ((float)(MagXf - M_X_MIN) / (M_X_MAX - M_X_MIN))*10.0 - 5.0;
+    c_magnetom_y = ((float)(MagYf - M_Y_MIN) / (M_Y_MAX - M_Y_MIN))*10.0 - 5.0;
+    c_magnetom_z = ((float)(MagZf - M_Z_MIN) / (M_Z_MAX - M_Z_MIN))*10.0 - 5.0;
+
+    //Serialprint("Compass: "); Serialprint(c_magnetom_x);
+    //Serialprint(" "); Serialprint(c_magnetom_y);
+    //Serialprint(" "); Serialprint(c_magnetom_z);
+}
+
+ 
 void setup()
 {
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
@@ -284,27 +358,31 @@ void setup()
     {
         // initialize Compass
         Serialprintln(F("Initializing Compass..."));
-        
-        while(!nCompass.begin())
-        {
-            Serialprintln("Can Not Find a Valid HMC5883L (Compass), Check H/W");
-            delay(500);
-        }
-        
-        // Set Measurement Range
-        nCompass.setRange(HMC5883L_RANGE_1_3GA);
-        
-        // Set Measurement Mode
-        nCompass.setMeasurementMode(HMC5883L_CONTINOUS);
-        
-        // Set Data Rate
-        nCompass.setDataRate(HMC5883L_DATARATE_75HZ);
-        
-        // Set Number of Samples Averaged
-        nCompass.setSamples(HMC5883L_SAMPLES_1);
-        
-        // Set Calibration Offset (Ref. HMC5883L_calibraton.ion)
-        nCompass.setOffset(0, 0);
+
+        #if 0
+            while(!nCompass.begin())
+            {
+                Serialprintln("Can Not Find a Valid HMC5883L (Compass), Check H/W");
+                delay(500);
+            }
+            
+            // Set Number of Samples Averaged
+            nCompass.setSamples(HMC5883L_SAMPLES_8);
+
+            // Set Data Rate
+            nCompass.setDataRate(HMC5883L_DATARATE_15HZ);
+            
+            // Set Measurement Range
+            nCompass.setRange(HMC5883L_RANGE_1_3GA);
+
+            // Set Measurement Mode
+            nCompass.setMeasurementMode(HMC5883L_CONTINOUS);
+            
+            // Set Calibration Offset (Ref. HMC5883L_calibraton.ion)
+            nCompass.setOffset(0, 0);
+        #else
+            MagHMC5883Int();
+        #endif
     }
     #endif
 
@@ -371,8 +449,12 @@ void loop()
         {
             if(false == bGetCompassSkipFlag)
             {
-                //nCompassParam.nRawData = nCompass.readRaw();
-                //nCompassParam.nNormData = nCompass.readNormalize();
+                #if 0
+                nCompassParam.nRawData = nCompass.readRaw();
+                nCompassParam.nNormData = nCompass.readNormalize();
+                #else
+                Mag5883Read();
+                #endif
                 bGetCompassSkipFlag = true;
     
                 //Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
