@@ -53,6 +53,14 @@
 #define YAW_P_GAIN                          (2.325)             // yaw -> rate control
 #define YAW_I_GAIN                          (0.650)
 
+// Min & Max Val for Compass
+#define M_X_MIN                             (-270)    //-654  -693   -688
+#define M_X_MAX                             (585)     //185   209    170
+#define M_Y_MIN                             (-600)    //-319  -311   -310
+#define M_Y_MAX                             (260)     //513   563    546
+#define M_Z_MIN                             (-425)    //-363  -374   -377
+#define M_Z_MAX                             (285)     //386   429    502
+
 // Flight parameters
 #define PITCH_ANG_MIN                       (-30)
 #define PITCH_ANG_MAX                       (30)
@@ -109,23 +117,13 @@
 /*----------------------------------------------------------------------------------------
  Type Definitions
  ----------------------------------------------------------------------------------------*/
-typedef struct _AxisErrRate_T
-{
-    float               nAngleErr;
-    float               nCurrErrRate;
-    float               nPrevErrRate;
-    float               nP_ErrRate;
-    float               nI_ErrRate;
-    float               nD_ErrRate;
-    float               nBalance;
-    float               nTorque;
-}AxisErrRate_T;
-
 #if __COMPASS_ENABLED__
 typedef struct _CompassParam_T
 {
     Vector              nRawData;
     Vector              nNormData;
+    float               nCompassHeadingRad;
+    float               nCompassHeadingDeg;
 }CompassParam_T;
 #endif
 
@@ -144,10 +142,52 @@ typedef struct _BaroParam_T
 }BaroParam_T;
 #endif
 
+typedef struct _AxisErrRate_T
+{
+    float               nAngleErr;
+    float               nCurrErrRate;
+    float               nPrevErrRate;
+    float               nP_ErrRate;
+    float               nI_ErrRate;
+    float               nD_ErrRate;
+    float               nBalance;
+    float               nTorque;
+}AxisErrRate_T;
+
+
 /*----------------------------------------------------------------------------------------
  Static Function
  ----------------------------------------------------------------------------------------*/
+float Clip3Float(const float nValue, const int MIN, const int MAX);
+int Clip3Int(const int nValue, const int MIN, const int MAX);
+inline void acquireLock();
+inline void releaseLock();
+inline void nRCInterrupt_CB1();
+inline void nRCInterrupt_CB2();
+inline void nRCInterrupt_CB3();
+inline void nRCInterrupt_CB5();
+inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int16_t nGyro[3], float nRPY[3]);
+inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int nThrottle[4]);
+inline void UpdateESCs(int nThrottle[4]);
+inline void dmpDataReady();
+inline void arm();
+void initESCs();
+void initRC();
+#if __COMPASS_ENABLED__
+    void MagHMC5883Int();
+    void Mag5883Read(struct _CompassParam_T *pCompassParam);
+    float tiltCompensate(Vector mag, Vector normAccel);
+    void CalibrateCompass();
+#endif
 
+#if __DEBUG__
+    void _print_RC_Signals();
+    void _print_Gyro_Signals(int16_t nGyro[3]);
+    void _print_Throttle_Signals(int nThrottle[4]);
+    void _print_RPY_Signals(float nRPY[3]);
+    void _print_CompassData(struct _CompassParam_T *pCompassParam);
+    void _print_BarometerData(struct _BaroParam_T *pBaroParam);
+#endif
 
 /*----------------------------------------------------------------------------------------
  Static Variable
@@ -160,16 +200,17 @@ typedef struct _BaroParam_T
 volatile bool           nMPUInterruptFlag = false;
 bool                    nInterruptLockFlag = false;             // Interrupt lock
 bool                    nDMPReadyFlag = false;                  // set true if DMP init was successful
-uint16_t                nPacketSize;                            // expected DMP packet size (default is 42 bytes)
-
-
+uint16_t                nPacketSize = 0;                            // expected DMP packet size (default is 42 bytes)
 float                   nRC_Ch[5] = {0, };                      // RC channel inputs
 unsigned long           nRCPrevChangeTime1 = micros();
 unsigned long           nRCPrevChangeTime2 = micros();
 unsigned long           nRCPrevChangeTime3 = micros();
 unsigned long           nRCPrevChangeTime4 = micros();
 unsigned long           nRCPrevChangeTime5 = micros();
-
+float                   nDeclinationAngle = 0.0f;
+float                   nCompassOffsetX;
+float                   nCompassOffsetY;
+    
 Servo                   nESC[4];
 #if __GYROSCOPE_ENABLED__
     MPU6050             nMPU;                                   // MPU6050 Gyroscope Interface
@@ -179,12 +220,9 @@ Servo                   nESC[4];
 
 #if __COMPASS_ENABLED__
     HMC5883L            nCompass;                               // HMC5883 Compass Interface
-    CompassParam_T      nCompassParam;
 #endif
 
 #if __BAROMETER_ENABLED__
-    MS5611              nBarometer;                             // MS5611 Barometer Interface
-    BaroParam_T         nBaroParam;
     MS561101BA          nBarometerBA;
 #endif
 
@@ -192,80 +230,6 @@ Servo                   nESC[4];
 /*----------------------------------------------------------------------------------------
  Function Implementation
  ----------------------------------------------------------------------------------------*/
-void MagHMC5883Int()
-{
-    // Open communication with HMC5883L
-    Wire.beginTransmission(HMC5883L_ADDRESS);
-    Wire.write(0x00);                                           // Configuration Register A
-    Wire.write(0x70);                                           // Num samples: 8 ; output rate: 15Hz ; normal measurement mode
-    Wire.endTransmission();
-    delay(1);
-
-    // Open communication with HMC5883L
-    Wire.beginTransmission(HMC5883L_ADDRESS);
-    Wire.write(0x01);                                           // Configuration Register B
-    Wire.write(0x20);                                           // Configuration gain 1.3Ga
-    Wire.endTransmission();
-    delay(1);
-
-    // Put the HMC5883 IC into the correct operating mode
-    // Open communication with HMC5883L
-    Wire.beginTransmission(HMC5883L_ADDRESS);
-    Wire.write(0x02);                                           // Select mode register
-    Wire.write(0x00);                                           // Continuous measurement mode
-    Wire.endTransmission();
-    delay(1);
-}
-
-int MagX,MagY,MagZ;
-float MagXf,MagYf,MagZf;
-float c_magnetom_x;
-float c_magnetom_y;
-float c_magnetom_z;
-int M_X_MIN = -270;    //-654  -693   -688
-int M_X_MAX = 585;     //185   209    170
-int M_Y_MIN = -600;    //-319  -311   -310
-int M_Y_MAX = 260;     //513   563    546
-int M_Z_MIN = -425;    //-363  -374   -377
-int M_Z_MAX = 285;     //386   429    502
-
-void Mag5883Read()
-{
-    int i = 0;
-    byte result[6];
-
-    //Tell the HMC5883 where to begin reading data
-    Wire.beginTransmission(HMC5883L_ADDRESS);
-    Wire.write(0x03);                                           // Select register 3, X MSB register
-    Wire.endTransmission();
-
-    //Read data from each axis, 2 registers per axis
-    Wire.requestFrom(HMC5883L_ADDRESS, 6);
-    while(Wire.available())
-    { 
-        result[i] = Wire.read();
-        i++;
-    }
-    Wire.endTransmission();
-
-    MagX = ((result[0] << 8) | result[1]);                      //offset + 1.05
-    MagZ = ((result[2] << 8) | result[3])*-1;                   // + 0.05
-    MagY = ((result[4] << 8) | result[5])*-1;                   // - 0.55
-    MagXf = MagXf + (MagX - MagXf)*0.55;
-    MagYf = MagYf + (MagY - MagYf)*0.55;
-    MagZf = MagZf + (MagZ - MagZf)*0.55;
-
-    // adjust for  compass axis offsets/sensitivity differences by scaling to +/-5 range
-    c_magnetom_x = ((float)(MagXf - M_X_MIN) / (M_X_MAX - M_X_MIN))*10.0 - 5.0;
-    c_magnetom_y = ((float)(MagYf - M_Y_MIN) / (M_Y_MAX - M_Y_MIN))*10.0 - 5.0;
-    c_magnetom_z = ((float)(MagZf - M_Z_MIN) / (M_Z_MAX - M_Z_MIN))*10.0 - 5.0;
-
-    //Serialprint("Compass: "); Serialprint(c_magnetom_x);
-    //Serialprint(" "); Serialprint(c_magnetom_y);
-    //Serialprint(" "); Serialprint(c_magnetom_z);
-}
-
- 
 void setup()
 {
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
@@ -294,12 +258,13 @@ void setup()
     #if __GYROSCOPE_ENABLED__
     {
         // initialize MPU
-        Serialprintln(F("Initializing MPU..."));
+        Serialprint(F("Initializing MPU..."));
         nMPU.initialize();
+        Serialprintln(F("Done"));
         
         // verify connection
-        Serialprintln(F("Testing device connections..."));
-        Serialprintln(nMPU.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+        Serialprint(F("Testing device connections..."));
+        Serialprintln(nMPU.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
         
         // wait for ready
         //Serialprintln(F("\nSend any character to begin DMP programming and demo: "));
@@ -308,8 +273,9 @@ void setup()
         //while (Serialavailable() && Serialread()); // empty buffer again
         
         // load and configure the DMP
-        Serialprintln(F("Initializing DMP..."));
+        Serialprint(F("Initializing DMP..."));
         nDevStatus = nMPU.dmpInitialize();
+        Serialprintln(F("Done"));
 
         nMPU.setI2CMasterModeEnabled(false);
         nMPU.setI2CBypassEnabled(true);
@@ -325,8 +291,9 @@ void setup()
         if(0 == nDevStatus)
         {
             // turn on the DMP, now that it's ready
-            Serialprintln(F("Enabling DMP..."));
+            Serialprint(F("Enabling DMP..."));
             nMPU.setDMPEnabled(true);
+            Serialprintln(F("Done"));
             
             // enable Arduino interrupt detection
             Serialprintln(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
@@ -358,58 +325,31 @@ void setup()
     {
         // initialize Compass
         Serialprintln(F("Initializing Compass..."));
+        MagHMC5883Int();
 
-        #if 0
-            while(!nCompass.begin())
-            {
-                Serialprintln("Can Not Find a Valid HMC5883L (Compass), Check H/W");
-                delay(500);
-            }
+        // Calibrate Compass
+        Serialprint(F("    Calibrating Compass...."));
+        CalibrateCompass();
             
-            // Set Number of Samples Averaged
-            nCompass.setSamples(HMC5883L_SAMPLES_8);
-
-            // Set Data Rate
-            nCompass.setDataRate(HMC5883L_DATARATE_15HZ);
-            
-            // Set Measurement Range
-            nCompass.setRange(HMC5883L_RANGE_1_3GA);
-
-            // Set Measurement Mode
-            nCompass.setMeasurementMode(HMC5883L_CONTINOUS);
-            
-            // Set Calibration Offset (Ref. HMC5883L_calibraton.ion)
-            nCompass.setOffset(0, 0);
-        #else
-            MagHMC5883Int();
-        #endif
+        // Date: 2015-11-05
+        // Location: Seoul, South Korea
+        // Latitude: 37.0000° North
+        // Longitude: 126.0000° East
+        // Magnetic declination: 7° 59.76' West
+        // Annual Change (minutes/year): 3.9 '/y West
+        // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
+        nDeclinationAngle = (7.0 + (59.76 / 60.0)) / (180 / M_PI);
+        Serialprintln(F("Done"));
     }
     #endif
 
     #if __BAROMETER_ENABLED__
     {
         // initialize Barometer
-        Serialprintln(F("Initializing Barometer..."));
-
-        #if 0
-            while(!nBarometer.begin())
-            {
-                Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
-                delay(500);
-            }
-    
-            nBarometer.setOversampling(MS5611_ULTRA_LOW_POWER);
-            
-            // Set Measurement Range
-            nBaroParam.nRefTemperature = nBarometer.readTemperature();
-            nBaroParam.nRefPressure = nBarometer.readPressure();
-        #else
-            nBarometerBA = MS561101BA();
-            nBarometerBA.init(MS561101BA_ADDR_CSB_LOW);
-        #endif
-        
-        Serialprint("Barometer Oversampling: ");
-        Serialprintln(nBarometer.getOversampling());
+        Serialprint(F("Initializing Barometer..."));
+        nBarometerBA = MS561101BA();
+        nBarometerBA.init(MS561101BA_ADDR_CSB_LOW);
+        Serialprintln(F("Done"));
     }
     #endif
     
@@ -420,15 +360,21 @@ void setup()
 
 void loop()
 {
-    bool                    bSkipFlag = false;
-    bool                    bGetCompassSkipFlag = false;
-    bool                    bGetBarometerSkipFlag = false;
+    volatile bool           bSkipFlag = false;
+    volatile bool           bGetCompassSkipFlag = false;
+    volatile bool           bGetBarometerSkipFlag = false;
     uint8_t                 nMPUInterruptStat;                                          // holds actual interrupt status byte from MPU
-    uint16_t                nFIFOCnt;                                                   // count of all bytes currently in FIFO
+    uint16_t                nFIFOCnt = 0;                                               // count of all bytes currently in FIFO
     uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
     int                     nThrottle[4] = {ESC_MIN, ESC_MIN, ESC_MIN, ESC_MIN};        // throttles
     int16_t                 nGyro[3];                                                   // Gyroscope Value
     float                   nRPY[3];                                                    // yaw pitch roll values
+    #if __COMPASS_ENABLED__
+    CompassParam_T          nCompassParam;
+    #endif
+    #if __BAROMETER_ENABLED__
+    BaroParam_T             nBaroParam;
+    #endif
     float                   nStartTime = 0.0f, nEndTime = 0.0f;
 
     nStartTime = micros();
@@ -437,74 +383,16 @@ void loop()
     // if programming failed, don't try to do anything
     if(!nDMPReadyFlag)
     {
-        Serialprintln("DMP Not Ready    Loop Run Fails");
+        Serialprintln("DMP Not Ready!!!!  Loop Fails");
         return;
     }
     
     // wait for MPU interrupt or extra packet(s) available
     while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
     {
-        // Get Compass Sensor Value
-        #if __COMPASS_ENABLED__
-        {
-            if(false == bGetCompassSkipFlag)
-            {
-                #if 0
-                nCompassParam.nRawData = nCompass.readRaw();
-                nCompassParam.nNormData = nCompass.readNormalize();
-                #else
-                Mag5883Read();
-                #endif
-                bGetCompassSkipFlag = true;
-    
-                //Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
-                //Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
-                //Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
-            }
-        }
-        #endif
-
-        // Get Barometer Sensor Value
-        #if __BAROMETER_ENABLED__
-        {
-            #if 0
-            {
-                // Read raw values
-                nBaroParam.nRawTemp = nBarometer.readRawTemperature();
-                nBaroParam.nRawPressure = nBarometer.readRawPressure();
         
-                // Read true temperature & Pressure
-                nBaroParam.nRealTemperature = nBarometer.readTemperature();
-                nBaroParam.nRealPressure = nBarometer.readPressure();
-        
-                // Calculate altitude
-                nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
-                nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefPressure);
-                //Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
-                //Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
-            }
-            #else
-            {
-                if(false == bGetBarometerSkipFlag)
-                {
-                    nBaroParam.nRealTemperature = nBarometerBA.getTemperature(MS561101BA_OSR_256);
-                    nBaroParam.nRealPressure = nBarometerBA.getPressure(MS561101BA_OSR_256);
-                    nBarometerBA.pushPressure(nBaroParam.nRealPressure);
-                    nBaroParam.nAvgpressure = nBarometerBA.getAvgPressure();
-                    nBaroParam.nAbsoluteAltitude = nBarometerBA.getAltitude(nBaroParam.nAvgpressure, nBaroParam.nRealTemperature);
-                    bGetBarometerSkipFlag = true;
-                    
-                    //Serialprint("  Barometer: "); Serialprint(nBaroParam.nRealTemperature);
-                    //Serialprint(" "); Serialprint(nBaroParam.nRealPressure);
-                    //Serialprint(" "); Serialprint(nBaroParam.nAvgpressure);
-                    //Serialprint(" "); Serialprint(nBaroParam.nAbsoluteAltitude);
-                }
-            }
-            #endif
-        }
-        #endif
     }
-
+    
     #if __GYROSCOPE_ENABLED__
     {
         // reset interrupt flag and get INT_STATUS byte
@@ -545,6 +433,32 @@ void loop()
         }
     }
     #endif
+
+    // Get Compass Sensor Value
+    #if __COMPASS_ENABLED__
+    {
+        if(false == bGetCompassSkipFlag)
+        {
+            Mag5883Read(&nCompassParam);
+            bGetCompassSkipFlag = true;
+        }
+    }
+    #endif
+
+    // Get Barometer Sensor Value
+    #if __BAROMETER_ENABLED__
+    {
+        if(false == bGetBarometerSkipFlag)
+        {
+            nBaroParam.nRealTemperature = nBarometerBA.getTemperature(MS561101BA_OSR_256);
+            nBaroParam.nRealPressure = nBarometerBA.getPressure(MS561101BA_OSR_256);
+            nBarometerBA.pushPressure(nBaroParam.nRealPressure);
+            nBaroParam.nAvgpressure = nBarometerBA.getAvgPressure();
+            nBaroParam.nAbsoluteAltitude = nBarometerBA.getAltitude(nBaroParam.nAvgpressure, nBaroParam.nRealTemperature);
+            bGetBarometerSkipFlag = true;
+        }
+    }
+    #endif
     
     if(false == bSkipFlag)
     {
@@ -563,6 +477,8 @@ void loop()
     }
     
     #if __DEBUG__
+    _print_CompassData(&nCompassParam);
+    _print_BarometerData(&nBaroParam);
     //_print_RPY_Signals(nRPY);
     //_print_Throttle_Signals(nThrottle);
     //_print_Gyro_Signals(nGyro);
@@ -573,41 +489,41 @@ void loop()
     #endif
 }
 
-
-inline void arm()
+ 
+float Clip3Float(const float nValue, const int MIN, const int MAX)
 {
-    nESC[1].writeMicroseconds(ESC_MIN);
-    nESC[2].writeMicroseconds(ESC_MIN);
-    nESC[3].writeMicroseconds(ESC_MIN);
-    nESC[4].writeMicroseconds(ESC_MIN);
+    float           nClipVal = nValue;
     
-    delay(ESC_ARM_DELAY);
+    if(nValue < MIN)
+        nClipVal = MIN;
+    else if(nValue > MAX)
+        nClipVal = MAX;
+
+    return nClipVal;
 }
 
 
-inline void initESCs()
+int Clip3Int(const int nValue, const int MIN, const int MAX)
 {
-    nESC[1].attach(PIN_ESC_1);
-    nESC[2].attach(PIN_ESC_2);
-    nESC[3].attach(PIN_ESC_3);
-    nESC[4].attach(PIN_ESC_4);
+    int             nClipVal = nValue;
     
-    delay(1000);
+    if(nValue < MIN)
+        nClipVal = MIN;
+    else if(nValue > MAX)
+        nClipVal = MAX;
     
-    arm();
+    return nClipVal;
+}
+
+inline void acquireLock()
+{
+    nInterruptLockFlag = true;
 }
 
 
-inline void initRC()
+inline void releaseLock()
 {
-    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
-    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
-    
-    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH5, nRCInterrupt_CB5, CHANGE);
+    nInterruptLockFlag = false;
 }
 
 
@@ -714,7 +630,6 @@ inline void UpdateESCs(int nThrottle[4])
 }
 
 
-
 inline void nRCInterrupt_CB1()
 {
     if(!nInterruptLockFlag)
@@ -759,50 +674,195 @@ inline void nRCInterrupt_CB5()
     nRCPrevChangeTime5 = micros();
 }
 
-
-inline void acquireLock()
-{
-    nInterruptLockFlag = true;
-}
-
-
-inline void releaseLock()
-{
-    nInterruptLockFlag = false;
-}
-
-
-void dmpDataReady()
+inline void dmpDataReady()
 {
     nMPUInterruptFlag = true;
 }
 
 
-//ERR_I limit to prevent divergence
-float Clip3Float(const float nValue, const int MIN, const int MAX)
+inline void arm()
 {
-    float           nClipVal = nValue;
+    nESC[1].writeMicroseconds(ESC_MIN);
+    nESC[2].writeMicroseconds(ESC_MIN);
+    nESC[3].writeMicroseconds(ESC_MIN);
+    nESC[4].writeMicroseconds(ESC_MIN);
     
-    if(nValue < MIN)
-        nClipVal = MIN;
-    else if(nValue > MAX)
-        nClipVal = MAX;
-
-    return nClipVal;
+    delay(ESC_ARM_DELAY);
 }
 
 
-int Clip3Int(const int nValue, const int MIN, const int MAX)
+void initESCs()
 {
-    int             nClipVal = nValue;
+    nESC[1].attach(PIN_ESC_1);
+    nESC[2].attach(PIN_ESC_2);
+    nESC[3].attach(PIN_ESC_3);
+    nESC[4].attach(PIN_ESC_4);
     
-    if(nValue < MIN)
-        nClipVal = MIN;
-    else if(nValue > MAX)
-        nClipVal = MAX;
+    delay(1000);
     
-    return nClipVal;
+    arm();
 }
+
+
+void initRC()
+{
+    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
+    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
+    
+    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH5, nRCInterrupt_CB5, CHANGE);
+}
+
+
+#if __COMPASS_ENABLED__
+void MagHMC5883Int()
+{
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x00);                                           // Configuration Register A
+    Wire.write(0x70);                                           // Num samples: 8 ; output rate: 15Hz ; normal measurement mode
+    Wire.endTransmission();
+    delay(1);
+
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x01);                                           // Configuration Register B
+    Wire.write(0x20);                                           // Configuration gain 1.3Ga
+    Wire.endTransmission();
+    delay(1);
+
+    // Put the HMC5883 IC into the correct operating mode
+    // Open communication with HMC5883L
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x02);                                           // Select mode register
+    Wire.write(0x00);                                           // Continuous measurement mode
+    Wire.endTransmission();
+    delay(1);
+}
+
+
+void Mag5883Read(struct _CompassParam_T *pCompassParam)
+{
+    int i = 0;
+    byte result[6];
+    int MagX,MagY,MagZ;
+    static float MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
+
+    //Tell the HMC5883 where to begin reading data
+    Wire.beginTransmission(HMC5883L_ADDRESS);
+    Wire.write(0x03);                                           // Select register 3, X MSB register
+    Wire.endTransmission();
+
+    //Read data from each axis, 2 registers per axis
+    Wire.requestFrom(HMC5883L_ADDRESS, 6);
+    while(Wire.available())
+    { 
+        result[i] = Wire.read();
+        i++;
+    }
+    Wire.endTransmission();
+
+    pCompassParam->nRawData.XAxis = ((result[0] << 8) | result[1]);                   //offset + 1.05
+    pCompassParam->nRawData.ZAxis = -((result[2] << 8) | result[3]);                  // + 0.05
+    pCompassParam->nRawData.YAxis = -((result[4] << 8) | result[5]);                  // - 0.55
+    pCompassParam->nNormData.XAxis = pCompassParam->nNormData.XAxis + (pCompassParam->nRawData.XAxis - pCompassParam->nNormData.XAxis)*0.55;
+    pCompassParam->nNormData.YAxis = pCompassParam->nNormData.YAxis + (pCompassParam->nRawData.YAxis - pCompassParam->nNormData.YAxis)*0.55;
+    pCompassParam->nNormData.ZAxis = pCompassParam->nNormData.ZAxis + (pCompassParam->nRawData.ZAxis - pCompassParam->nNormData.ZAxis)*0.55;
+
+    // adjust for  compass axis offsets/sensitivity differences by scaling to +/-5 range
+    //pCompassParam->nNormData.XAxis = ((float)(MagXf - M_X_MIN) / (M_X_MAX - M_X_MIN))*10.0 - 5.0;
+    //pCompassParam->nNormData.YAxis = ((float)(MagYf - M_Y_MIN) / (M_Y_MAX - M_Y_MIN))*10.0 - 5.0;
+    //pCompassParam->nNormData.ZAxis = ((float)(MagZf - M_Z_MIN) / (M_Z_MAX - M_Z_MIN))*10.0 - 5.0;
+
+    pCompassParam->nCompassHeadingRad = atan2(pCompassParam->nRawData.YAxis, pCompassParam->nRawData.XAxis) + nDeclinationAngle;
+
+    if(pCompassParam->nCompassHeadingRad < 0)
+        pCompassParam->nCompassHeadingRad += 2 * PI;
+  
+    if(pCompassParam->nCompassHeadingRad > 2 * PI)
+        pCompassParam->nCompassHeadingRad -= 2 * PI;
+
+    pCompassParam->nCompassHeadingDeg = pCompassParam->nCompassHeadingRad * 180 / M_PI;
+
+    //if(pCompassParam->nCompassHeadingDeg >= 1 && pCompassParam->nCompassHeadingDeg < 240)
+    //    pCompassParam->nCompassHeadingDeg = map(pCompassParam->nCompassHeadingDeg, 0, 239, 0, 179);
+    //else if(pCompassParam->nCompassHeadingDeg >= 240)
+    //    pCompassParam->nCompassHeadingDeg = map(pCompassParam->nCompassHeadingDeg, 240, 360, 180, 360);
+    
+    // Smooth angles rotation for +/- 3deg
+    //int smoothHeadingDegrees = round(pCompassParam->nCompassHeadingDeg);
+    //int previousDegree = 0;
+    //if(smoothHeadingDegrees < (previousDegree + 3) && smoothHeadingDegrees > (previousDegree - 3))
+    //    smoothHeadingDegrees = previousDegree;
+}
+
+
+float tiltCompensate(Vector mag, Vector normAccel)
+{
+    // Pitch & Roll   
+    float roll;
+    float pitch;
+  
+    roll = asin(normAccel.YAxis);
+    pitch = asin(-normAccel.XAxis);
+
+    if(roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
+        return -1000;
+  
+    // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
+    float cosRoll = cos(roll);
+    float sinRoll = sin(roll);  
+    float cosPitch = cos(pitch);
+    float sinPitch = sin(pitch);
+  
+    // Tilt compensation
+    float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
+    float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
+ 
+    float heading = atan2(Yh, Xh);
+    
+    return heading;
+}
+
+void CalibrateCompass() 
+{
+    int     i = 0;
+    float   nSumMinX = 0;
+    float   nSumMaxX = 0;
+    float   nSumMinY = 0;
+    float   nSumMaxY = 0;
+    const int nLoopCnt = 50;
+
+    for(i=0 ; i<nLoopCnt ; i++)
+    {
+        float     nMinX = 0;
+        float     nMaxX = 0;
+        float     nMinY = 0;
+        float     nMaxY = 0;
+        Vector    nLocalCompass = nCompass.readRaw();
+
+        // Determine Min / Max values
+        if (nLocalCompass.XAxis < nMinX) nMinX = nLocalCompass.XAxis;
+        if (nLocalCompass.XAxis > nMaxX) nMaxX = nLocalCompass.XAxis;
+        if (nLocalCompass.YAxis < nMinY) nMinY = nLocalCompass.YAxis;
+        if (nLocalCompass.YAxis > nMaxY) nMaxY = nLocalCompass.YAxis;
+
+        nSumMinX += nMinX;
+        nSumMaxX += nMaxX;
+        nSumMinY += nMinY;
+        nSumMaxY += nMaxY;
+        
+        Serialprint(".");
+    }
+    
+    // Calculate offsets
+    nCompassOffsetX = (nSumMaxX + nSumMinX) / 2 / nLoopCnt;
+    nCompassOffsetY = (nSumMaxY + nSumMinY) / 2 / nLoopCnt;
+}
+#endif
 
 
 #if __DEBUG__
@@ -866,11 +926,31 @@ void _print_Throttle_Signals(int nThrottle[4])
 
 void _print_RPY_Signals(float nRPY[3])
 {
-    Serialprint("   //    Roll : ");
+    Serialprint("   //    Roll: ");
     Serialprint(nRPY[2]);
-    Serialprint("   Pitch : ");
+    Serialprint("   Pitch: ");
     Serialprint(nRPY[1]);
-    Serialprint("   Yaw : ");
+    Serialprint("   Yaw: ");
     Serialprint(nRPY[0]);
+}
+
+void _print_CompassData(struct _CompassParam_T *pCompassParam)
+{
+    #if __COMPASS_ENABLED__
+    Serialprint("   //    Compass -> X:"); Serialprint(pCompassParam->nNormData.XAxis);
+    Serialprint("   Y:"); Serialprint(pCompassParam->nNormData.YAxis);
+    Serialprint("   Z:"); Serialprint(pCompassParam->nNormData.ZAxis);
+    Serialprint("   Head:"); Serialprint(pCompassParam->nCompassHeadingDeg);
+    #endif
+}
+
+void _print_BarometerData(struct _BaroParam_T *pBaroParam)
+{
+    #if __BAROMETER_ENABLED__
+    Serialprint("   //    Barometer -> Temp:"); Serialprint(pBaroParam->nRealTemperature);
+    Serialprint("   Press:"); Serialprint(pBaroParam->nRealPressure);
+    Serialprint("   AvgPress:"); Serialprint(pBaroParam->nAvgpressure);
+    Serialprint("   AbsAlt:"); Serialprint(pBaroParam->nAbsoluteAltitude);
+    #endif
 }
 #endif
