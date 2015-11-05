@@ -298,7 +298,7 @@ void setup()
         nCompass.setDataRate(HMC5883L_DATARATE_75HZ);
         
         // Set Number of Samples Averaged
-        nCompass.setSamples(HMC5883L_SAMPLES_8);
+        nCompass.setSamples(HMC5883L_SAMPLES_1);
         
         // Set Calibration Offset (Ref. HMC5883L_calibraton.ion)
         nCompass.setOffset(0, 0);
@@ -310,11 +310,13 @@ void setup()
         // initialize Barometer
         Serialprintln(F("Initializing Barometer..."));
         
-        while(!nBarometer.begin(MS5611_ULTRA_HIGH_RES))
+        while(!nBarometer.begin())
         {
             Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
             delay(500);
         }
+
+        nBarometer.setOversampling(MS5611_ULTRA_LOW_POWER);
         
         // Set Measurement Range
         nBaroParam.nRefTemperature = nBarometer.readTemperature();
@@ -362,7 +364,7 @@ void loop()
         // .
         // .
     }
-    
+
     #if __GYROSCOPE_ENABLED__
     // reset interrupt flag and get INT_STATUS byte
     nMPUInterruptFlag = false;
@@ -406,15 +408,15 @@ void loop()
     nCompassParam.nRawData = nCompass.readRaw();
     nCompassParam.nNormData = nCompass.readNormalize();
 
-    Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
-    Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
-    Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
+    //Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
+    //Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
+    //Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
     #endif
 
     #if __BAROMETER_ENABLED__
     // Read raw values
-    nBaroParam.nRawTemp = nBarometer.readRawTemperature();
-    nBaroParam.nRawPressure = nBarometer.readRawPressure();
+    //nBaroParam.nRawTemp = nBarometer.readRawTemperature();
+    //nBaroParam.nRawPressure = nBarometer.readRawPressure();
     
     // Read true temperature & Pressure
     nBaroParam.nRealTemperature = nBarometer.readTemperature();
@@ -424,8 +426,8 @@ void loop()
     nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
     nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefPressure);
     
-    Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
-    Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
+    //Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
+    //Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
     #endif
     
     if(false == bSkipFlag)
@@ -445,11 +447,11 @@ void loop()
     }
     
     #if __DEBUG__
-    _print_RPY_Signals(nRPY);
+    //_print_RPY_Signals(nRPY);
     //_print_Throttle_Signals(nThrottle);
-    _print_Gyro_Signals(nGyro);
+    //_print_Gyro_Signals(nGyro);
     //_print_RC_Signals();
-    Serialprintln(" ");
+    Serialprintln("");
     #endif
 }
 
@@ -587,10 +589,10 @@ inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRa
 
 inline void UpdateESCs(int nThrottle[4])
 {
-    //nESC[1].writeMicroseconds(nThrottle[0]);
-    //nESC[3].writeMicroseconds(nThrottle[1]);
-    //nESC[2].writeMicroseconds(nThrottle[2]);
-    //nESC[4].writeMicroseconds(nThrottle[3]);
+    nESC[1].writeMicroseconds(nThrottle[0]);
+    nESC[3].writeMicroseconds(nThrottle[1]);
+    nESC[2].writeMicroseconds(nThrottle[2]);
+    nESC[4].writeMicroseconds(nThrottle[3]);
 }
 
 
