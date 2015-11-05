@@ -117,11 +117,18 @@
 /*----------------------------------------------------------------------------------------
  Type Definitions
  ----------------------------------------------------------------------------------------*/
+typedef struct _Axis_T
+{
+    float              XAxis;
+    float              YAxis;
+    float              ZAxis;
+}Axis_T;
+ 
 #if __COMPASS_ENABLED__
 typedef struct _CompassParam_T
 {
-    Vector              nRawData;
-    Vector              nNormData;
+    Axis_T              nRawData;
+    Axis_T              nNormData;
     float               nCompassHeadingRad;
     float               nCompassHeadingDeg;
 }CompassParam_T;
@@ -361,8 +368,6 @@ void setup()
 void loop()
 {
     volatile bool           bSkipFlag = false;
-    volatile bool           bGetCompassSkipFlag = false;
-    volatile bool           bGetBarometerSkipFlag = false;
     uint8_t                 nMPUInterruptStat;                                          // holds actual interrupt status byte from MPU
     uint16_t                nFIFOCnt = 0;                                               // count of all bytes currently in FIFO
     uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
@@ -389,8 +394,7 @@ void loop()
     
     // wait for MPU interrupt or extra packet(s) available
     while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
-    {
-        
+    {      
     }
     
     #if __GYROSCOPE_ENABLED__
@@ -436,30 +440,18 @@ void loop()
 
     // Get Compass Sensor Value
     #if __COMPASS_ENABLED__
-    {
-        if(false == bGetCompassSkipFlag)
-        {
-            Mag5883Read(&nCompassParam);
-            bGetCompassSkipFlag = true;
-        }
-    }
+        Mag5883Read(&nCompassParam);
     #endif
 
     // Get Barometer Sensor Value
     #if __BAROMETER_ENABLED__
-    {
-        if(false == bGetBarometerSkipFlag)
-        {
-            nBaroParam.nRealTemperature = nBarometerBA.getTemperature(MS561101BA_OSR_256);
-            nBaroParam.nRealPressure = nBarometerBA.getPressure(MS561101BA_OSR_256);
-            nBarometerBA.pushPressure(nBaroParam.nRealPressure);
-            nBaroParam.nAvgpressure = nBarometerBA.getAvgPressure();
-            nBaroParam.nAbsoluteAltitude = nBarometerBA.getAltitude(nBaroParam.nAvgpressure, nBaroParam.nRealTemperature);
-            bGetBarometerSkipFlag = true;
-        }
-    }
-    #endif
-    
+        nBaroParam.nRealTemperature = nBarometerBA.getTemperature(MS561101BA_OSR_256);
+        nBaroParam.nRealPressure = nBarometerBA.getPressure(MS561101BA_OSR_256);
+        nBarometerBA.pushPressure(nBaroParam.nRealPressure);
+        nBaroParam.nAvgpressure = nBarometerBA.getAvgPressure();
+        nBaroParam.nAbsoluteAltitude = nBarometerBA.getAltitude(nBaroParam.nAvgpressure, nBaroParam.nRealTemperature);
+    #endif  
+
     if(false == bSkipFlag)
     {
         AxisErrRate_T           nPitch = {0, };
@@ -477,8 +469,8 @@ void loop()
     }
     
     #if __DEBUG__
-    _print_CompassData(&nCompassParam);
-    _print_BarometerData(&nBaroParam);
+    //_print_CompassData(&nCompassParam);
+    //_print_BarometerData(&nBaroParam);
     //_print_RPY_Signals(nRPY);
     //_print_Throttle_Signals(nThrottle);
     //_print_Gyro_Signals(nGyro);
