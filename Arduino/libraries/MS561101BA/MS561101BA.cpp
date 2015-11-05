@@ -41,156 +41,211 @@ void printLongLong(uint64_t n, uint8_t base) {
 
 
 MS561101BA::MS561101BA() {
-  ;
+    memset(PressureArry, 0, PRESSURE_ARRY_SIZE * sizeof(float));
+    PressureArryIdx = 0;
 }
 
-void MS561101BA::init(uint8_t address) {  
-  _addr =  address;
-  
-  // disable internal pullups of the ATMEGA which Wire enable by default
-  #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega8__) || defined(__AVR_ATmega328P__)
-    // deactivate internal pull-ups for twi
-    // as per note from atmega8 manual pg167
-    cbi(PORTC, 4);
-    cbi(PORTC, 5);
-  #else
-    // deactivate internal pull-ups for twi
-    // as per note from atmega128 manual pg204
-    cbi(PORTD, 0);
-    cbi(PORTD, 1);
-  #endif
- 
-  reset(); // reset the device to populate its internal PROM registers
-  delay(1000); // some safety time
-  readPROM(); // reads the PROM into object variables for later use
+void MS561101BA::init(uint8_t address)
+{
+    _addr =  address;
+
+    // disable internal pullups of the ATMEGA which Wire enable by default
+    #if defined(__AVR_ATmega168__) || defined(__AVR_ATmega8__) || defined(__AVR_ATmega328P__)
+        // deactivate internal pull-ups for twi
+        // as per note from atmega8 manual pg167
+        cbi(PORTC, 4);
+        cbi(PORTC, 5);
+    #else
+        // deactivate internal pull-ups for twi
+        // as per note from atmega128 manual pg204
+        cbi(PORTD, 0);
+        cbi(PORTD, 1);
+    #endif
+
+    reset();            // reset the device to populate its internal PROM registers
+    delay(1000);        // some safety time
+    readPROM();         // reads the PROM into object variables for later use
 }
 
-float MS561101BA::getPressure(uint8_t OSR) {
-  // see datasheet page 7 for formulas
-  
-  uint32_t rawPress = rawPressure(OSR);
-  if(rawPress == NULL) {
-    return NULL;
-  }
-  
-  int32_t dT = getDeltaTemp(OSR);
-  if(dT == NULL) {
-    return NULL;
-  }
-  
-  int64_t off  = ((uint32_t)_C[1] <<16) + (((int64_t)dT * _C[3]) >> 7);
-  int64_t sens = ((uint32_t)_C[0] <<15) + (((int64_t)dT * _C[2]) >> 8);
-  return ((( (rawPress * sens ) >> 21) - off) >> 15) / 100.0;
+
+float MS561101BA::getPressure(uint8_t OSR)
+{
+    // see datasheet page 7 for formulas
+    uint32_t        rawPress = rawPressure(OSR);
+    int32_t         dT = getDeltaTemp(OSR);
+    
+    if(rawPress == NULL)
+        return NULL;
+
+    if(dT == NULL)
+        return NULL;
+
+    int64_t off  = ((uint32_t)_C[1] <<16) + (((int64_t)dT * _C[3]) >> 7);
+    int64_t sens = ((uint32_t)_C[0] <<15) + (((int64_t)dT * _C[2]) >> 8);
+
+    return ((( (rawPress * sens ) >> 21) - off) >> 15) / 100.0;
 }
 
-float MS561101BA::getTemperature(uint8_t OSR) {
-  // see datasheet page 7 for formulas
-  int64_t dT = getDeltaTemp(OSR);
-  
-  if(dT != NULL) {
-    return (2000 + ((dT * _C[5]) >> 23)) / 100.0;
-  }
-  else {
-    return NULL;
-  }
+
+float MS561101BA::getTemperature(uint8_t OSR)
+{
+    // see datasheet page 7 for formulas
+    int64_t dT = getDeltaTemp(OSR);
+
+    if(dT != NULL)
+        return (2000 + ((dT * _C[5]) >> 23)) / 100.0;
+    else
+        return NULL;
 }
 
-int32_t MS561101BA::getDeltaTemp(uint8_t OSR) {
-  uint32_t rawTemp = rawTemperature(OSR);
-  if(rawTemp != NULL) {
-    return (int32_t)(rawTemp - ((uint32_t)_C[4] << 8));
-  }
-  else {
-    return NULL;
-  }
+
+float MS561101BA::getAltitude(float press, float temp)
+{
+    const float sea_press = 1013.25;
+
+    //return (1.0f - pow(press/101325.0f, 0.190295f)) * 4433000.0f;
+    return ((pow((sea_press / press), 1/5.257) - 1.0) * (temp + 273.15)) / 0.0065;
+}
+
+
+void MS561101BA::pushPressure(float nPressure)
+{
+    PressureArry[PressureArryIdx] = nPressure;
+    PressureArryIdx = (PressureArryIdx + 1) % PRESSURE_ARRY_SIZE;
+}
+
+
+float MS561101BA::getAvgPressure()
+{
+    int         i = 0;
+    float       nPressureSum = 0.0;
+    
+    for(i=0; i<PRESSURE_ARRY_SIZE; i++)
+        nPressureSum += PressureArry[i];
+
+    return nPressureSum / PRESSURE_ARRY_SIZE;
+}
+
+
+int32_t MS561101BA::getDeltaTemp(uint8_t OSR)
+{
+    uint32_t rawTemp = rawTemperature(OSR);
+    
+    if(rawTemp != NULL)
+        return (int32_t)(rawTemp - ((uint32_t)_C[4] << 8));
+    else
+        return NULL;
 }
 
 //TODO: avoid duplicated code between rawPressure and rawTemperature methods
 //TODO: possible race condition between readings.. serious headache doing this.. help appreciated!
 
-uint32_t MS561101BA::rawPressure(uint8_t OSR) {
-  unsigned long now = micros();
-  if(lastPresConv != 0 && (now - lastPresConv) >= CONVERSION_TIME) {
-    lastPresConv = 0;
-    pressCache = getConversion(MS561101BA_D1 + OSR);
-  }
-  else {
-    if(lastPresConv == 0 && lastTempConv == 0) {
-      startConversion(MS561101BA_D1 + OSR);
-      lastPresConv = now;
+uint32_t MS561101BA::rawPressure(uint8_t OSR)
+{
+    unsigned long now = micros();
+    
+    if(lastPresConv != 0 && (now - lastPresConv) >= CONVERSION_TIME)
+    {
+        lastPresConv = 0;
+        pressCache = getConversion(MS561101BA_D1 + OSR);
     }
+    else
+    {
+        if(lastPresConv == 0 && lastTempConv == 0)
+        {
+            startConversion(MS561101BA_D1 + OSR);
+            lastPresConv = now;
+        }
+    }
+
     return pressCache;
-  }
 }
 
-uint32_t MS561101BA::rawTemperature(uint8_t OSR) {
-  unsigned long now = micros();
-  if(lastTempConv != 0 && (now - lastTempConv) >= CONVERSION_TIME) {
-    lastTempConv = 0;
-    tempCache = getConversion(MS561101BA_D2 + OSR);
-  }
-  else {
-    if(lastTempConv == 0 && lastPresConv == 0) { // no conversions in progress
-      startConversion(MS561101BA_D2 + OSR);
-      lastTempConv = now;
+
+uint32_t MS561101BA::rawTemperature(uint8_t OSR)
+{
+    unsigned long now = micros();
+    
+    if(lastTempConv != 0 && (now - lastTempConv) >= CONVERSION_TIME)
+    {
+        lastTempConv = 0;
+        tempCache = getConversion(MS561101BA_D2 + OSR);
     }
-  }
-  return tempCache;
+    else
+    {
+        if(lastTempConv == 0 && lastPresConv == 0)
+        { // no conversions in progress
+            startConversion(MS561101BA_D2 + OSR);
+            lastTempConv = now;
+        }
+    }
+    return tempCache;
 }
 
 
 // see page 11 of the datasheet
-void MS561101BA::startConversion(uint8_t command) {
-  // initialize pressure conversion
-  Wire.beginTransmission(_addr);
-  Wire.write(command);
-  Wire.endTransmission();
+void MS561101BA::startConversion(uint8_t command)
+{
+    // initialize pressure conversion
+    Wire.beginTransmission(_addr);
+    Wire.write(command);
+    Wire.endTransmission();
 }
 
-uint32_t MS561101BA::getConversion(uint8_t command) {
-  union {uint32_t val; uint8_t raw[4]; } conversion = {0};
-  
-  // start read sequence
-  Wire.beginTransmission(_addr);
-  Wire.write(0);
-  Wire.endTransmission();
-  
-  Wire.beginTransmission(_addr);
-  Wire.requestFrom(_addr, (uint8_t) MS561101BA_D1D2_SIZE);
-  if(Wire.available()) {
-    conversion.raw[2] = Wire.read();
-    conversion.raw[1] = Wire.read();
-    conversion.raw[0] = Wire.read();
-  }
-  else {
-    conversion.val = -1;
-  }
-  
-  return conversion.val;
+
+uint32_t MS561101BA::getConversion(uint8_t command)
+{
+    union {uint32_t val; uint8_t raw[4]; } conversion = {0};
+
+    // start read sequence
+    Wire.beginTransmission(_addr);
+    Wire.write(0);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(_addr);
+    Wire.requestFrom(_addr, (uint8_t) MS561101BA_D1D2_SIZE);
+    
+    if(Wire.available())
+    {
+        conversion.raw[2] = Wire.read();
+        conversion.raw[1] = Wire.read();
+        conversion.raw[0] = Wire.read();
+    }
+    else
+    {
+        conversion.val = -1;
+    }
+
+    return conversion.val;
 }
 
 
 /**
  * Reads factory calibration and store it into object variables.
 */
-int MS561101BA::readPROM() {
-  for (int i=0;i<MS561101BA_PROM_REG_COUNT;i++) {
-    Wire.beginTransmission(_addr);
-    Wire.write(MS561101BA_PROM_BASE_ADDR + (i * MS561101BA_PROM_REG_SIZE));
-    Wire.endTransmission();
-    
-    Wire.beginTransmission(_addr);
-    Wire.requestFrom(_addr, (uint8_t) MS561101BA_PROM_REG_SIZE);
-    if(Wire.available()) {
-      _C[i] = Wire.read() << 8 | Wire.read();
-      
-      //DEBUG_PRINT(_C[i]);
+int MS561101BA::readPROM()
+{
+    for (int i=0;i<MS561101BA_PROM_REG_COUNT;i++)
+    {
+        Wire.beginTransmission(_addr);
+        Wire.write(MS561101BA_PROM_BASE_ADDR + (i * MS561101BA_PROM_REG_SIZE));
+        Wire.endTransmission();
+
+        Wire.beginTransmission(_addr);
+        Wire.requestFrom(_addr, (uint8_t) MS561101BA_PROM_REG_SIZE);
+        if(Wire.available())
+        {
+            _C[i] = Wire.read() << 8 | Wire.read();
+
+            //DEBUG_PRINT(_C[i]);
+        }
+        else
+        {
+            return -1; // error reading the PROM or communicating with the device
+        }
     }
-    else {
-      return -1; // error reading the PROM or communicating with the device
-    }
-  }
-  return 0;
+  
+    return 0;
 }
 
 
@@ -198,10 +253,11 @@ int MS561101BA::readPROM() {
  * Send a reset command to the device. With the reset command the device
  * populates its internal registers with the values read from the PROM.
 */
-void MS561101BA::reset() {
-  Wire.beginTransmission(_addr);
-  Wire.write(MS561101BA_RESET);
-  Wire.endTransmission();
+void MS561101BA::reset()
+{
+    Wire.beginTransmission(_addr);
+    Wire.write(MS561101BA_RESET);
+    Wire.endTransmission();
 }
 
 
