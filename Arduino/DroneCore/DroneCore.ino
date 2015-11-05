@@ -90,6 +90,7 @@
 
 #if __BAROMETER_ENABLED__
     #include <MS5611.h>
+    #include <MS561101BA.h>
 #endif
 
 
@@ -134,7 +135,8 @@ typedef struct _BaroParam_T
     uint32_t            nRawTemp;                               // Raw Temperature Data
     uint32_t            nRawPressure;                           // Raw Pressure Data
     double              nRealTemperature;                       // Real Temperature Data
-    long                nRealPressure;                          // Real Pressure Data
+    float               nRealPressure;                          // Real Pressure Data
+    float               nAvgpressure;                           // Average Pressure Data
     float               nAbsoluteAltitude;                      // Estimated Absolute Altitude
     float               nRelativeAltitude;                      // Estimated Relative Altitude
     double              nRefTemperature;                        // Reference Temperature Value
@@ -183,6 +185,7 @@ Servo                   nESC[4];
 #if __BAROMETER_ENABLED__
     MS5611              nBarometer;                             // MS5611 Barometer Interface
     BaroParam_T         nBaroParam;
+    MS561101BA          nBarometerBA;
 #endif
 
 
@@ -309,18 +312,23 @@ void setup()
     {
         // initialize Barometer
         Serialprintln(F("Initializing Barometer..."));
-        
-        while(!nBarometer.begin())
-        {
-            Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
-            delay(500);
-        }
 
-        nBarometer.setOversampling(MS5611_ULTRA_LOW_POWER);
-        
-        // Set Measurement Range
-        nBaroParam.nRefTemperature = nBarometer.readTemperature();
-        nBaroParam.nRefPressure = nBarometer.readPressure();
+        #if 0
+            while(!nBarometer.begin())
+            {
+                Serialprintln("Can Not Find a Valid MS5611 (Barometer), Check H/W");
+                delay(500);
+            }
+    
+            nBarometer.setOversampling(MS5611_ULTRA_LOW_POWER);
+            
+            // Set Measurement Range
+            nBaroParam.nRefTemperature = nBarometer.readTemperature();
+            nBaroParam.nRefPressure = nBarometer.readPressure();
+        #else
+            nBarometerBA = MS561101BA();
+            nBarometerBA.init(MS561101BA_ADDR_CSB_LOW);
+        #endif
         
         Serialprint("Barometer Oversampling: ");
         Serialprintln(nBarometer.getOversampling());
@@ -335,12 +343,17 @@ void setup()
 void loop()
 {
     bool                    bSkipFlag = false;
+    bool                    bGetCompassSkipFlag = false;
+    bool                    bGetBarometerSkipFlag = false;
     uint8_t                 nMPUInterruptStat;                                          // holds actual interrupt status byte from MPU
     uint16_t                nFIFOCnt;                                                   // count of all bytes currently in FIFO
     uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
     int                     nThrottle[4] = {ESC_MIN, ESC_MIN, ESC_MIN, ESC_MIN};        // throttles
     int16_t                 nGyro[3];                                                   // Gyroscope Value
     float                   nRPY[3];                                                    // yaw pitch roll values
+    float                   nStartTime = 0.0f, nEndTime = 0.0f;
+
+    nStartTime = micros();
     
     ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
     // if programming failed, don't try to do anything
@@ -353,81 +366,102 @@ void loop()
     // wait for MPU interrupt or extra packet(s) available
     while(!nMPUInterruptFlag && nFIFOCnt < nPacketSize)
     {
-        // other program behavior stuff here
-        // .
-        // .
-        // .
-        // if you are really paranoid you can frequently test in between other
-        // stuff to see if nMPUInterruptFlag is true, and if so, "break;" from the
-        // while() loop to immediately process the MPU data
-        // .
-        // .
-        // .
+        // Get Compass Sensor Value
+        #if __COMPASS_ENABLED__
+        {
+            if(false == bGetCompassSkipFlag)
+            {
+                //nCompassParam.nRawData = nCompass.readRaw();
+                //nCompassParam.nNormData = nCompass.readNormalize();
+                bGetCompassSkipFlag = true;
+    
+                //Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
+                //Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
+                //Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
+            }
+        }
+        #endif
+
+        // Get Barometer Sensor Value
+        #if __BAROMETER_ENABLED__
+        {
+            #if 0
+            {
+                // Read raw values
+                nBaroParam.nRawTemp = nBarometer.readRawTemperature();
+                nBaroParam.nRawPressure = nBarometer.readRawPressure();
+        
+                // Read true temperature & Pressure
+                nBaroParam.nRealTemperature = nBarometer.readTemperature();
+                nBaroParam.nRealPressure = nBarometer.readPressure();
+        
+                // Calculate altitude
+                nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
+                nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefPressure);
+                //Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
+                //Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
+            }
+            #else
+            {
+                if(false == bGetBarometerSkipFlag)
+                {
+                    nBaroParam.nRealTemperature = nBarometerBA.getTemperature(MS561101BA_OSR_256);
+                    nBaroParam.nRealPressure = nBarometerBA.getPressure(MS561101BA_OSR_256);
+                    nBarometerBA.pushPressure(nBaroParam.nRealPressure);
+                    nBaroParam.nAvgpressure = nBarometerBA.getAvgPressure();
+                    nBaroParam.nAbsoluteAltitude = nBarometerBA.getAltitude(nBaroParam.nAvgpressure, nBaroParam.nRealTemperature);
+                    bGetBarometerSkipFlag = true;
+                    
+                    //Serialprint("  Barometer: "); Serialprint(nBaroParam.nRealTemperature);
+                    //Serialprint(" "); Serialprint(nBaroParam.nRealPressure);
+                    //Serialprint(" "); Serialprint(nBaroParam.nAvgpressure);
+                    //Serialprint(" "); Serialprint(nBaroParam.nAbsoluteAltitude);
+                }
+            }
+            #endif
+        }
+        #endif
     }
 
     #if __GYROSCOPE_ENABLED__
-    // reset interrupt flag and get INT_STATUS byte
-    nMPUInterruptFlag = false;
-    nMPUInterruptStat = nMPU.getIntStatus();
-    
-    // get current FIFO count
-    nFIFOCnt = nMPU.getFIFOCount();
-    
-    // check for overflow (this should never happen unless our code is too inefficient)
-    if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
     {
-        // reset so we can continue cleanly
-        nMPU.resetFIFO();
-        //Serialprintln(F("FIFO overflow!"));
+        // reset interrupt flag and get INT_STATUS byte
+        nMPUInterruptFlag = false;
+        nMPUInterruptStat = nMPU.getIntStatus();
         
-        // otherwise, check for DMP data ready interrupt (this should happen frequently)
+        // get current FIFO count
+        nFIFOCnt = nMPU.getFIFOCount();
         
-        bSkipFlag = true;
+        // check for overflow (this should never happen unless our code is too inefficient)
+        if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
+        {
+            // reset so we can continue cleanly
+            nMPU.resetFIFO();
+            //Serialprintln(F("FIFO overflow!"));
+            
+            // otherwise, check for DMP data ready interrupt (this should happen frequently)
+            
+            bSkipFlag = true;
+        }
+        else if(nMPUInterruptStat & 0x02)
+        {
+            // wait for correct available data length, should be a VERY short wait
+            while (nFIFOCnt < nPacketSize)
+                nFIFOCnt = nMPU.getFIFOCount();
+            
+            // read a packet from FIFO
+            nMPU.getFIFOBytes(nFIFOBuf, nPacketSize);
+            
+            // track FIFO count here in case there is > 1 packet available
+            // (this lets us immediately read more without waiting for an interrupt)
+            nFIFOCnt -= nPacketSize;
+            
+            nMPU.dmpGetGyro(nGyro, nFIFOBuf);
+            nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
+            nMPU.dmpGetGravity(&nGravity, &nQuater);
+            nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);
+        }
     }
-    else if(nMPUInterruptStat & 0x02)
-    {
-        // wait for correct available data length, should be a VERY short wait
-        while (nFIFOCnt < nPacketSize)
-            nFIFOCnt = nMPU.getFIFOCount();
-        
-        // read a packet from FIFO
-        nMPU.getFIFOBytes(nFIFOBuf, nPacketSize);
-        
-        // track FIFO count here in case there is > 1 packet available
-        // (this lets us immediately read more without waiting for an interrupt)
-        nFIFOCnt -= nPacketSize;
-        
-        nMPU.dmpGetGyro(nGyro, nFIFOBuf);
-        nMPU.dmpGetQuaternion(&nQuater, nFIFOBuf);
-        nMPU.dmpGetGravity(&nGravity, &nQuater);
-        nMPU.dmpGetYawPitchRoll(nRPY, &nQuater, &nGravity);
-    }
-    #endif
-
-    #if __COMPASS_ENABLED__
-    nCompassParam.nRawData = nCompass.readRaw();
-    nCompassParam.nNormData = nCompass.readNormalize();
-
-    //Serialprint("Compass: "); Serialprint(nCompassParam.nNormData.XAxis);
-    //Serialprint(" "); Serialprint(nCompassParam.nNormData.YAxis);
-    //Serialprint(" "); Serialprint(nCompassParam.nNormData.ZAxis);
-    #endif
-
-    #if __BAROMETER_ENABLED__
-    // Read raw values
-    //nBaroParam.nRawTemp = nBarometer.readRawTemperature();
-    //nBaroParam.nRawPressure = nBarometer.readRawPressure();
-    
-    // Read true temperature & Pressure
-    nBaroParam.nRealTemperature = nBarometer.readTemperature();
-    nBaroParam.nRealPressure = nBarometer.readPressure();
-    
-    // Calculate altitude
-    nBaroParam.nAbsoluteAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure);
-    nBaroParam.nRelativeAltitude = nBarometer.getAltitude(nBaroParam.nRealPressure, nBaroParam.nRefPressure);
-    
-    //Serialprint("  Barometer: "); Serialprint(nBaroParam.nAbsoluteAltitude);
-    //Serialprint(" "); Serialprint(nBaroParam.nRelativeAltitude);
     #endif
     
     if(false == bSkipFlag)
@@ -451,6 +485,8 @@ void loop()
     //_print_Throttle_Signals(nThrottle);
     //_print_Gyro_Signals(nGyro);
     //_print_RC_Signals();
+    nEndTime = micros();
+    Serialprint(" ");Serialprint((nEndTime - nStartTime)/1000);
     Serialprintln("");
     #endif
 }
@@ -594,6 +630,7 @@ inline void UpdateESCs(int nThrottle[4])
     nESC[2].writeMicroseconds(nThrottle[2]);
     nESC[4].writeMicroseconds(nThrottle[3]);
 }
+
 
 
 inline void nRCInterrupt_CB1()
