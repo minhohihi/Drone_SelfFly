@@ -153,16 +153,9 @@ typedef struct _GyroAccelParam_T
     int16_t             nGyro[3];
     int16_t             nAccel[3];
     
-    float               nPrevGyro[3];
-    float               nPrevAccel[3];
-    
-    float               nGyroAngle[3];
-    float               nAccelAngle[3];
-    
     float               nBaseGyro[3];
     float               nBaseAccel[3];
 
-    float               nPrevRawAngle[3];               // Raw (Non-Filtered Angles)
     float               nFineAngle[3];                  // Filtered Angles
     
     float               nCurrReadTime;
@@ -173,10 +166,13 @@ typedef struct _GyroAccelParam_T
 #if __COMPASS_ENABLED__
 typedef struct _CompassParam_T
 {
+    byte                nRawBits[6];
     float               nRawData[3];
     float               nNormData[3];
     float               nCompassHeadingRad;
     float               nCompassHeadingDeg;
+    float               nCompassOffsetX;
+    float               nCompassOffsetY;
 }CompassParam_T;
 #endif
 
@@ -249,8 +245,6 @@ unsigned long           nRCPrevChangeTime3 = micros();
 unsigned long           nRCPrevChangeTime4 = micros();
 unsigned long           nRCPrevChangeTime5 = micros();
 float                   nDeclinationAngle = 0.0f;
-float                   nCompassOffsetX;
-float                   nCompassOffsetY;
 
 Servo                   nESC[4];
 #if __GYROACCEL_ENABLED__
@@ -285,7 +279,10 @@ Servo                   nESC[4];
 //inline float get_last_gyro_x_angle(pGyroAccelParam, idx) {return last_gyro_x_angle;}
 //inline float get_last_gyro_y_angle(pGyroAccelParam, idx) {return last_gyro_y_angle;}
 //inline float get_last_gyro_z_angle(pGyroAccelParam, idx) {return last_gyro_z_angle;}
-
+int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam);
 
 int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
 {
@@ -294,7 +291,7 @@ int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
     Serialprintln(F("Done"));
     
     // verify connection
-    Serialprint(F("Testing device connections..."));
+    Serialprint(F("    Testing device connections..."));
     Serialprintln(nGyroAccel.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
     
     nGyroAccel.setI2CMasterModeEnabled(false);
@@ -312,7 +309,7 @@ int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
     nGyroAccel.setFullScaleAccelRange(MPU6050_ACCEL_FS_2);                // +-2g
 
     // Calibrate GyroAccel
-    Serialprint(F("Calibrating Gyro & Accel"));
+    Serialprint(F("    Calibrating Gyro & Accel"));
     _GyroAccel_Calibrate(pGyroAccelParam);
     Serialprintln(F("Done"));
     
@@ -338,7 +335,7 @@ void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam)
         nAccel[Y_AXIS] += pGyroAccelParam->nAccel[Y_AXIS];
         nAccel[Z_AXIS] += pGyroAccelParam->nAccel[Z_AXIS];
         
-        delay(50);
+        delay(20);
         
         Serialprint(".");
     }
@@ -362,26 +359,31 @@ void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam)
 
 void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam)
 {
+    int16_t             *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
+    int16_t             *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
+
+    pGyroAccelParam->nCurrReadTime = micros();
+
     // Read Gyro and Accelerate Data
     nGyroAccel.getRotation(&pGyro[X_AXIS], &pGyro[Y_AXIS], &pGyro[Z_AXIS]);
     nGyroAccel.getAcceleration(&pAccel[X_AXIS], &pAccel[Y_AXIS], &pAccel[Z_AXIS]);
-    
-    pGyroAccelParam->nCurrReadTime = micros();
 }
 
 
 void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam)
 {
     const float         nFS = 131.0f;
-    const float         nRadtoDegOffset = 180.0 / M_PI;
-    int16_t             *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
-    int16_t             *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
-    float               *pGyroAngle = &(pGyroAccelParam->nGyroAngle[X_AXIS]);
-    float               *pAccelAngle = &(pGyroAccelParam->nAccelAngle[X_AXIS]);
-    float               *pFineAngle = &(pGyroAccelParam->nFineAngle[X_AXIS]);
+    const float         nRadtoDegOffset = 57.2958;             // = 180.0 / M_PI;
+    const int16_t       *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
+    const int16_t       *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
     const float         *pBaseGyro = &(pGyroAccelParam->nBaseGyro[X_AXIS]);
-    const float         *pPrevRawAngle = &(pGyroAccelParam->nPrevRawAngle[X_AXIS]);
-    float               nGyroDiffAngle[3] = {0, }, nRawAngle[3] = {0, };
+    float               *pFineAngle = &(pGyroAccelParam->nFineAngle[X_AXIS]);
+    float               nGyroAngle[3] = {0, };
+    float               nAccelAngle[3] = {0, };
+    float               nGyroDiffAngle[3] = {0, };
+    float               nRawAngle[3] = {0, };
+    static float        nPrevRawAngle[3] = {0, };
+
     
     // Convert Gyro Values to Degrees/Sec
     nGyroDiffAngle[X_AXIS] = (pGyro[X_AXIS] - pBaseGyro[X_AXIS]) / nFS;
@@ -389,58 +391,61 @@ void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam)
     nGyroDiffAngle[Z_AXIS] = (pGyro[Z_AXIS] - pBaseGyro[Z_AXIS]) / nFS;
     
     // float accel_vector_length = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
-    pAccelAngle[X_AXIS] = atan(pAccel[Y_AXIS] / sqrt(pow(pAccel[X_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
-    pAccelAngle[Y_AXIS] = atan(-1*pAccel[X_AXIS] / sqrt(pow(pAccel[Y_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
-    pAccelAngle[Z_AXIS] = 0;
+    nAccelAngle[X_AXIS] = atan(pAccel[Y_AXIS] / sqrt(pow(pAccel[X_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
+    nAccelAngle[Y_AXIS] = atan(-1*pAccel[X_AXIS] / sqrt(pow(pAccel[Y_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
+    nAccelAngle[Z_AXIS] = 0;
     
     // Compute the (filtered) gyro angles
     {
-        float dt =(pGyroAccelParam->nCurrReadTime - pGyroAccelParam->nPrevReadTime) / 1000.0;
+        float dt =(pGyroAccelParam->nCurrReadTime - pGyroAccelParam->nPrevReadTime) / 1000000.0;
         
-        pGyroAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * dt + pFineAngle[X_AXIS];
-        pGyroAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * dt + pFineAngle[Y_AXIS];
-        pGyroAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] * dt + pFineAngle[Z_AXIS];
+        nGyroAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * dt + pFineAngle[X_AXIS];
+        nGyroAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * dt + pFineAngle[Y_AXIS];
+        nGyroAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] * dt + pFineAngle[Z_AXIS];
         
         // Compute the drifting gyro angles
-        nRawAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * dt + pPrevRawAngle[X_AXIS];
-        nRawAngle[X_AXIS] = nGyroDiffAngle[Y_AXIS] * dt + pPrevRawAngle[Y_AXIS];
-        nRawAngle[X_AXIS] = nGyroDiffAngle[Z_AXIS] * dt + pPrevRawAngle[Z_AXIS];
+        //nRawAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * dt + nPrevRawAngle[X_AXIS];
+        //nRawAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * dt + nPrevRawAngle[Y_AXIS];
+        //nRawAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] * dt + nPrevRawAngle[Z_AXIS];
     }
     
     // Apply the complementary filter to figure out the change in angle - choice of alpha is
     // estimated now.  Alpha depends on the sampling rate...
     {
-        float nOffset0 = 0.96;
-        float nOffset1 = 1.0 - nOffset0;
-        pFineAngle[X_AXIS] = nOffset0 * pGyroAngle[X_AXIS] + nOffset1 * pAccelAngle[X_AXIS];
-        pFineAngle[Y_AXIS] = nOffset0 * pGyroAngle[Y_AXIS] + nOffset1 * pAccelAngle[Y_AXIS];
-        pFineAngle[Z_AXIS] = pGyroAngle[Z_AXIS];  //Accelerometer doesn't give z-angle
+        const float     nOffset0 = 0.80;
+        const float     nOffset1 = 1.0 - nOffset0;
+        pFineAngle[X_AXIS] = nOffset0 * nGyroAngle[X_AXIS] + nOffset1 * nAccelAngle[X_AXIS];
+        pFineAngle[Y_AXIS] = nOffset0 * nGyroAngle[Y_AXIS] + nOffset1 * nAccelAngle[Y_AXIS];
+        pFineAngle[Z_AXIS] = nGyroAngle[Z_AXIS];  //Accelerometer doesn't give z-angle
     }
     
     // Update the saved data with the latest values
     pGyroAccelParam->nPrevReadTime = pGyroAccelParam->nCurrReadTime;
-    memcpy(pGyroAccelParam->nPrevRawAngle, nRawAngle, 3 * sizeof(float));
-    
-}
-
-
-
-void _GyroAccel_SetOldData(struct _GyroAccelParam_T *pGyroAccelParam)
-{
-
 }
 #endif
 
+
 #if __COMPASS_ENABLED__
+int _Compass_Initialize(struct _CompassParam_T *pCompassParam);
+void _Compass_Init();
+void _Compass_ReadData(struct _CompassParam_T *pCompassParam);
+void _Compass_CalculateDirection(struct _CompassParam_T *pCompassParam);
+float _Compass_TiltCompensate(Vector mag, Vector normAccel);
+void _Compass_Calibrate(struct _CompassParam_T *pCompassParam);
+
+
 int _Compass_Initialize(struct _CompassParam_T *pCompassParam)
 {
     // initialize Compass
     Serialprintln(F("Initializing Compass..."));
-    _Compass_Boot();
+    _Compass_Init();
     
     // Calibrate Compass
     Serialprint(F("    Calibrating Compass...."));
     _Compass_Calibrate(&nCompassParam);
+    
+    // Set Offset
+    nCompass.setOffset(nCompassParam.nCompassOffsetX, nCompassParam.nCompassOffsetY);
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
@@ -453,7 +458,8 @@ int _Compass_Initialize(struct _CompassParam_T *pCompassParam)
     Serialprintln(F("Done"));
 }
 
-void _Compass_Boot()
+
+void _Compass_Init()
 {
     // Open communication with HMC5883L
     Wire.beginTransmission(HMC5883L_ADDRESS);
@@ -481,28 +487,42 @@ void _Compass_Boot()
 
 void _Compass_ReadData(struct _CompassParam_T *pCompassParam)
 {
-    int i = 0;
-    byte result[6];
-    int MagX,MagY,MagZ;
-    static float MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
+    int                 i = 0;
+    byte                result[6];
+    int                 MagX,MagY,MagZ;
+    static float        MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
+    const float         nRadtoDegOffset = 57.2958;                  // = 180.0 / M_PI;
+    const float         nDougleRad = 6.283184;                      // = 2 * 3.141592
     
     //Tell the HMC5883 where to begin reading data
     Wire.beginTransmission(HMC5883L_ADDRESS);
-    Wire.write(0x03);                                           // Select register 3, X MSB register
+    Wire.write(0x03);                                               // Select register 3, X MSB register
     Wire.endTransmission();
     
     //Read data from each axis, 2 registers per axis
     Wire.requestFrom(HMC5883L_ADDRESS, 6);
     while(Wire.available())
     {
-        result[i] = Wire.read();
+        pCompassParam->nRawBits[i] = Wire.read();
         i++;
     }
     Wire.endTransmission();
     
-    pCompassParam->nRawData[X_AXIS] = ((result[0] << 8) | result[1]);                   //offset + 1.05
-    pCompassParam->nRawData[Z_AXIS] = -((result[2] << 8) | result[3]);                  // + 0.05
-    pCompassParam->nRawData[Y_AXIS] = -((result[4] << 8) | result[5]);                  // - 0.55
+    pCompassParam->nRawData[X_AXIS] = ((pCompassParam->nRawBits[0] << 8) | pCompassParam->nRawBits[1]);                  // Offset + 1.05
+    pCompassParam->nRawData[Z_AXIS] = ((pCompassParam->nRawBits[2] << 8) | pCompassParam->nRawBits[3]);                  // + 0.05
+    pCompassParam->nRawData[Y_AXIS] = ((pCompassParam->nRawBits[4] << 8) | pCompassParam->nRawBits[5]);                  // - 0.55
+    
+}
+
+
+void _Compass_CalculateDirection(struct _CompassParam_T *pCompassParam)
+{
+    int                 i = 0;
+    int                 MagX,MagY,MagZ;
+    static float        MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
+    const float         nRadtoDegOffset = 57.2958;                  // = 180.0 / M_PI;
+    const float         nDougleRad = 6.283184;                      // = 2 * 3.141592
+    
     pCompassParam->nNormData[X_AXIS] = pCompassParam->nNormData[X_AXIS] + (pCompassParam->nRawData[X_AXIS] - pCompassParam->nNormData[X_AXIS])*0.55;
     pCompassParam->nNormData[Y_AXIS] = pCompassParam->nNormData[Y_AXIS] + (pCompassParam->nRawData[Y_AXIS] - pCompassParam->nNormData[Y_AXIS])*0.55;
     pCompassParam->nNormData[Z_AXIS] = pCompassParam->nNormData[Z_AXIS] + (pCompassParam->nRawData[Z_AXIS] - pCompassParam->nNormData[Z_AXIS])*0.55;
@@ -515,12 +535,12 @@ void _Compass_ReadData(struct _CompassParam_T *pCompassParam)
     pCompassParam->nCompassHeadingRad = atan2(pCompassParam->nRawData[Y_AXIS], pCompassParam->nRawData[X_AXIS]) + nDeclinationAngle;
     
     if(pCompassParam->nCompassHeadingRad < 0)
-        pCompassParam->nCompassHeadingRad += 2 * PI;
+        pCompassParam->nCompassHeadingRad += nDougleRad;
     
-    if(pCompassParam->nCompassHeadingRad > 2 * PI)
-        pCompassParam->nCompassHeadingRad -= 2 * PI;
+    if(pCompassParam->nCompassHeadingRad > nDougleRad)
+        pCompassParam->nCompassHeadingRad -= nDougleRad;
     
-    pCompassParam->nCompassHeadingDeg = pCompassParam->nCompassHeadingRad * 180 / M_PI;
+    pCompassParam->nCompassHeadingDeg = pCompassParam->nCompassHeadingRad * nRadtoDegOffset;
     
     //if(pCompassParam->nCompassHeadingDeg >= 1 && pCompassParam->nCompassHeadingDeg < 240)
     //    pCompassParam->nCompassHeadingDeg = map(pCompassParam->nCompassHeadingDeg, 0, 239, 0, 179);
@@ -565,38 +585,45 @@ float _Compass_TiltCompensate(Vector mag, Vector normAccel)
 
 void _Compass_Calibrate(struct _CompassParam_T *pCompassParam)
 {
-    int     i = 0;
-    float   nSumMinX = 0;
-    float   nSumMaxX = 0;
-    float   nSumMinY = 0;
-    float   nSumMaxY = 0;
-    const int nLoopCnt = 50;
+    int                 i = 0;
+    float               nSumMinX = 0.0f;
+    float               nSumMaxX = 0.0f;
+    float               nSumMinY = 0.0f;
+    float               nSumMaxY = 0.0f;
+    const int           nLoopCnt = 50;
     
     for(i=0 ; i<nLoopCnt ; i++)
     {
-        float     nMinX = 0;
-        float     nMaxX = 0;
-        float     nMinY = 0;
-        float     nMaxY = 0;
-        Vector    nLocalCompass = nCompass.readRaw();
+        float           nMinX = 0.0f;
+        float           nMaxX = 0.0f;
+        float           nMinY = 0.0f;
+        float           nMaxY = 0.0f;
+        
+        _Compass_ReadData(pCompassParam);
         
         // Determine Min / Max values
-        if (nLocalCompass.XAxis < nMinX) nMinX = nLocalCompass.XAxis;
-        if (nLocalCompass.XAxis > nMaxX) nMaxX = nLocalCompass.XAxis;
-        if (nLocalCompass.YAxis < nMinY) nMinY = nLocalCompass.YAxis;
-        if (nLocalCompass.YAxis > nMaxY) nMaxY = nLocalCompass.YAxis;
+        if(pCompassParam->nRawData[X_AXIS] < nMinX)
+            nMinX = pCompassParam->nRawData[X_AXIS];
+        if(pCompassParam->nRawData[X_AXIS] > nMaxX)
+            nMaxX = pCompassParam->nRawData[X_AXIS];
+        if(pCompassParam->nRawData[Y_AXIS] < nMinY)
+            nMinY = pCompassParam->nRawData[Y_AXIS];
+        if(pCompassParam->nRawData[Y_AXIS] > nMaxY)
+            nMaxY = pCompassParam->nRawData[Y_AXIS];
         
         nSumMinX += nMinX;
         nSumMaxX += nMaxX;
         nSumMinY += nMinY;
         nSumMaxY += nMaxY;
         
+        delay(20);
+        
         Serialprint(".");
     }
     
     // Calculate offsets
-    nCompassOffsetX = (nSumMaxX + nSumMinX) / 2 / nLoopCnt;
-    nCompassOffsetY = (nSumMaxY + nSumMinY) / 2 / nLoopCnt;
+    pCompassParam->nCompassOffsetX = (nSumMaxX + nSumMinX) / 2 / nLoopCnt;
+    pCompassParam->nCompassOffsetY = (nSumMaxY + nSumMinY) / 2 / nLoopCnt;
 }
 #endif
 
@@ -693,46 +720,25 @@ void loop()
     nStartTime1 = micros();
     #if __GYROACCEL_ENABLED__
     {
-        // reset interrupt flag and get INT_STATUS byte
-        nMPUInterruptFlag = false;
-        nMPUInterruptStat = nGyroAccel.getIntStatus();
-        //while(!(nMPUInterruptStat & 0x02))
-        //{
-        // Wait MPU6050 Interrupt
-        //    nMPUInterruptStat = nGyroAccel.getIntStatus();
-        //}
-        
-        // check for overflow (this should never happen unless our code is too inefficient)
-//        if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
-//        {
-//            // reset so we can continue cleanly
-//            nGyroAccel.resetFIFO();
-//            //Serialprintln(F("FIFO overflow!"));
-//            
-//            // otherwise, check for DMP data ready interrupt (this should happen frequently)
-//            
-//            bSkipFlag = true;
-//        }
-//        else if(nMPUInterruptStat & 0x02)
-        {
-            _GyroAccel_GetData(&nGyroAccelParam);
-            _GyroAccel_CalculateAngle(pGyroAccelParam);
-            Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[X_AXIS]);
-            Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[Y_AXIS]);
-            Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[Z_AXIS]);
-        }
+        _GyroAccel_GetData(&nGyroAccelParam);
+        _GyroAccel_CalculateAngle(&nGyroAccelParam);
     }
     #endif
     
     nStartTime2 = micros();
     // Get Compass Sensor Value
     #if __COMPASS_ENABLED__
-    _Compass_ReadData(&nCompassParam);
+    {
+        _Compass_ReadData(&nCompassParam);
+        _Compass_CalculateDirection(&nCompassParam);
+    }
     #endif
     
     // Get Barometer Sensor Value
     #if __BAROMETER_ENABLED__
-    _Barometer_GetData(&nBaroParam);
+    {
+        _Barometer_GetData(&nBaroParam);
+    }
     #endif
     
     nStartTime3 = micros();
@@ -761,9 +767,6 @@ void loop()
     //_print_RC_Signals();
     nEndTime = micros();
     Serialprint(" ");Serialprint((nEndTime - nStartTime0)/1000);
-    Serialprint(" ");Serialprint((nEndTime - nStartTime1)/1000);
-    Serialprint(" ");Serialprint((nEndTime - nStartTime2)/1000);
-    Serialprint(" ");Serialprint((nEndTime - nStartTime3)/1000);
     Serialprintln("");
     #endif
 }
@@ -1085,6 +1088,12 @@ void _print_BarometerData(struct _BaroParam_T *pBaroParam)
     #endif
 }
 #endif
+
+
+
+
+
+
 
 
 
