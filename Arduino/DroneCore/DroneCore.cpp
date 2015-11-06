@@ -285,7 +285,10 @@ Servo                   nESC[4];
 //inline float get_last_gyro_x_angle(pGyroAccelParam, idx) {return last_gyro_x_angle;}
 //inline float get_last_gyro_y_angle(pGyroAccelParam, idx) {return last_gyro_y_angle;}
 //inline float get_last_gyro_z_angle(pGyroAccelParam, idx) {return last_gyro_z_angle;}
-
+int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam);
+void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam);
 
 int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
 {
@@ -362,6 +365,9 @@ void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam)
 
 void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam)
 {
+    int16_t             *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
+    int16_t             *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
+
     // Read Gyro and Accelerate Data
     nGyroAccel.getRotation(&pGyro[X_AXIS], &pGyro[Y_AXIS], &pGyro[Z_AXIS]);
     nGyroAccel.getAcceleration(&pAccel[X_AXIS], &pAccel[Y_AXIS], &pAccel[Z_AXIS]);
@@ -432,6 +438,13 @@ void _GyroAccel_SetOldData(struct _GyroAccelParam_T *pGyroAccelParam)
 #endif
 
 #if __COMPASS_ENABLED__
+int _Compass_Initialize(struct _CompassParam_T *pCompassParam);
+void _Compass_Boot();
+void _Compass_ReadData(struct _CompassParam_T *pCompassParam);
+float _Compass_TiltCompensate(Vector mag, Vector normAccel);
+void _Compass_Calibrate(struct _CompassParam_T *pCompassParam);
+
+
 int _Compass_Initialize(struct _CompassParam_T *pCompassParam)
 {
     // initialize Compass
@@ -716,7 +729,7 @@ void loop()
 //        else if(nMPUInterruptStat & 0x02)
         {
             _GyroAccel_GetData(&nGyroAccelParam);
-            _GyroAccel_CalculateAngle(pGyroAccelParam);
+            _GyroAccel_CalculateAngle(&nGyroAccelParam);
             Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[X_AXIS]);
             Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[Y_AXIS]);
             Serialprint(" ");Serialprint(nGyroAccelParam.nFineAngle[Z_AXIS]);
@@ -1085,6 +1098,11 @@ void _print_BarometerData(struct _BaroParam_T *pBaroParam)
     #endif
 }
 #endif
+
+
+
+
+
 
 
 

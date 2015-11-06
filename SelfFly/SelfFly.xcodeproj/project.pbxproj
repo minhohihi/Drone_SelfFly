@@ -56,6 +56,8 @@
 		8B31BA0D1BEAE10B005634F8 /* Servo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B31B9DC1BEAE10B005634F8 /* Servo.cpp */; };
 		8B31BA0E1BEAE10B005634F8 /* ServoTimers.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B31B9DD1BEAE10B005634F8 /* ServoTimers.h */; };
 		8B31BA0F1BEAE10B005634F8 /* Servo.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B31B9DE1BEAE10B005634F8 /* Servo.h */; };
+		8B31BA131BEC326C005634F8 /* Sensors.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B31BA121BEC326C005634F8 /* Sensors.h */; };
+		8B367D771BEC92AF00CB9B92 /* DroneCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B367D761BEC92AF00CB9B92 /* DroneCore.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -351,6 +353,8 @@
 		8B31B9DC1BEAE10B005634F8 /* Servo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Servo.cpp; sourceTree = "<group>"; };
 		8B31B9DD1BEAE10B005634F8 /* ServoTimers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServoTimers.h; sourceTree = "<group>"; };
 		8B31B9DE1BEAE10B005634F8 /* Servo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Servo.h; sourceTree = "<group>"; };
+		8B31BA121BEC326C005634F8 /* Sensors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Sensors.h; path = ../../../../Documents/Arduino/libraries/Sensors/Sensors.h; sourceTree = "<group>"; };
+		8B367D761BEC92AF00CB9B92 /* DroneCore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DroneCore.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -385,6 +389,8 @@
 			isa = PBXGroup;
 			children = (
 				8B31B85E1BEAE10A005634F8 /* DroneCore.ino */,
+				8B31BA121BEC326C005634F8 /* Sensors.h */,
+				8B367D761BEC92AF00CB9B92 /* DroneCore.cpp */,
 			);
 			name = DroneCore;
 			path = ../Arduino/DroneCore;
@@ -1465,6 +1471,7 @@
 				8B31BA061BEAE10B005634F8 /* MS561101BA.h in Headers */,
 				8B31B9E21BEAE10B005634F8 /* bma180.h in Headers */,
 				8B31B9E91BEAE10B005634F8 /* calibration.h in Headers */,
+				8B31BA131BEC326C005634F8 /* Sensors.h in Headers */,
 				8B31B9EB1BEAE10B005634F8 /* CommunicationUtils.h in Headers */,
 				8B31B9F61BEAE10B005634F8 /* I2Cdev.h in Headers */,
 			);
@@ -1539,6 +1546,7 @@
 				8B31B9FF1BEAE10B005634F8 /* MPU60X0.cpp in Sources */,
 				8B31B9DF1BEAE10B005634F8 /* ADXL345.cpp in Sources */,
 				8B31BA041BEAE10B005634F8 /* README.md in Sources */,
+				8B367D771BEC92AF00CB9B92 /* DroneCore.cpp in Sources */,
 				8B31BA051BEAE10B005634F8 /* MS561101BA.cpp in Sources */,
 				8B31B9FA1BEAE10B005634F8 /* MPU6050.cpp in Sources */,
 				8B31BA071BEAE10B005634F8 /* ByteBuffer.cpp in Sources */,
@@ -1667,6 +1675,7 @@
 				8B31B85C1BEAE0F1005634F8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
