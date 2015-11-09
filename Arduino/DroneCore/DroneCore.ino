@@ -2,12 +2,7 @@
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
 #define __DEBUG__                           (1)
-#define __GYROACCEL_ENABLED__               (1)
-#if __GYROACCEL_ENABLED__
-    #define __GYROACCEL_DMP_ENABLED__       (0)
-#endif
-#define __MAG_ENABLED__                     (1)
-#define __BAROMETER_ENABLED__               (1)
+#define __GYROACCEL_DMP_ENABLED__           (0)
 
 // Arduino Pin configuration
 #define PIN_GY86_EXT_INTERRUPT              (13)
@@ -61,12 +56,15 @@
 #define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
 // Min & Max Val for Magnetic
-#define M_X_MIN                             (-270)    //-654  -693   -688
-#define M_X_MAX                             (585)     //185   209    170
-#define M_Y_MIN                             (-600)    //-319  -311   -310
-#define M_Y_MAX                             (260)     //513   563    546
-#define M_Z_MIN                             (-425)    //-363  -374   -377
-#define M_Z_MAX                             (285)     //386   429    502
+#define MAG_X_MIN                           (-270)    //-654  -693   -688
+#define MAG_X_MAX                           (585)     //185   209    170
+#define MAG_X_RANGE                         (MAG_X_MAX - MAG_X_MIN)
+#define MAG_Y_MIN                           (-600)    //-319  -311   -310
+#define MAG_Y_MAX                           (260)     //513   563    546
+#define MAG_Y_RANGE                         (MAG_Y_MAX - MAG_Y_MIN)
+#define MAG_Z_MIN                           (-425)    //-363  -374   -377
+#define MAG_Z_MAX                           (285)     //386   429    502
+#define MAG_Z_RANGE                         (MAG_Z_MAX - MAG_Z_MIN)
 
 // Flight parameters
 #define PITCH_ANG_MIN                       (-30)
@@ -87,6 +85,8 @@
 #define Y_AXIS                              (1)
 #define Z_AXIS                              (2)
 
+#define RAD_TO_DEG_SCALE                    (57.2958f)          // = 180 / PI
+
 /*----------------------------------------------------------------------------------------
  File Inclusions
  ----------------------------------------------------------------------------------------*/
@@ -96,20 +96,10 @@
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include <Wire.h>
 #endif
-
-#if __GYROACCEL_ENABLED__
-    //#include <MPU6050.h>
-    #include <MPU6050_6Axis_MotionApps20.h>
-#endif
-
-#if __MAG_ENABLED__
-    #include <HMC5883L.h>
-#endif
-
-#if __BAROMETER_ENABLED__
-    #include <MS5611.h>
-    #include <MS561101BA.h>
-#endif
+//#include <MPU6050.h>
+#include <MPU6050_6Axis_MotionApps20.h>
+#include <HMC5883L.h>
+#include <MS561101BA.h>
 
 
 /*----------------------------------------------------------------------------------------
@@ -154,34 +144,30 @@ typedef struct _AxisErrRate_T
     float               nTorque;
 }AxisErrRate_T;
 
-#if __GYROACCEL_ENABLED__
-typedef struct _GyroAccelParam_T
+typedef struct _AccelGyroParam_T
 {
-    int16_t             nGyro[3];
-    int16_t             nAccel[3];
+    int16_t             nRawGyro[3];
+    int16_t             nRawAccel[3];
     float               nBaseGyro[3];
     float               nBaseAccel[3];
     float               nCurrReadTime;
     float               nPrevReadTime;
     float               nFineAngle[3];                          // Filtered Angles
     float               nFineRPY[3];                            // yaw pitch roll values
-}GyroAccelParam_T;
-#endif
+}AccelGyroParam_T;
 
-#if __MAG_ENABLED__
 typedef struct _MagParam_T
 {
     byte                nRawBits[6];
-    //Vector              nRawData;
-    //Vector              nNormData;
-    float               nRawData[3];
-    float               nNormData[3];
+    //Vector              nRawMagData;
+    //Vector              nNormMagData;
+    float               nRawMagData[3];
+    float               nNormMagData[3];
+    float               nFineMag[3];
     float               nMagHeadingRad;
     float               nMagHeadingDeg;
 }MagneticParam_T;
-#endif
 
-#if __BAROMETER_ENABLED__
 typedef struct _BaroParam_T
 {
     uint32_t            nRawTemp;                               // Raw Temperature Data
@@ -194,7 +180,6 @@ typedef struct _BaroParam_T
     double              nRefTemperature;                        // Reference Temperature Value
     int32_t             nRefPressure;                           // Reference Pressure Value
 }BaroParam_T;
-#endif
 
 
 /*----------------------------------------------------------------------------------------
@@ -208,19 +193,35 @@ inline void nRCInterrupt_CB1();
 inline void nRCInterrupt_CB2();
 inline void nRCInterrupt_CB3();
 inline void nRCInterrupt_CB5();
-inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3]);
+inline void _CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3]);
 inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int nThrottle[4]);
 inline void UpdateESCs(int nThrottle[4]);
 inline void dmpDataReady();
 inline void arm();
 void _ESC_Initialize();
 void _RC_Initialize();
-#if __MAG_ENABLED__
-    void MagHMC5883Int();
-    void Magnetic_ReadData(struct _MagParam_T *pMagParam);
-    float tiltCompensate(Vector mag, Vector normAccel);
-    void CalibrateMagnetic();
+
+int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam);
+void _AccelGyro_GetData(struct _AccelGyroParam_T *pGyroAccelParam);
+void _AccelGyro_CalculateAngle(struct _AccelGyroParam_T *pGyroAccelParam);
+void _AccelGyro_Calibrate(struct _AccelGyroParam_T *pGyroAccelParam);
+#if __GYROACCEL_DMP_ENABLED__
+    int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam);
 #endif
+
+int _Mag_Initialize(struct _MagParam_T *pMagParam);
+void _Mag_Start();
+void _Mag_GetData(struct _MagParam_T *pMagParam);
+void _Mag_CalculateDirection(struct _MagParam_T *pMagParam);
+float _Mag_TiltCompensate(Vector mag, Vector normAccel);
+void _Mag_Calibrate(struct _MagParam_T *pMagParam);
+
+void _GetYawPitchRoll(float *pYPR);
+void _GetSensorRawData(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam);
+void _GetQuaternion(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pQ);
+void _GetYawPitchRollRad(float *pYPR);
+void _Convert_Rad_to_Deg(float *pArr);
+float _InvSqrt(float nNumber);
 
 #if __DEBUG__
     void _print_RC_Signals();
@@ -252,41 +253,22 @@ unsigned long           nRCPrevChangeTime5 = micros();
 float                   nDeclinationAngle = 0.0f;
 
 Servo                   nESC[4];
-#if __GYROACCEL_ENABLED__
-    MPU6050             nGyroAccel;                                   // MPU6050 Gyroscope Interface
-    GyroAccelParam_T    nGyroAccelParam;
-    Quaternion          nQuater;
-    VectorFloat         nGravity;
-#endif
+MPU6050                 nGyroAccel;                                   // MPU6050 Gyroscope Interface
+AccelGyroParam_T        nAccelGyroParam;
+Quaternion              nQuater;
+VectorFloat             nGravity;
 
-#if __MAG_ENABLED__
-    HMC5883L             nMagHndl;                              // HMC5883 Magnetic Interface
-    MagneticParam_T      nMagParam;
-#endif
-#if __BAROMETER_ENABLED__
-    MS561101BA           nBarometer;
-    BaroParam_T          nBaroParam;
-#endif
+HMC5883L                nMagHndl;                              // HMC5883 Magnetic Interface
+MagneticParam_T         nMagParam;
+
+MS561101BA              nBarometer;
+BaroParam_T             nBaroParam;
 
 
 /*----------------------------------------------------------------------------------------
  Function Implementation
  ----------------------------------------------------------------------------------------*/
-#if __GYROACCEL_ENABLED__
-#define GYROACCEL_GET_BASE_GYRO(pGyroAccelParam, idx)               (pGyroAccelParam->nBaseGyro[idx])
-#define GYROACCEL_GET_BASE_Accel(pGyroAccelParam, idx)              (pGyroAccelParam->nBaseAccel[idx])
-#define GYROACCEL_GET_PREV_GYROANG(pGyroAccelParam, idx)               (pGyroAccelParam->nPrevGyro[idx])
-#define GYROACCEL_GET_PREV_AccelANG(pGyroAccelParam, idx)              (pGyroAccelParam->nPrevAccel[idx])
-
-int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam);
-void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam);
-void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam);
-void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam);
-#if __GYROACCEL_DMP_ENABLED__
-    int _GyroAccel_GetDMPData(struct _GyroAccelParam_T *pGyroAccelParam);
-#endif
-
-int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
+int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
 {
     Serialprintln(F("Initializing MPU..."));
     nGyroAccel.initialize();
@@ -352,7 +334,7 @@ int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
 
     // Calibrate GyroAccel
     Serialprint(F("    Calibrating Gyro & Accel   "));
-    _GyroAccel_Calibrate(pGyroAccelParam);
+    _AccelGyro_Calibrate(pGyroAccelParam);
     Serialprintln(F("    Done"));
     Serialprintln(F("Done"));
     
@@ -360,26 +342,25 @@ int _GyroAccel_Initialize(struct _GyroAccelParam_T *pGyroAccelParam)
 }
 
 
-void _GyroAccel_GetData(struct _GyroAccelParam_T *pGyroAccelParam)
+void _AccelGyro_GetData(struct _AccelGyroParam_T *pGyroAccelParam)
 {
-    int16_t             *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
-    int16_t             *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
+    int16_t             *pRawGyro = &(pGyroAccelParam->nRawGyro[X_AXIS]);
+    int16_t             *pRawAccel = &(pGyroAccelParam->nRawAccel[X_AXIS]);
 
     pGyroAccelParam->nCurrReadTime = micros();
 
     // Read Gyro and Accelerate Data
-    nGyroAccel.getRotation(&pGyro[X_AXIS], &pGyro[Y_AXIS], &pGyro[Z_AXIS]);
-    nGyroAccel.getAcceleration(&pAccel[X_AXIS], &pAccel[Y_AXIS], &pAccel[Z_AXIS]);
-    //nGyroAccel.getMotion6(&pGyro[X_AXIS], &pGyro[Y_AXIS], &pGyro[Z_AXIS], &pAccel[X_AXIS], &pAccel[Y_AXIS], &pAccel[Z_AXIS]);
+    nGyroAccel.getRotation(&pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
+    nGyroAccel.getAcceleration(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS]);
+    //nGyroAccel.getMotion6(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS], &pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
 }
 
 
-void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam)
+void _AccelGyro_CalculateAngle(struct _AccelGyroParam_T *pGyroAccelParam)
 {
     const float         nFS = 131.0f;
-    const float         nRadtoDegOffset = 57.2958;             // = 180.0 / M_PI;
-    const int16_t       *pGyro = &(pGyroAccelParam->nGyro[X_AXIS]);
-    const int16_t       *pAccel = &(pGyroAccelParam->nAccel[X_AXIS]);
+    const int16_t       *pRawGyro = &(pGyroAccelParam->nRawGyro[X_AXIS]);
+    const int16_t       *pRawAccel = &(pGyroAccelParam->nRawAccel[X_AXIS]);
     const float         *pBaseGyro = &(pGyroAccelParam->nBaseGyro[X_AXIS]);
     float               *pFineAngle = &(pGyroAccelParam->nFineAngle[X_AXIS]);
     static float               nGyroAngle[3] = {0, };
@@ -389,13 +370,13 @@ void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam)
     static float        nPrevRawAngle[3] = {0, };
     
     // Convert Gyro Values to Degrees/Sec
-    nGyroDiffAngle[X_AXIS] = (pGyro[X_AXIS] - pBaseGyro[X_AXIS]) / nFS;
-    nGyroDiffAngle[Y_AXIS] = (pGyro[Y_AXIS] - pBaseGyro[Y_AXIS]) / nFS;
-    nGyroDiffAngle[Z_AXIS] = (pGyro[Z_AXIS] - pBaseGyro[Z_AXIS]) / nFS;
+    nGyroDiffAngle[X_AXIS] = (pRawGyro[X_AXIS] - pBaseGyro[X_AXIS]) / nFS;
+    nGyroDiffAngle[Y_AXIS] = (pRawGyro[Y_AXIS] - pBaseGyro[Y_AXIS]) / nFS;
+    nGyroDiffAngle[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]) / nFS;
     
     // float accel_vector_length = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
-    nAccelAngle[X_AXIS] = atan(pAccel[Y_AXIS] / sqrt(pow(pAccel[X_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
-    nAccelAngle[Y_AXIS] = atan((-1) * pAccel[X_AXIS] / sqrt(pow(pAccel[Y_AXIS], 2) + pow(pAccel[Z_AXIS], 2))) * nRadtoDegOffset;
+    nAccelAngle[X_AXIS] = atan(pRawGyro[Y_AXIS] / sqrt(pow(pRawGyro[X_AXIS], 2) + pow(pRawGyro[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
+    nAccelAngle[Y_AXIS] = atan((-1) * pRawGyro[X_AXIS] / sqrt(pow(pRawGyro[Y_AXIS], 2) + pow(pRawGyro[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
     nAccelAngle[Z_AXIS] = 0;
     
     // Compute the (filtered) gyro angles
@@ -426,29 +407,29 @@ void _GyroAccel_CalculateAngle(struct _GyroAccelParam_T *pGyroAccelParam)
     // Update the saved data with the latest values
     pGyroAccelParam->nPrevReadTime = pGyroAccelParam->nCurrReadTime;
     
-    //Serialprint(nGyroAngle[0]);Serialprint("  ");Serialprint(nGyroAngle[1]);Serialprint("  ");Serialprint(nGyroAngle[2]);Serialprint("  /  ");
-    //Serialprint(nAccelAngle[0]);Serialprint("  ");Serialprint(nAccelAngle[1]);Serialprint("  ");Serialprint(nAccelAngle[2]);Serialprint("  /  ");
-    //Serialprint(pFineAngle[0]);Serialprint("  ");Serialprint(pFineAngle[1]);Serialprint("  ");Serialprint(pFineAngle[2]);Serialprint("  /  ");
+    Serialprint(nGyroAngle[0]);Serialprint("  ");Serialprint(nGyroAngle[1]);Serialprint("  ");Serialprint(nGyroAngle[2]);Serialprint("  /  ");
+    Serialprint(nAccelAngle[0]);Serialprint("  ");Serialprint(nAccelAngle[1]);Serialprint("  ");Serialprint(nAccelAngle[2]);Serialprint("  /  ");
+    Serialprint(pFineAngle[0]);Serialprint("  ");Serialprint(pFineAngle[1]);Serialprint("  ");Serialprint(pFineAngle[2]);Serialprint("  /  ");
 }
 
 
-void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam)
+void _AccelGyro_Calibrate(struct _AccelGyroParam_T *pGyroAccelParam)
 {
     int                     i = 0;
-    int32_t                 nGyro[3] = {0, };
-    int32_t                 nAccel[3] = {0, };
+    int32_t                 nRawGyro[3] = {0, };
+    int32_t                 nRawAccel[3] = {0, };
     const int               nLoopCnt = 20;
     
     for(i=0 ; i<nLoopCnt ; i++)
     {
-        _GyroAccel_GetData(pGyroAccelParam);
+        _AccelGyro_GetData(pGyroAccelParam);
         
-        nGyro[X_AXIS] += pGyroAccelParam->nGyro[X_AXIS];
-        nGyro[Y_AXIS] += pGyroAccelParam->nGyro[Y_AXIS];
-        nGyro[Z_AXIS] += pGyroAccelParam->nGyro[Z_AXIS];
-        nAccel[X_AXIS] += pGyroAccelParam->nAccel[X_AXIS];
-        nAccel[Y_AXIS] += pGyroAccelParam->nAccel[Y_AXIS];
-        nAccel[Z_AXIS] += pGyroAccelParam->nAccel[Z_AXIS];
+        nRawGyro[X_AXIS] += pGyroAccelParam->nRawGyro[X_AXIS];
+        nRawGyro[Y_AXIS] += pGyroAccelParam->nRawGyro[Y_AXIS];
+        nRawGyro[Z_AXIS] += pGyroAccelParam->nRawGyro[Z_AXIS];
+        nRawAccel[X_AXIS] += pGyroAccelParam->nRawAccel[X_AXIS];
+        nRawAccel[Y_AXIS] += pGyroAccelParam->nRawAccel[Y_AXIS];
+        nRawAccel[Z_AXIS] += pGyroAccelParam->nRawAccel[Z_AXIS];
         
         delay(20);
         
@@ -456,17 +437,17 @@ void _GyroAccel_Calibrate(struct _GyroAccelParam_T *pGyroAccelParam)
     }
     
     // Store the raw calibration values globally
-    pGyroAccelParam->nBaseGyro[X_AXIS] = nGyro[X_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseGyro[Y_AXIS] = nGyro[Y_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseGyro[Z_AXIS] = nGyro[Z_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[X_AXIS] = nAccel[X_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[Y_AXIS] = nAccel[Y_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[Z_AXIS] = nAccel[Z_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseGyro[X_AXIS] = nRawGyro[X_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseGyro[Y_AXIS] = nRawGyro[Y_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseGyro[Z_AXIS] = nRawGyro[Z_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseAccel[X_AXIS] = nRawAccel[X_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseAccel[Y_AXIS] = nRawAccel[Y_AXIS] / nLoopCnt;
+    pGyroAccelParam->nBaseAccel[Z_AXIS] = nRawAccel[Z_AXIS] / nLoopCnt;
 }
 
 
 #if __GYROACCEL_DMP_ENABLED__
-int _GyroAccel_GetDMPData(struct _GyroAccelParam_T *pGyroAccelParam)
+int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam)
 {
     uint16_t                nFIFOCnt = 0;                                               // count of all bytes currently in FIFO
     uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
@@ -525,16 +506,6 @@ int _GyroAccel_GetDMPData(struct _GyroAccelParam_T *pGyroAccelParam)
     return 0;
 }
 #endif
-#endif
-
-
-#if __MAG_ENABLED__
-int _Mag_Initialize(struct _MagParam_T *pMagParam);
-void _Mag_Start();
-void _Mag_ReadData(struct _MagParam_T *pMagParam);
-void _Mag_CalculateDirection(struct _MagParam_T *pMagParam);
-float _Mag_TiltCompensate(Vector mag, Vector normAccel);
-void _Mag_Calibrate(struct _MagParam_T *pMagParam);
 
 
 int _Mag_Initialize(struct _MagParam_T *pMagParam)
@@ -585,7 +556,7 @@ void _Mag_Start()
 }
 
 
-void _Mag_ReadData(struct _MagParam_T *pMagParam)
+void _Mag_GetData(struct _MagParam_T *pMagParam)
 {
     int                 i = 0;
     byte                result[6];
@@ -608,12 +579,12 @@ void _Mag_ReadData(struct _MagParam_T *pMagParam)
     }
     Wire.endTransmission();
     
-    pMagParam->nRawData[X_AXIS] = ((pMagParam->nRawBits[0] << 8) | pMagParam->nRawBits[1]);                  // Offset + 1.05
-    pMagParam->nRawData[Z_AXIS] = ((pMagParam->nRawBits[2] << 8) | pMagParam->nRawBits[3]);                  // + 0.05
-    pMagParam->nRawData[Y_AXIS] = ((pMagParam->nRawBits[4] << 8) | pMagParam->nRawBits[5]);                  // - 0.55
+    pMagParam->nRawMagData[X_AXIS] = ((pMagParam->nRawBits[0] << 8) | pMagParam->nRawBits[1]);                  // Offset + 1.05
+    pMagParam->nRawMagData[Z_AXIS] = ((pMagParam->nRawBits[2] << 8) | pMagParam->nRawBits[3]) * (-1);           // + 0.05
+    pMagParam->nRawMagData[Y_AXIS] = ((pMagParam->nRawBits[4] << 8) | pMagParam->nRawBits[5]) * (-1);           // - 0.55
     
-    //pMagParam->nRawData = nMagHndl.readRaw();
-    //pMagParam->nNormData = nMagHndl.readNormalize();
+    //pMagParam->nRawMagData = nMagHndl.readRaw();
+    //pMagParam->nNormMagData = nMagHndl.readNormalize();
 }
 
 
@@ -625,16 +596,16 @@ void _Mag_CalculateDirection(struct _MagParam_T *pMagParam)
     const float         nRadtoDegOffset = 57.2958;                  // = 180.0 / M_PI;
     const float         nDougleRad = 6.283184;                      // = 2 * 3.141592
     
-    pMagParam->nNormData[X_AXIS] = pMagParam->nNormData[X_AXIS] + (pMagParam->nRawData[X_AXIS] - pMagParam->nNormData[X_AXIS])*0.55;
-    pMagParam->nNormData[Y_AXIS] = pMagParam->nNormData[Y_AXIS] + (pMagParam->nRawData[Y_AXIS] - pMagParam->nNormData[Y_AXIS])*0.55;
-    pMagParam->nNormData[Z_AXIS] = pMagParam->nNormData[Z_AXIS] + (pMagParam->nRawData[Z_AXIS] - pMagParam->nNormData[Z_AXIS])*0.55;
+    pMagParam->nNormMagData[X_AXIS] = pMagParam->nNormMagData[X_AXIS] + (pMagParam->nRawMagData[X_AXIS] - pMagParam->nNormMagData[X_AXIS]) * 0.55;
+    pMagParam->nNormMagData[Y_AXIS] = pMagParam->nNormMagData[Y_AXIS] + (pMagParam->nRawMagData[Y_AXIS] - pMagParam->nNormMagData[Y_AXIS]) * 0.55;
+    pMagParam->nNormMagData[Z_AXIS] = pMagParam->nNormMagData[Z_AXIS] + (pMagParam->nRawMagData[Z_AXIS] - pMagParam->nNormMagData[Z_AXIS]) * 0.55;
     
     // adjust for  Magnetic axis offsets/sensitivity differences by scaling to +/-5 range
-    //pMagParam->nNormData[X_AXIS] = ((float)(MagXf - M_X_MIN) / (M_X_MAX - M_X_MIN))*10.0 - 5.0;
-    //pMagParam->nNormData[Y_AXIS] = ((float)(MagYf - M_Y_MIN) / (M_Y_MAX - M_Y_MIN))*10.0 - 5.0;
-    //pMagParam->nNormData[Z_AXIS] = ((float)(MagZf - M_Z_MIN) / (M_Z_MAX - M_Z_MIN))*10.0 - 5.0;
+    pMagParam->nFineMag[X_AXIS] = ((pMagParam->nNormMagData[X_AXIS] - MAG_X_MIN) / (MAG_X_RANGE)) * 10.0 - 5.0;
+    pMagParam->nFineMag[Y_AXIS] = ((pMagParam->nNormMagData[Y_AXIS] - MAG_Y_MIN) / (MAG_Y_RANGE)) * 10.0 - 5.0;
+    pMagParam->nFineMag[Z_AXIS] = ((pMagParam->nNormMagData[Z_AXIS] - MAG_Z_MIN) / (MAG_Z_RANGE)) * 10.0 - 5.0;
     
-    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawData[Y_AXIS], pMagParam->nRawData[X_AXIS]) + nDeclinationAngle;
+    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMagData[Y_AXIS], pMagParam->nRawMagData[X_AXIS]) + nDeclinationAngle;
     
     if(pMagParam->nMagHeadingRad < 0)
         pMagParam->nMagHeadingRad += nDougleRad;
@@ -701,17 +672,17 @@ void _Mag_Calibrate(struct _MagParam_T *pMagParam)
         float           nMinY = 0.0f;
         float           nMaxY = 0.0f;
         
-        _Mag_ReadData(pMagParam);
+        _Mag_GetData(pMagParam);
         
         // Determine Min / Max values
-        if(pMagParam->nRawData[X_AXIS] < nMinX)
-            nMinX = pMagParam->nRawData[X_AXIS];
-        if(pMagParam->nRawData[X_AXIS] > nMaxX)
-            nMaxX = pMagParam->nRawData[X_AXIS];
-        if(pMagParam->nRawData[Y_AXIS] < nMinY)
-            nMinY = pMagParam->nRawData[Y_AXIS];
-        if(pMagParam->nRawData[Y_AXIS] > nMaxY)
-            nMaxY = pMagParam->nRawData[Y_AXIS];
+        if(pMagParam->nRawMagData[X_AXIS] < nMinX)
+            nMinX = pMagParam->nRawMagData[X_AXIS];
+        if(pMagParam->nRawMagData[X_AXIS] > nMaxX)
+            nMaxX = pMagParam->nRawMagData[X_AXIS];
+        if(pMagParam->nRawMagData[Y_AXIS] < nMinY)
+            nMinY = pMagParam->nRawMagData[Y_AXIS];
+        if(pMagParam->nRawMagData[Y_AXIS] > nMaxY)
+            nMaxY = pMagParam->nRawMagData[Y_AXIS];
         
         nSumMinX += nMinX;
         nSumMaxX += nMaxX;
@@ -726,10 +697,7 @@ void _Mag_Calibrate(struct _MagParam_T *pMagParam)
     // Calculate offsets
     nMagHndl.setOffset(((nSumMaxX + nSumMinX) / 2 / nLoopCnt), ((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
 }
-#endif
 
-
-#if __BAROMETER_ENABLED__
 int _Barometer_Initialize(struct _BaroParam_T *pBaroParam)
 {
     Serialprint(F("Initializing Barometer..."));
@@ -747,8 +715,6 @@ void _Barometer_GetData(struct _BaroParam_T *pBaroParam)
     pBaroParam->nAvgpressure = nBarometer.getAvgPressure();
     pBaroParam->nAbsoluteAltitude = nBarometer.getAltitude(pBaroParam->nAvgpressure, pBaroParam->nRealTemperature);
 }
-#endif
-
 
 void setup()
 {
@@ -769,32 +735,14 @@ void setup()
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
     #endif
     
-    // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
-    // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
-    // the baud timing being too misaligned with processor ticks. You must use
-    // 38400 or slower in these cases, or use some kind of external separate
-    // crystal solution for the UART timer.
-    
-    #if __GYROACCEL_ENABLED__
-    {
-        // Initialize Gyro_Accel
-        _GyroAccel_Initialize(&nGyroAccelParam);
-    }
-    #endif
-    
-    #if __MAG_ENABLED__
-    {
-        // Initialize Magnetic
-        _Mag_Initialize(&nMagParam);
-    }
-    #endif
-    
-    #if __BAROMETER_ENABLED__
-    {
-        // Initialize Barometer
-        _Barometer_Initialize(&nBaroParam);
-    }
-    #endif
+    // Initialize Gyro_Accel
+    _AccelGyro_Initialize(&nAccelGyroParam);
+
+    // Initialize Magnetic
+    _Mag_Initialize(&nMagParam);
+
+    // Initialize Barometer
+    _Barometer_Initialize(&nBaroParam);
     
     // Initialize RemoteController
     _RC_Initialize();
@@ -816,33 +764,22 @@ void loop()
     ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
     
     nStartTime1 = micros();
-    #if __GYROACCEL_ENABLED__
-    {
-        #if !__GYROACCEL_DMP_ENABLED__
-        _GyroAccel_GetData(&nGyroAccelParam);
-        _GyroAccel_CalculateAngle(&nGyroAccelParam);
-        #else
-        if(0 != _GyroAccel_GetDMPData(&nGyroAccelParam))
-            return;
-        #endif
-    }
+    // Get AccelGyro Sensor Value
+    #if !__GYROACCEL_DMP_ENABLED__
+    _AccelGyro_GetData(&nAccelGyroParam);
+    _AccelGyro_CalculateAngle(&nAccelGyroParam);
+    #else
+    if(0 != _AccelGyro_GetDMPData(&nAccelGyroParam))
+        return;
     #endif
     
     nStartTime2 = micros();
     // Get Magnetic Sensor Value
-    #if __MAG_ENABLED__
-    {
-        _Mag_ReadData(&nMagParam);
-        _Mag_CalculateDirection(&nMagParam);
-    }
-    #endif
+    _Mag_GetData(&nMagParam);
+    _Mag_CalculateDirection(&nMagParam);
     
     // Get Barometer Sensor Value
-    #if __BAROMETER_ENABLED__
-    {
-        _Barometer_GetData(&nBaroParam);
-    }
-    #endif
+    _Barometer_GetData(&nBaroParam);
     
     nStartTime3 = micros();
     if(false == bSkipFlag)
@@ -853,7 +790,7 @@ void loop()
         int                     nThrottle[4] = {ESC_MIN, ESC_MIN, ESC_MIN, ESC_MIN};        // throttles
         
         // PID Computation
-        CalculatePID(&nRoll, &nPitch, &nYaw, nGyroAccelParam.nFineAngle, nGyroAccelParam.nFineRPY);
+        _CalculatePID(&nRoll, &nPitch, &nYaw, nAccelGyroParam.nFineAngle, nAccelGyroParam.nFineRPY);
         
         //Throttle Calculation
         CalculateThrottleVal(&nRoll, &nPitch, &nYaw, nThrottle);
@@ -863,8 +800,8 @@ void loop()
     }
     
     #if __DEBUG__
-    //_print_Gyro_Signals(nGyroAccelParam.nFineAngle);
-    //_print_RPY_Signals(nGyroAccelParam.nFineRPY);
+    //_print_Gyro_Signals(nAccelGyroParam.nFineAngle);
+    //_print_RPY_Signals(nAccelGyroParam.nFineRPY);
     //_print_MagData(&nMagParam);
     //_print_BarometerData(&nBaroParam);
     //_print_Throttle_Signals(nThrottle);
@@ -878,7 +815,7 @@ void loop()
 
 float Clip3Float(const float nValue, const int MIN, const int MAX)
 {
-    float           nClipVal = nValue;
+    float               nClipVal = nValue;
     
     if(nValue < MIN)
         nClipVal = MIN;
@@ -891,7 +828,7 @@ float Clip3Float(const float nValue, const int MIN, const int MAX)
 
 int Clip3Int(const int nValue, const int MIN, const int MAX)
 {
-    int             nClipVal = nValue;
+    int                 nClipVal = nValue;
     
     if(nValue < MIN)
         nClipVal = MIN;
@@ -912,8 +849,89 @@ inline void releaseLock()
     nInterruptLockFlag = false;
 }
 
+void _GetYawPitchRoll(float *pYPR)
+{
+    _GetYawPitchRollRad(pYPR);
+    _Convert_Rad_to_Deg(pYPR);
+}
 
-inline void CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3])
+
+void _GetSensorRawData(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam)
+{
+    _AccelGyro_GetData(pAccelGyroParam);
+    
+    _Mag_GetData(pMagParam);
+}
+
+
+void _GetQuaternion(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pQ)
+{
+    float               val[9];
+    
+    //getValues(val);
+    _GetSensorRawData(pAccelGyroParam, pMagParam);
+    
+    //now = micros();
+    //sampleFreq = 1.0 / ((now - lastUpdate) / 1000000.0);
+    //lastUpdate = now;
+
+    // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
+    //AHRSupdate(val[3] * M_PI/180, val[4] * M_PI/180, val[5] * M_PI/180, val[0], val[1], val[2], val[6], val[7], val[8]);
+    
+    //pQ[0] = q0;
+    //pQ[1] = q1;
+    //pQ[2] = q2;
+    //pQ[3] = q3;
+}
+
+
+void _GetYawPitchRollRad(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pYPR)
+{
+    float               nQ[4]; // quaternion
+    float               gx, gy, gz; // estimated gravity direction
+    
+    _GetQuaternion(pAccelGyroParam, pMagParam, &nQ[0]);
+    
+    //gx = 2 * (q[1]*q[3] - q[0]*q[2]);
+    //gy = 2 * (q[0]*q[1] + q[2]*q[3]);
+    //gz = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
+    
+    //pYPR[0] = atan2(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1);
+    //pYPR[1] = atan(gx / sqrt(gy*gy + gz*gz));
+    //pYPR[2] = atan(gy / sqrt(gx*gx + gz*gz));
+}
+
+
+void _Convert_Rad_to_Deg(float *pArr)
+{
+    pArr[0] *= RAD_TO_DEG_SCALE;
+    pArr[1] *= RAD_TO_DEG_SCALE;
+    pArr[2] *= RAD_TO_DEG_SCALE;
+}
+
+
+/**
+ * Fast inverse square root implementation
+ * @see http://en.wikipedia.org/wiki/Fast_inverse_square_root
+ */
+float _InvSqrt(float nNumber)
+{
+    volatile long           i;
+    volatile float          x, y;
+    volatile const float    f = 1.5F;
+    
+    x = nNumber * 0.5F;
+    y = nNumber;
+    i = * ( long * ) &y;
+    i = 0x5f375a86 - ( i >> 1 );
+    y = * ( float * ) &i;
+    y = y * ( f - ( x * y * y ) );
+    
+    return y;
+}
+
+
+inline void _CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3])
 {
     static float            nRC_PrevCh[5] = {0, };              // Filter variables
     static float            nPrevRPY[3];
@@ -1175,9 +1193,9 @@ void _print_RPY_Signals(float nRPY[3])
 void _print_MagData(struct _MagParam_T *pMagParam)
 {
     #if __MAG_ENABLED__
-    Serialprint("   //    Magnetic -> X:"); Serialprint(pMagParam->nNormData[X_AXIS]);
-    Serialprint("   Y:"); Serialprint(pMagParam->nNormData[Y_AXIS]);
-    Serialprint("   Z:"); Serialprint(pMagParam->nNormData[Z_AXIS]);
+    Serialprint("   //    Magnetic -> X:"); Serialprint(pMagParam->nNormMagData[X_AXIS]);
+    Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[Y_AXIS]);
+    Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[Z_AXIS]);
     Serialprint("   Head:"); Serialprint(pMagParam->nMagHeadingDeg);
     #endif
 }
