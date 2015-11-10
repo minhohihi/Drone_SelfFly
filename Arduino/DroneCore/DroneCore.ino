@@ -388,11 +388,11 @@ void loop()
     UpdateESCs();
     
     #if __DEBUG__
-    //_print_Gyro_Signals(pAccelGyroParam->nFineAngle);
-    //_print_RPY_Signals(pAccelGyroParam->nFineRPY);
-    //_print_MagData(pMagParam);
-    //_print_BarometerData(pBaroParam);
-    //_print_Throttle_Signals(nThrottle);
+    _print_Gyro_Signals();
+    //_print_RPY_Signals();
+    //_print_MagData();
+    //_print_BarometerData();
+    //_print_Throttle_Signals();
     //_print_RC_Signals();
     nEndTime = micros();
     Serialprint(" ");Serialprint((nEndTime - nStartTime0)/1000);
@@ -515,7 +515,7 @@ void _AccelGyro_CalculateAngle()
     nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] / nFS;
     nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] / nFS;
     
-    // float accel_vector_length = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
+    // Calculate 
     nAccelAngle[X_AXIS] = atan(pRawAccel[Y_AXIS] / sqrt(pow(pRawAccel[X_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
     nAccelAngle[Y_AXIS] = atan((-1) * pRawAccel[X_AXIS] / sqrt(pow(pRawAccel[Y_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
     nAccelAngle[Z_AXIS] = 0;
@@ -1315,14 +1315,14 @@ void _print_RC_Signals()
 
 void _print_Gyro_Signals()
 {
-    float                   *pFineGyro = &(nSelfFlyHndl.nFineGyro[0]);
+    float                   *pFineAngle = &(nSelfFlyHndl.nAccelGyroParam.nFineAngle[0]);
     
     Serialprint("   //    Roll Gyro : ");
-    Serialprint(pFineGyro[0]);
+    Serialprint(pFineAngle[0]);
     Serialprint("   Pitch Gyro : ");
-    Serialprint(pFineGyro[1]);
+    Serialprint(pFineAngle[1]);
     Serialprint("   Yaw Gyro : ");
-    Serialprint(pFineGyro[2]);
+    Serialprint(pFineAngle[2]);
 }
 
 
@@ -1355,12 +1355,12 @@ void _print_RPY_Signals()
 
 void _print_MagData()
 {
-    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+    float                   *pNormMagData = &(nSelfFlyHndl.nMagParam.nNormMagData[0]);
 
-    Serialprint("   //    Magnetic -> X:"); Serialprint(pMagParam->nNormMagData[X_AXIS]);
-    Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[Y_AXIS]);
-    Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[Z_AXIS]);
-    Serialprint("   Head:"); Serialprint(pMagParam->nMagHeadingDeg);
+    Serialprint("   //    Magnetic -> X:"); Serialprint(pNormMagData[X_AXIS]);
+    Serialprint("   Y:"); Serialprint(pNormMagData[Y_AXIS]);
+    Serialprint("   Z:"); Serialprint(pNormMagData[Z_AXIS]);
+    Serialprint("   Head:"); Serialprint(pMagHeadingDeg);
 }
 
 void _print_BarometerData()
