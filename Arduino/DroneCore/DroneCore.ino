@@ -4,19 +4,28 @@
 #define __DEBUG__                           (1)
 #define __GYROACCEL_DMP_ENABLED__           (0)
 
+// Define Axis
+#define X_AXIS                              (0)
+#define Y_AXIS                              (1)
+#define Z_AXIS                              (2)
+
+// Define Max Number of Each Field
+#define MAX_CH_RC                           (5)
+#define MAX_CH_ESC                          (4)
+
 // Arduino Pin configuration
 #define PIN_GY86_EXT_INTERRUPT              (13)
 #define PIN_RESERVED_12                     (12)
-#define PIN_ESC_1                           (11)
-#define PIN_ESC_2                           (10)
-#define PIN_ESC_3                           (9)
-#define PIN_ESC_4                           (8)
+#define PIN_ESC_CH0                         (11)
+#define PIN_ESC_CH1                         (10)
+#define PIN_ESC_CH2                         (9)
+#define PIN_ESC_CH3                         (8)
 #define PIN_RESERVED_07                     (7)
-#define PIN_RC_CH1                          (6)
-#define PIN_RC_CH2                          (5)
-#define PIN_RC_CH3                          (4)
-#define PIN_RC_CH4                          (3)
-#define PIN_RC_CH5                          (2)
+#define PIN_RC_CH0                          (6)
+#define PIN_RC_CH1                          (5)
+#define PIN_RC_CH2                          (4)
+#define PIN_RC_CH3                          (3)
+#define PIN_RC_CH4                          (2)
 #define PIN_RESERVED_01                     (1)
 #define PIN_RESERVED_00                     (0)
 #define PIN_CHECK_POWER_STAT                (A0)
@@ -28,16 +37,16 @@
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
-#define RC_HIGH_CH1                         (1900)
-#define RC_LOW_CH1                          (1050)
-#define RC_HIGH_CH2                         (1900)
-#define RC_LOW_CH2                          (1050)
-#define RC_HIGH_CH3                         (1900)
-#define RC_LOW_CH3                          (1050)
-#define RC_HIGH_CH4                         (1900)
-#define RC_LOW_CH4                          (1050)
-#define RC_HIGH_CH5                         (1900)
-#define RC_LOW_CH5                          (1050)
+#define RC_CH_HIGH0                         (1900)
+#define RC_CH_LOW0                          (1050)
+#define RC_CH_HIGH1                         (1900)
+#define RC_CH_LOW1                          (1050)
+#define RC_CH_HIGH2                         (1900)
+#define RC_CH_LOW2                          (1050)
+#define RC_CH_HIGH3                         (1900)
+#define RC_CH_LOW3                          (1050)
+#define RC_CH_HIGH4                         (1900)
+#define RC_CH_LOW4                          (1050)
 
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)             // angle control
@@ -81,11 +90,12 @@
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)              // seconds
 
-#define X_AXIS                              (0)
-#define Y_AXIS                              (1)
-#define Z_AXIS                              (2)
+#define TWO_KP_DEF                          (2.0f * 0.5f) // 2 * proportional gain
+#define TWO_KI_DEF                          (2.0f * 0.1f) // 2 * integral gain
 
 #define RAD_TO_DEG_SCALE                    (57.2958f)          // = 180 / PI
+#define DEG_TO_RAD_SCALE                    (0.0175f)           // = PI / 180
+#define DOUBLE_RADIAN                       (6.283184)          // = 2 * PI
 
 /*----------------------------------------------------------------------------------------
  File Inclusions
@@ -181,55 +191,86 @@ typedef struct _BaroParam_T
     int32_t             nRefPressure;                           // Reference Pressure Value
 }BaroParam_T;
 
+typedef struct _SelfFly_T
+{
+    Servo               nESC[MAX_CH_ESC];
+    MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
+    AccelGyroParam_T    nAccelGyroParam;
+    Quaternion          nQuater;
+    VectorFloat         nGravity;
+    
+    HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
+    MagneticParam_T     nMagParam;
+    
+    MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
+    BaroParam_T         nBaroParam;
+    
+    AxisErrRate_T       nPitch;
+    AxisErrRate_T       nRoll;
+    AxisErrRate_T       nYaw;
+    float               nRCCh[MAX_CH_RC];                       // RC channel inputs
+    unsigned long       nRCPrevChangeTime[MAX_CH_RC];
+
+    int32_t             nThrottle[MAX_CH_ESC];
+    
+    float               nFineRPY[3];
+    float               nFineGyro[3];
+    float               nFineQ[4];                              // quaternion
+    float               nFineG[3];                              // estimated gravity direction
+    
+    unsigned long       nLatestSensorCapTime;
+    unsigned long       nPrevSensorCapTime;
+    float               nSampleFreq;                            // half the sample period expressed in seconds
+}SelfFly_T;
+
 
 /*----------------------------------------------------------------------------------------
  Static Function
  ----------------------------------------------------------------------------------------*/
-float Clip3Float(const float nValue, const int MIN, const int MAX);
-int Clip3Int(const int nValue, const int MIN, const int MAX);
-inline void acquireLock();
-inline void releaseLock();
+int _AccelGyro_Initialize();
+void _AccelGyro_GetData();
+void _AccelGyro_CalculateAngle();
+void _AccelGyro_Calibrate();
+#if __GYROACCEL_DMP_ENABLED__
+int _AccelGyro_GetDMPData();
+#endif
+int _Mag_Initialize();
+void _Mag_Start();
+void _Mag_GetData();
+void _Mag_CalculateDirection();
+void _Mag_Calibrate();
+int _Barometer_Initialize();
+void _Barometer_GetData();
+inline void UpdateESCs();
+inline void nRCInterrupt_CB0();
 inline void nRCInterrupt_CB1();
 inline void nRCInterrupt_CB2();
 inline void nRCInterrupt_CB3();
-inline void nRCInterrupt_CB5();
-inline void _CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3]);
-inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int nThrottle[4]);
-inline void UpdateESCs(int nThrottle[4]);
+inline void nRCInterrupt_CB4();
 inline void dmpDataReady();
+float Clip3Float(const float nValue, const int MIN, const int MAX);
+int Clip3Int(const int nValue, const int MIN, const int MAX);
+inline void _AcquireLock();
+inline void _ReleaseLock();
 inline void arm();
 void _ESC_Initialize();
 void _RC_Initialize();
-
-int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam);
-void _AccelGyro_GetData(struct _AccelGyroParam_T *pGyroAccelParam);
-void _AccelGyro_CalculateAngle(struct _AccelGyroParam_T *pGyroAccelParam);
-void _AccelGyro_Calibrate(struct _AccelGyroParam_T *pGyroAccelParam);
-#if __GYROACCEL_DMP_ENABLED__
-    int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam);
-#endif
-
-int _Mag_Initialize(struct _MagParam_T *pMagParam);
-void _Mag_Start();
-void _Mag_GetData(struct _MagParam_T *pMagParam);
-void _Mag_CalculateDirection(struct _MagParam_T *pMagParam);
-float _Mag_TiltCompensate(Vector mag, Vector normAccel);
-void _Mag_Calibrate(struct _MagParam_T *pMagParam);
-
-void _GetYawPitchRoll(float *pYPR);
-void _GetSensorRawData(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam);
-void _GetQuaternion(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pQ);
-void _GetYawPitchRollRad(float *pYPR);
+void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
+void _GetYawPitchRoll();
+void _GetSensorRawData();
+void _GetQuaternion();
+void _GetYawPitchRollRad();
 void _Convert_Rad_to_Deg(float *pArr);
 float _InvSqrt(float nNumber);
-
+inline void _CalculatePID();
+inline void CalculateThrottleVal();
 #if __DEBUG__
     void _print_RC_Signals();
-    void _print_Gyro_Signals(float nGyro[3]);
-    void _print_Throttle_Signals(int nThrottle[4]);
-    void _print_RPY_Signals(float nRPY[3]);
-    void _print_MagData(struct _MagParam_T *pMagParam);
-    void _print_BarometerData(struct _BaroParam_T *pBaroParam);
+    void _print_Gyro_Signals();
+    void _print_Throttle_Signals();
+    void _print_RPY_Signals();
+    void _print_MagData();
+    void _print_BarometerData();
 #endif
 
 /*----------------------------------------------------------------------------------------
@@ -244,42 +285,134 @@ volatile bool           nMPUInterruptFlag = false;
 bool                    nInterruptLockFlag = false;             // Interrupt lock
 bool                    nDMPReadyFlag = false;                  // set true if DMP init was successful
 uint16_t                nPacketSize = 0;                            // expected DMP packet size (default is 42 bytes)
-float                   nRC_Ch[5] = {0, };                      // RC channel inputs
-unsigned long           nRCPrevChangeTime1 = micros();
-unsigned long           nRCPrevChangeTime2 = micros();
-unsigned long           nRCPrevChangeTime3 = micros();
-unsigned long           nRCPrevChangeTime4 = micros();
-unsigned long           nRCPrevChangeTime5 = micros();
 float                   nDeclinationAngle = 0.0f;
 
-Servo                   nESC[4];
-MPU6050                 nGyroAccel;                                   // MPU6050 Gyroscope Interface
-AccelGyroParam_T        nAccelGyroParam;
-Quaternion              nQuater;
-VectorFloat             nGravity;
-
-HMC5883L                nMagHndl;                              // HMC5883 Magnetic Interface
-MagneticParam_T         nMagParam;
-
-MS561101BA              nBarometer;
-BaroParam_T             nBaroParam;
-
+SelfFly_T               nSelfFlyHndl;                            // SelfFly Main Handle
 
 /*----------------------------------------------------------------------------------------
  Function Implementation
  ----------------------------------------------------------------------------------------*/
-int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
+void setup()
+{
+    int32_t                 i = 0;
+    uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
+    
+    // join I2C bus (I2Cdev library doesn't do this automatically)
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+    #endif
+    
+    #if __DEBUG__
+    Serial.begin(115200);
+    Serial.flush();
+    
+    while(!Serial); // wait for Leonardo enumeration, others continue immediately
+    #endif
+    
+    // Initialize Gyro_Accel
+    _AccelGyro_Initialize();
+    
+    // Initialize Magnetic
+    _Mag_Initialize();
+    
+    // Initialize Barometer
+    _Barometer_Initialize();
+    
+    // Initialize RemoteController
+    _RC_Initialize();
+    
+    // Initialize ESCs
+    _ESC_Initialize();
+    
+    memset(&(nSelfFlyHndl.nPitch), 0, sizeof(AxisErrRate_T));
+    memset(&(nSelfFlyHndl.nRoll), 0, sizeof(AxisErrRate_T));
+    memset(&(nSelfFlyHndl.nYaw), 0, sizeof(AxisErrRate_T));
+    memset(&(nSelfFlyHndl.nRCCh[0]), 0, MAX_CH_RC * sizeof(float));
+    memset(&(nSelfFlyHndl.nThrottle[0]), ESC_MIN, MAX_CH_ESC * sizeof(int32_t));
+    
+    for(i=0 ; i<MAX_CH_RC ; i++)
+        nSelfFlyHndl.nRCPrevChangeTime[i] = micros();
+    
+    memset(&(nSelfFlyHndl.nFineGyro), 0, 3 * sizeof(float));
+    memset(&(nSelfFlyHndl.nFineRPY), 0, 3 * sizeof(float));
+    memset(&(nSelfFlyHndl.nFineG), 0, 3 * sizeof(float));
+    memset(&(nSelfFlyHndl.nFineQ), 0, 3 * sizeof(float));
+}
+
+
+void loop()
+{
+    float                   nStartTime0 = 0.0f, nStartTime1 = 0.0f, nStartTime2 = 0.0f, nStartTime3 = 0.0f, nEndTime = 0.0f;
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
+    
+    nStartTime0 = micros();
+    
+    ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
+    
+    nStartTime1 = micros();
+    // Get AccelGyro Sensor Value
+    #if !__GYROACCEL_DMP_ENABLED__
+    _AccelGyro_GetData();
+    _AccelGyro_CalculateAngle();
+    #else
+    if(0 != _AccelGyro_GetDMPData())
+        return;
+    #endif
+    
+    nStartTime2 = micros();
+    // Get Magnetic Sensor Value
+    _Mag_GetData();
+    _Mag_CalculateDirection();
+    
+    // Get Barometer Sensor Value
+    _Barometer_GetData();
+    
+    nStartTime3 = micros();
+    memset(&(nSelfFlyHndl.nThrottle[0]), ESC_MIN, 4 * sizeof(int32_t));
+    
+    // PID Computation
+    _CalculatePID();
+    
+    //Throttle Calculation
+    CalculateThrottleVal();
+    
+    //Update BLDCs
+    UpdateESCs();
+    
+    #if __DEBUG__
+    //_print_Gyro_Signals(pAccelGyroParam->nFineAngle);
+    //_print_RPY_Signals(pAccelGyroParam->nFineRPY);
+    //_print_MagData(pMagParam);
+    //_print_BarometerData(pBaroParam);
+    //_print_Throttle_Signals(nThrottle);
+    //_print_RC_Signals();
+    nEndTime = micros();
+    Serialprint(" ");Serialprint((nEndTime - nStartTime0)/1000);
+    Serialprintln("");
+    #endif
+}
+
+
+int _AccelGyro_Initialize()
 {
     Serialprintln(F("Initializing MPU..."));
-    nGyroAccel.initialize();
+    nSelfFlyHndl.nAccelGyroHndl.initialize();
     
     // verify connection
     Serialprint(F("    Testing device connections..."));
-    Serialprintln(nGyroAccel.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    Serialprintln(nSelfFlyHndl.nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
     
-    nGyroAccel.setI2CMasterModeEnabled(false);
-    nGyroAccel.setI2CBypassEnabled(true);
-    nGyroAccel.setSleepEnabled(false);
+    nSelfFlyHndl.nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    nSelfFlyHndl.nAccelGyroHndl.setI2CBypassEnabled(true);
+    nSelfFlyHndl.nAccelGyroHndl.setSleepEnabled(false);
     
     #if __GYROACCEL_DMP_ENABLED__
     {
@@ -287,14 +420,14 @@ int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
         
         // load and configure the DMP
         Serialprintln(F("    Initializing DMP..."));
-        nDevStatus = nGyroAccel.dmpInitialize();
+        nDevStatus = nSelfFlyHndl.nAccelGyroHndl.dmpInitialize();
         
         // make sure it worked (returns 0 if so)
         if(0 == nDevStatus)
         {
             // turn on the DMP, now that it's ready
             Serialprintln(F("        Enabling DMP..."));
-            nGyroAccel.setDMPEnabled(true);
+            nSelfFlyHndl.nAccelGyroHndl.setDMPEnabled(true);
             
             // enable Arduino interrupt detection
             Serialprintln(F("            Enabling interrupt detection (Arduino external interrupt 0)..."));
@@ -307,7 +440,7 @@ int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
             nDMPReadyFlag = true;
             
             // get expected DMP packet size for later comparison
-            nPacketSize = nGyroAccel.dmpGetFIFOPacketSize();
+            nPacketSize = nSelfFlyHndl.nAccelGyroHndl.dmpGetFIFOPacketSize();
         }
         else
         {
@@ -323,18 +456,18 @@ int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
     #endif
     
     // supply your own gyro offsets here, scaled for min sensitivity
-    nGyroAccel.setXGyroOffset(220);
-    nGyroAccel.setYGyroOffset(76);
-    nGyroAccel.setZGyroOffset(-85);
-    nGyroAccel.setZAccelOffset(1788);                                     // 1688 factory default for my test chip
-    nGyroAccel.setRate(1);                                                // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    nGyroAccel.setDLPFMode(MPU6050_DLPF_BW_20);                           // Low Pass filter 20hz
-    nGyroAccel.setFullScaleGyroRange(GYRO_FS_PRECISIOM);                // 250? / s (MPU6050_GYRO_FS_250)
-    nGyroAccel.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);                // +-2g (MPU6050_ACCEL_FS_2)
+    nSelfFlyHndl.nAccelGyroHndl.setXGyroOffset(220);
+    nSelfFlyHndl.nAccelGyroHndl.setYGyroOffset(76);
+    nSelfFlyHndl.nAccelGyroHndl.setZGyroOffset(-85);
+    nSelfFlyHndl.nAccelGyroHndl.setZAccelOffset(1788);                                     // 1688 factory default for my test chip
+    nSelfFlyHndl.nAccelGyroHndl.setRate(1);                                                // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    nSelfFlyHndl.nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                           // Low Pass filter 20hz
+    nSelfFlyHndl.nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);                // 250? / s (MPU6050_GYRO_FS_250)
+    nSelfFlyHndl.nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);                // +-2g (MPU6050_ACCEL_FS_2)
 
     // Calibrate GyroAccel
     Serialprint(F("    Calibrating Gyro & Accel   "));
-    _AccelGyro_Calibrate(pGyroAccelParam);
+    _AccelGyro_Calibrate();
     Serialprintln(F("    Done"));
     Serialprintln(F("Done"));
     
@@ -342,46 +475,54 @@ int _AccelGyro_Initialize(struct _AccelGyroParam_T *pGyroAccelParam)
 }
 
 
-void _AccelGyro_GetData(struct _AccelGyroParam_T *pGyroAccelParam)
+void _AccelGyro_GetData()
 {
-    int16_t             *pRawGyro = &(pGyroAccelParam->nRawGyro[X_AXIS]);
-    int16_t             *pRawAccel = &(pGyroAccelParam->nRawAccel[X_AXIS]);
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+    int16_t                 *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
+    int16_t                 *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
+    const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
 
-    pGyroAccelParam->nCurrReadTime = micros();
+    pAccelGyroParam->nCurrReadTime = micros();
 
     // Read Gyro and Accelerate Data
-    nGyroAccel.getRotation(&pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
-    nGyroAccel.getAcceleration(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS]);
-    //nGyroAccel.getMotion6(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS], &pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
+    //nSelfFlyHndl.nAccelGyroHndl.getRotation(&pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
+    //nSelfFlyHndl.nAccelGyroHndl.getAcceleration(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS]);
+    nSelfFlyHndl.nAccelGyroHndl.getMotion6(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS],
+                                            &pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
+
+    pRawGyro[X_AXIS] = (pRawGyro[X_AXIS] - pBaseGyro[X_AXIS]);
+    pRawGyro[Y_AXIS] = (pRawGyro[Y_AXIS] - pBaseGyro[Y_AXIS]);
+    pRawGyro[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]);
 }
 
 
-void _AccelGyro_CalculateAngle(struct _AccelGyroParam_T *pGyroAccelParam)
+void _AccelGyro_CalculateAngle()
 {
-    const float         nFS = 131.0f;
-    const int16_t       *pRawGyro = &(pGyroAccelParam->nRawGyro[X_AXIS]);
-    const int16_t       *pRawAccel = &(pGyroAccelParam->nRawAccel[X_AXIS]);
-    const float         *pBaseGyro = &(pGyroAccelParam->nBaseGyro[X_AXIS]);
-    float               *pFineAngle = &(pGyroAccelParam->nFineAngle[X_AXIS]);
-    static float               nGyroAngle[3] = {0, };
-    float               nAccelAngle[3] = {0, };
-    float               nGyroDiffAngle[3] = {0, };
-    float               nRawAngle[3] = {0, };
-    static float        nPrevRawAngle[3] = {0, };
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+    const float             nFS = 131.0f;
+    const int16_t           *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
+    const int16_t           *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
+    const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
+    float                   *pFineAngle = &(pAccelGyroParam->nFineAngle[X_AXIS]);
+    static float            nGyroAngle[3] = {0, };
+    float                   nAccelAngle[3] = {0, };
+    float                   nGyroDiffAngle[3] = {0, };
+    float                   nRawAngle[3] = {0, };
+    static float            nPrevRawAngle[3] = {0, };
     
     // Convert Gyro Values to Degrees/Sec
-    nGyroDiffAngle[X_AXIS] = (pRawGyro[X_AXIS] - pBaseGyro[X_AXIS]) / nFS;
-    nGyroDiffAngle[Y_AXIS] = (pRawGyro[Y_AXIS] - pBaseGyro[Y_AXIS]) / nFS;
-    nGyroDiffAngle[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]) / nFS;
+    nGyroDiffAngle[X_AXIS] = pRawGyro[X_AXIS] / nFS;
+    nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] / nFS;
+    nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] / nFS;
     
     // float accel_vector_length = sqrt(pow(accel_x,2) + pow(accel_y,2) + pow(accel_z,2));
-    nAccelAngle[X_AXIS] = atan(pRawGyro[Y_AXIS] / sqrt(pow(pRawGyro[X_AXIS], 2) + pow(pRawGyro[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
-    nAccelAngle[Y_AXIS] = atan((-1) * pRawGyro[X_AXIS] / sqrt(pow(pRawGyro[Y_AXIS], 2) + pow(pRawGyro[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
+    nAccelAngle[X_AXIS] = atan(pRawAccel[Y_AXIS] / sqrt(pow(pRawAccel[X_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
+    nAccelAngle[Y_AXIS] = atan((-1) * pRawAccel[X_AXIS] / sqrt(pow(pRawAccel[Y_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
     nAccelAngle[Z_AXIS] = 0;
     
     // Compute the (filtered) gyro angles
     {
-        float dt =(pGyroAccelParam->nCurrReadTime - pGyroAccelParam->nPrevReadTime) / 1000000.0;
+        float dt = (pAccelGyroParam->nCurrReadTime - pAccelGyroParam->nPrevReadTime) / 1000000.0;
         
         nGyroAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * dt + pFineAngle[X_AXIS];
         nGyroAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * dt + pFineAngle[Y_AXIS];
@@ -405,31 +546,28 @@ void _AccelGyro_CalculateAngle(struct _AccelGyroParam_T *pGyroAccelParam)
     }
     
     // Update the saved data with the latest values
-    pGyroAccelParam->nPrevReadTime = pGyroAccelParam->nCurrReadTime;
-    
-    Serialprint(nGyroAngle[0]);Serialprint("  ");Serialprint(nGyroAngle[1]);Serialprint("  ");Serialprint(nGyroAngle[2]);Serialprint("  /  ");
-    Serialprint(nAccelAngle[0]);Serialprint("  ");Serialprint(nAccelAngle[1]);Serialprint("  ");Serialprint(nAccelAngle[2]);Serialprint("  /  ");
-    Serialprint(pFineAngle[0]);Serialprint("  ");Serialprint(pFineAngle[1]);Serialprint("  ");Serialprint(pFineAngle[2]);Serialprint("  /  ");
+    pAccelGyroParam->nPrevReadTime = pAccelGyroParam->nCurrReadTime;
 }
 
 
-void _AccelGyro_Calibrate(struct _AccelGyroParam_T *pGyroAccelParam)
+void _AccelGyro_Calibrate()
 {
     int                     i = 0;
     int32_t                 nRawGyro[3] = {0, };
     int32_t                 nRawAccel[3] = {0, };
     const int               nLoopCnt = 20;
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
     
     for(i=0 ; i<nLoopCnt ; i++)
     {
-        _AccelGyro_GetData(pGyroAccelParam);
+        _AccelGyro_GetData();
         
-        nRawGyro[X_AXIS] += pGyroAccelParam->nRawGyro[X_AXIS];
-        nRawGyro[Y_AXIS] += pGyroAccelParam->nRawGyro[Y_AXIS];
-        nRawGyro[Z_AXIS] += pGyroAccelParam->nRawGyro[Z_AXIS];
-        nRawAccel[X_AXIS] += pGyroAccelParam->nRawAccel[X_AXIS];
-        nRawAccel[Y_AXIS] += pGyroAccelParam->nRawAccel[Y_AXIS];
-        nRawAccel[Z_AXIS] += pGyroAccelParam->nRawAccel[Z_AXIS];
+        nRawGyro[X_AXIS] += pAccelGyroParam->nRawGyro[X_AXIS];
+        nRawGyro[Y_AXIS] += pAccelGyroParam->nRawGyro[Y_AXIS];
+        nRawGyro[Z_AXIS] += pAccelGyroParam->nRawGyro[Z_AXIS];
+        nRawAccel[X_AXIS] += pAccelGyroParam->nRawAccel[X_AXIS];
+        nRawAccel[Y_AXIS] += pAccelGyroParam->nRawAccel[Y_AXIS];
+        nRawAccel[Z_AXIS] += pAccelGyroParam->nRawAccel[Z_AXIS];
         
         delay(20);
         
@@ -437,22 +575,23 @@ void _AccelGyro_Calibrate(struct _AccelGyroParam_T *pGyroAccelParam)
     }
     
     // Store the raw calibration values globally
-    pGyroAccelParam->nBaseGyro[X_AXIS] = nRawGyro[X_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseGyro[Y_AXIS] = nRawGyro[Y_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseGyro[Z_AXIS] = nRawGyro[Z_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[X_AXIS] = nRawAccel[X_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[Y_AXIS] = nRawAccel[Y_AXIS] / nLoopCnt;
-    pGyroAccelParam->nBaseAccel[Z_AXIS] = nRawAccel[Z_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[X_AXIS] = nRawGyro[X_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[Y_AXIS] = nRawGyro[Y_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[Z_AXIS] = nRawGyro[Z_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[X_AXIS] = nRawAccel[X_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[Y_AXIS] = nRawAccel[Y_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[Z_AXIS] = nRawAccel[Z_AXIS] / nLoopCnt;
 }
 
 
 #if __GYROACCEL_DMP_ENABLED__
-int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam)
+int _AccelGyro_GetDMPData()
 {
     uint16_t                nFIFOCnt = 0;                                               // count of all bytes currently in FIFO
     uint8_t                 nFIFOBuf[64];                                               // FIFO storage buffer
     uint8_t                 nMPUInterruptStat;                                          // holds actual interrupt status byte from MPU
-    
+    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+
     if(!nDMPReadyFlag)
     {
         Serialprintln("DMP Not Ready    Loop Run Fails");
@@ -466,16 +605,16 @@ int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam)
     
     // reset interrupt flag and get INT_STATUS byte
     nMPUInterruptFlag = false;
-    nMPUInterruptStat = nGyroAccel.getIntStatus();
+    nMPUInterruptStat = nSelfFlyHndl.nAccelGyroHndl.getIntStatus();
     
     // get current FIFO count
-    nFIFOCnt = nGyroAccel.getFIFOCount();
+    nFIFOCnt = nSelfFlyHndl.nAccelGyroHndl.getFIFOCount();
     
     // check for overflow (this should never happen unless our code is too inefficient)
     if((nMPUInterruptStat & 0x10) || nFIFOCnt == 1024)
     {
         // reset so we can continue cleanly
-        nGyroAccel.resetFIFO();
+        nSelfFlyHndl.nAccelGyroHndl.resetFIFO();
         //Serialprintln(F("FIFO overflow!"));
     }
     else if(nMPUInterruptStat & 0x02)
@@ -484,23 +623,23 @@ int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam)
         
         // wait for correct available data length, should be a VERY short wait
         while (nFIFOCnt < nPacketSize)
-            nFIFOCnt = nGyroAccel.getFIFOCount();
+            nFIFOCnt = nSelfFlyHndl.nAccelGyroHndl.getFIFOCount();
         
         // read a packet from FIFO
-        nGyroAccel.getFIFOBytes(nFIFOBuf, nPacketSize);
+        nSelfFlyHndl.nAccelGyroHndl.getFIFOBytes(nFIFOBuf, nPacketSize);
         
         // track FIFO count here in case there is > 1 packet available
         // (this lets us immediately read more without waiting for an interrupt)
         nFIFOCnt -= nPacketSize;
         
-        nGyroAccel.dmpGetGyro(nGyro, nFIFOBuf);
-        nGyroAccel.dmpGetQuaternion(&nQuater, nFIFOBuf);
-        nGyroAccel.dmpGetGravity(&nGravity, &nQuater);
-        nGyroAccel.dmpGetYawPitchRoll(pGyroAccelParam->nFineRPY, &nQuater, &nGravity);
+        nSelfFlyHndl.nAccelGyroHndl.dmpGetGyro(nGyro, nFIFOBuf);
+        nSelfFlyHndl.nAccelGyroHndl.dmpGetQuaternion(&nQuater, nFIFOBuf);
+        nSelfFlyHndl.nAccelGyroHndl.dmpGetGravity(&nGravity, &nQuater);
+        nSelfFlyHndl.nAccelGyroHndl.dmpGetYawPitchRoll(pAccelGyroParam->nFineRPY, &nQuater, &nGravity);
         
-        pGyroAccelParam->nFineAngle[X_AXIS] = nGyro[X_AXIS];
-        pGyroAccelParam->nFineAngle[Y_AXIS] = nGyro[Y_AXIS];
-        pGyroAccelParam->nFineAngle[Z_AXIS] = nGyro[Z_AXIS];
+        pAccelGyroParam->nFineAngle[X_AXIS] = nGyro[X_AXIS];
+        pAccelGyroParam->nFineAngle[Y_AXIS] = nGyro[Y_AXIS];
+        pAccelGyroParam->nFineAngle[Z_AXIS] = nGyro[Z_AXIS];
     }
     
     return 0;
@@ -508,7 +647,7 @@ int _AccelGyro_GetDMPData(struct _AccelGyroParam_T *pGyroAccelParam)
 #endif
 
 
-int _Mag_Initialize(struct _MagParam_T *pMagParam)
+int _Mag_Initialize()
 {
     // initialize Magnetic
     Serialprintln(F("Initializing Magnetic..."));
@@ -516,7 +655,7 @@ int _Mag_Initialize(struct _MagParam_T *pMagParam)
     
     // Calibrate Magnetic
     Serialprint(F("    Calibrating Magnetic...."));
-    _Mag_Calibrate(&nMagParam);
+    _Mag_Calibrate();
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
@@ -556,14 +695,10 @@ void _Mag_Start()
 }
 
 
-void _Mag_GetData(struct _MagParam_T *pMagParam)
+void _Mag_GetData()
 {
-    int                 i = 0;
-    byte                result[6];
-    int                 MagX,MagY,MagZ;
-    static float        MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
-    const float         nRadtoDegOffset = 57.2958;                  // = 180.0 / M_PI;
-    const float         nDougleRad = 6.283184;                      // = 2 * 3.141592
+    int                     i = 0;
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
     
     //Tell the HMC5883 where to begin reading data
     Wire.beginTransmission(HMC5883L_ADDRESS);
@@ -588,32 +723,31 @@ void _Mag_GetData(struct _MagParam_T *pMagParam)
 }
 
 
-void _Mag_CalculateDirection(struct _MagParam_T *pMagParam)
+void _Mag_CalculateDirection()
 {
-    int                 i = 0;
-    int                 MagX,MagY,MagZ;
-    static float        MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
-    const float         nRadtoDegOffset = 57.2958;                  // = 180.0 / M_PI;
-    const float         nDougleRad = 6.283184;                      // = 2 * 3.141592
+    int                     i = 0;
+    int                     MagX,MagY,MagZ;
+    static float            MagXf = 0.0f ,MagYf = 0.0f ,MagZf = 0.0f;
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
     
     pMagParam->nNormMagData[X_AXIS] = pMagParam->nNormMagData[X_AXIS] + (pMagParam->nRawMagData[X_AXIS] - pMagParam->nNormMagData[X_AXIS]) * 0.55;
     pMagParam->nNormMagData[Y_AXIS] = pMagParam->nNormMagData[Y_AXIS] + (pMagParam->nRawMagData[Y_AXIS] - pMagParam->nNormMagData[Y_AXIS]) * 0.55;
     pMagParam->nNormMagData[Z_AXIS] = pMagParam->nNormMagData[Z_AXIS] + (pMagParam->nRawMagData[Z_AXIS] - pMagParam->nNormMagData[Z_AXIS]) * 0.55;
-    
+
     // adjust for  Magnetic axis offsets/sensitivity differences by scaling to +/-5 range
     pMagParam->nFineMag[X_AXIS] = ((pMagParam->nNormMagData[X_AXIS] - MAG_X_MIN) / (MAG_X_RANGE)) * 10.0 - 5.0;
     pMagParam->nFineMag[Y_AXIS] = ((pMagParam->nNormMagData[Y_AXIS] - MAG_Y_MIN) / (MAG_Y_RANGE)) * 10.0 - 5.0;
     pMagParam->nFineMag[Z_AXIS] = ((pMagParam->nNormMagData[Z_AXIS] - MAG_Z_MIN) / (MAG_Z_RANGE)) * 10.0 - 5.0;
-    
+
     pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMagData[Y_AXIS], pMagParam->nRawMagData[X_AXIS]) + nDeclinationAngle;
     
     if(pMagParam->nMagHeadingRad < 0)
-        pMagParam->nMagHeadingRad += nDougleRad;
+        pMagParam->nMagHeadingRad += DOUBLE_RADIAN;
     
-    if(pMagParam->nMagHeadingRad > nDougleRad)
-        pMagParam->nMagHeadingRad -= nDougleRad;
+    if(pMagParam->nMagHeadingRad > DOUBLE_RADIAN)
+        pMagParam->nMagHeadingRad -= DOUBLE_RADIAN;
     
-    pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * nRadtoDegOffset;
+    pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
     
     //if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
     //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
@@ -628,42 +762,15 @@ void _Mag_CalculateDirection(struct _MagParam_T *pMagParam)
 }
 
 
-float _Mag_TiltCompensate(Vector mag, Vector normAccel)
+void _Mag_Calibrate()
 {
-    // Pitch & Roll
-    float roll;
-    float pitch;
-    
-    roll = asin(normAccel.YAxis);
-    pitch = asin(-normAccel.XAxis);
-    
-    if(roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
-        return -1000;
-    
-    // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
-    float cosRoll = cos(roll);
-    float sinRoll = sin(roll);
-    float cosPitch = cos(pitch);
-    float sinPitch = sin(pitch);
-    
-    // Tilt compensation
-    float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
-    float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
-    
-    float heading = atan2(Yh, Xh);
-    
-    return heading;
-}
-
-
-void _Mag_Calibrate(struct _MagParam_T *pMagParam)
-{
-    int                 i = 0;
-    float               nSumMinX = 0.0f;
-    float               nSumMaxX = 0.0f;
-    float               nSumMinY = 0.0f;
-    float               nSumMaxY = 0.0f;
-    const int           nLoopCnt = 50;
+    int                     i = 0;
+    float                   nSumMinX = 0.0f;
+    float                   nSumMaxX = 0.0f;
+    float                   nSumMinY = 0.0f;
+    float                   nSumMaxY = 0.0f;
+    const int               nLoopCnt = 50;
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
     
     for(i=0 ; i<nLoopCnt ; i++)
     {
@@ -672,7 +779,7 @@ void _Mag_Calibrate(struct _MagParam_T *pMagParam)
         float           nMinY = 0.0f;
         float           nMaxY = 0.0f;
         
-        _Mag_GetData(pMagParam);
+        _Mag_GetData();
         
         // Determine Min / Max values
         if(pMagParam->nRawMagData[X_AXIS] < nMinX)
@@ -695,121 +802,90 @@ void _Mag_Calibrate(struct _MagParam_T *pMagParam)
     }
     
     // Calculate offsets
-    nMagHndl.setOffset(((nSumMaxX + nSumMinX) / 2 / nLoopCnt), ((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
+    nSelfFlyHndl.nMagHndl.setOffset(((nSumMaxX + nSumMinX) / 2 / nLoopCnt), ((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
 }
 
-int _Barometer_Initialize(struct _BaroParam_T *pBaroParam)
+
+int _Barometer_Initialize()
 {
     Serialprint(F("Initializing Barometer..."));
-    nBarometer = MS561101BA();
-    nBarometer.init(MS561101BA_ADDR_CSB_LOW);
+    nSelfFlyHndl.nBaroHndl = MS561101BA();
+    nSelfFlyHndl.nBaroHndl.init(MS561101BA_ADDR_CSB_LOW);
     Serialprintln(F("Done"));
 }
 
 
-void _Barometer_GetData(struct _BaroParam_T *pBaroParam)
+void _Barometer_GetData()
 {
-    pBaroParam->nRealTemperature = nBarometer.getTemperature(MS561101BA_OSR_256);
-    pBaroParam->nRealPressure = nBarometer.getPressure(MS561101BA_OSR_256);
-    nBarometer.pushPressure(pBaroParam->nRealPressure);
-    pBaroParam->nAvgpressure = nBarometer.getAvgPressure();
-    pBaroParam->nAbsoluteAltitude = nBarometer.getAltitude(pBaroParam->nAvgpressure, pBaroParam->nRealTemperature);
-}
+    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
 
-void setup()
-{
-    uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
-    
-    // join I2C bus (I2Cdev library doesn't do this automatically)
-    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    Wire.begin();
-    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    Fastwire::setup(400, true);
-    #endif
-    
-    #if __DEBUG__
-    Serial.begin(115200);
-    Serial.flush();
-    
-    while(!Serial); // wait for Leonardo enumeration, others continue immediately
-    #endif
-    
-    // Initialize Gyro_Accel
-    _AccelGyro_Initialize(&nAccelGyroParam);
-
-    // Initialize Magnetic
-    _Mag_Initialize(&nMagParam);
-
-    // Initialize Barometer
-    _Barometer_Initialize(&nBaroParam);
-    
-    // Initialize RemoteController
-    _RC_Initialize();
-    
-    // Initialize ESCs
-    _ESC_Initialize();
+    pBaroParam->nRealTemperature = nSelfFlyHndl.nBaroHndl.getTemperature(MS561101BA_OSR_256);
+    pBaroParam->nRealPressure = nSelfFlyHndl.nBaroHndl.getPressure(MS561101BA_OSR_256);
+    nSelfFlyHndl.nBaroHndl.pushPressure(pBaroParam->nRealPressure);
+    pBaroParam->nAvgpressure = nSelfFlyHndl.nBaroHndl.getAvgPressure();
+    pBaroParam->nAbsoluteAltitude = nSelfFlyHndl.nBaroHndl.getAltitude(pBaroParam->nAvgpressure, pBaroParam->nRealTemperature);
 }
 
 
-void loop()
+inline void UpdateESCs()
 {
-    volatile bool           bSkipFlag = false;
-    float                   nStartTime0 = 0.0f, nStartTime1 = 0.0f, nStartTime2 = 0.0f, nStartTime3 = 0.0f, nEndTime = 0.0f;
-    int16_t                 nGyro[3];                                                   // Gyroscope Value
-    float                   nRPY[3];                                                    // yaw pitch roll values
+    Servo                   *pESC = &(nSelfFlyHndl.nESC[0]);
+    int32_t                 *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
+    int                     i = 0;
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pESC[i].writeMicroseconds(pThrottle[i]);
+}
 
-    nStartTime0 = micros();
+
+inline void nRCInterrupt_CB0()
+{
+    if(!nInterruptLockFlag)
+        nSelfFlyHndl.nRCCh[0] = micros() - nSelfFlyHndl.nRCPrevChangeTime[0];
     
-    ////////////////////////////////// Get angle & gyro ///////////////////////////////////////////////////////
+    nSelfFlyHndl.nRCPrevChangeTime[0] = micros();
+}
+
+
+inline void nRCInterrupt_CB1()
+{
+    if(!nInterruptLockFlag)
+        nSelfFlyHndl.nRCCh[1] = micros() - nSelfFlyHndl.nRCPrevChangeTime[1];
     
-    nStartTime1 = micros();
-    // Get AccelGyro Sensor Value
-    #if !__GYROACCEL_DMP_ENABLED__
-    _AccelGyro_GetData(&nAccelGyroParam);
-    _AccelGyro_CalculateAngle(&nAccelGyroParam);
-    #else
-    if(0 != _AccelGyro_GetDMPData(&nAccelGyroParam))
-        return;
-    #endif
+    nSelfFlyHndl.nRCPrevChangeTime[1] = micros();
+}
+
+
+inline void nRCInterrupt_CB2()
+{
+    if(!nInterruptLockFlag)
+        nSelfFlyHndl.nRCCh[2] = micros() - nSelfFlyHndl.nRCPrevChangeTime[2];
     
-    nStartTime2 = micros();
-    // Get Magnetic Sensor Value
-    _Mag_GetData(&nMagParam);
-    _Mag_CalculateDirection(&nMagParam);
+    nSelfFlyHndl.nRCPrevChangeTime[2] = micros();
+}
+
+
+inline void nRCInterrupt_CB3()
+{
+    if(!nInterruptLockFlag)
+        nSelfFlyHndl.nRCCh[3] = micros() - nSelfFlyHndl.nRCPrevChangeTime[3];
     
-    // Get Barometer Sensor Value
-    _Barometer_GetData(&nBaroParam);
+    nSelfFlyHndl.nRCPrevChangeTime[3] = micros();
+}
+
+
+inline void nRCInterrupt_CB4()
+{
+    if(!nInterruptLockFlag)
+        nSelfFlyHndl.nRCCh[4] = micros() - nSelfFlyHndl.nRCPrevChangeTime[4];
     
-    nStartTime3 = micros();
-    if(false == bSkipFlag)
-    {
-        AxisErrRate_T           nPitch = {0, };
-        AxisErrRate_T           nRoll = {0, };
-        AxisErrRate_T           nYaw = {0, };
-        int                     nThrottle[4] = {ESC_MIN, ESC_MIN, ESC_MIN, ESC_MIN};        // throttles
-        
-        // PID Computation
-        _CalculatePID(&nRoll, &nPitch, &nYaw, nAccelGyroParam.nFineAngle, nAccelGyroParam.nFineRPY);
-        
-        //Throttle Calculation
-        CalculateThrottleVal(&nRoll, &nPitch, &nYaw, nThrottle);
-        
-        //Update BLDCs
-        UpdateESCs(nThrottle);
-    }
-    
-    #if __DEBUG__
-    //_print_Gyro_Signals(nAccelGyroParam.nFineAngle);
-    //_print_RPY_Signals(nAccelGyroParam.nFineRPY);
-    //_print_MagData(&nMagParam);
-    //_print_BarometerData(&nBaroParam);
-    //_print_Throttle_Signals(nThrottle);
-    //_print_RC_Signals();
-    nEndTime = micros();
-    Serialprint(" ");Serialprint((nEndTime - nStartTime0)/1000);
-    Serialprintln("");
-    #endif
+    nSelfFlyHndl.nRCPrevChangeTime[4] = micros();
+}
+
+
+inline void dmpDataReady()
+{
+    nMPUInterruptFlag = true;
 }
 
 
@@ -838,67 +914,231 @@ int Clip3Int(const int nValue, const int MIN, const int MAX)
     return nClipVal;
 }
 
-inline void acquireLock()
+
+inline void _AcquireLock()
 {
     nInterruptLockFlag = true;
 }
 
 
-inline void releaseLock()
+inline void _ReleaseLock()
 {
     nInterruptLockFlag = false;
 }
 
-void _GetYawPitchRoll(float *pYPR)
-{
-    _GetYawPitchRollRad(pYPR);
-    _Convert_Rad_to_Deg(pYPR);
-}
 
-
-void _GetSensorRawData(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam)
+inline void arm()
 {
-    _AccelGyro_GetData(pAccelGyroParam);
+    Servo                   *pESC = &(nSelfFlyHndl.nESC[0]);
+    int                     i = 0;
     
-    _Mag_GetData(pMagParam);
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pESC[i].writeMicroseconds(ESC_MIN);
+    
+    delay(ESC_ARM_DELAY);
 }
 
 
-void _GetQuaternion(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pQ)
+void _ESC_Initialize()
 {
-    float               val[9];
+    Servo                   *pESC = &(nSelfFlyHndl.nESC[0]);
+    int                     i = 0;
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pESC[i].attach(PIN_ESC_CH0);
+    
+    delay(1000);
+    
+    arm();
+}
+
+
+void _RC_Initialize()
+{
+    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
+    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
+    
+    PCintPort::attachInterrupt(PIN_RC_CH0, nRCInterrupt_CB0, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
+}
+
+
+void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
+{
+    float                   nRecipNorm = 0.0f;
+    float                   nFineQ00, nFineQ01, nFineQ02, nFineQ03, nFineQ11, nFineQ12, nFineQ13, nFineQ22, nFineQ23, nFineQ33;
+    float                   halfex = 0.0f, halfey = 0.0f, halfez = 0.0f;
+    float                   qa, qb, qc;
+    static volatile float   nIntegralFBx = 0.0f,  nIntegralFBy = 0.0f, nIntegralFBz = 0.0f;
+    const float             nSampleFreq = nSelfFlyHndl.nSampleFreq;
+    float                   *pFineQ = &(nSelfFlyHndl.nFineQ[0]);
+    
+    
+    // Auxiliary variables to avoid repeated arithmetic
+    nFineQ00 = pFineQ[0] * pFineQ[0];
+    nFineQ01 = pFineQ[0] * pFineQ[1];
+    nFineQ02 = pFineQ[0] * pFineQ[2];
+    nFineQ03 = pFineQ[0] * pFineQ[3];
+    nFineQ11 = pFineQ[1] * pFineQ[1];
+    nFineQ12 = pFineQ[1] * pFineQ[2];
+    nFineQ13 = pFineQ[1] * pFineQ[3];
+    nFineQ22 = pFineQ[2] * pFineQ[2];
+    nFineQ23 = pFineQ[2] * pFineQ[3];
+    nFineQ33 = pFineQ[3] * pFineQ[3];
+    
+    if((mx != 0.0f) && (my != 0.0f) && (mz != 0.0f))
+    {
+        float hx, hy, bx, bz;
+        float halfwx, halfwy, halfwz;
+        
+        // Normalise magnetometer measurement
+        nRecipNorm = _InvSqrt(mx * mx + my * my + mz * mz);
+        mx *= nRecipNorm;
+        my *= nRecipNorm;
+        mz *= nRecipNorm;
+        
+        // Reference direction of Earth's magnetic field
+        hx = 2.0f * (mx * (0.5f - nFineQ22 - nFineQ33) + my * (nFineQ12 - nFineQ03) + mz * (nFineQ13 + nFineQ02));
+        hy = 2.0f * (mx * (nFineQ12 + nFineQ03) + my * (0.5f - nFineQ11 - nFineQ33) + mz * (nFineQ23 - nFineQ01));
+        bx = sqrt(hx * hx + hy * hy);
+        bz = 2.0f * (mx * (nFineQ13 - nFineQ02) + my * (nFineQ23 + nFineQ01) + mz * (0.5f - nFineQ11 - nFineQ22));
+        
+        // Estimated direction of magnetic field
+        halfwx = bx * (0.5f - nFineQ22 - nFineQ33) + bz * (nFineQ13 - nFineQ02);
+        halfwy = bx * (nFineQ12 - nFineQ03) + bz * (nFineQ01 + nFineQ23);
+        halfwz = bx * (nFineQ02 + nFineQ13) + bz * (0.5f - nFineQ11 - nFineQ22);
+        
+        // Error is sum of cross product between estimated direction and measured direction of field vectors
+        halfex = (my * halfwz - mz * halfwy);
+        halfey = (mz * halfwx - mx * halfwz);
+        halfez = (mx * halfwy - my * halfwx);
+    }
+    
+    // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
+    if((ax != 0.0f) && (ay != 0.0f) && (az != 0.0f))
+    {
+        float halfvx, halfvy, halfvz;
+        
+        // Normalise accelerometer measurement
+        nRecipNorm = _InvSqrt(ax * ax + ay * ay + az * az);
+        ax *= nRecipNorm;
+        ay *= nRecipNorm;
+        az *= nRecipNorm;
+        
+        // Estimated direction of gravity
+        halfvx = nFineQ13 - nFineQ02;
+        halfvy = nFineQ01 + nFineQ23;
+        halfvz = nFineQ00 + nFineQ33 - 0.5f;
+        
+        // Error is sum of cross product between estimated direction and measured direction of field vectors
+        halfex += (ay * halfvz - az * halfvy);
+        halfey += (az * halfvx - ax * halfvz);
+        halfez += (ax * halfvy - ay * halfvx);
+    }
+    
+    // Apply feedback only when valid data has been gathered from the accelerometer or magnetometer
+    if(halfex != 0.0f && halfey != 0.0f && halfez != 0.0f)
+    {
+        // Compute and apply integral feedback if enabled
+        if(TWO_KI_DEF > 0.0f)
+        {
+            nIntegralFBx += TWO_KI_DEF * halfex * (1.0f / nSampleFreq);  // integral error scaled by Ki
+            nIntegralFBy += TWO_KI_DEF * halfey * (1.0f / nSampleFreq);
+            nIntegralFBz += TWO_KI_DEF * halfez * (1.0f / nSampleFreq);
+            gx += nIntegralFBx;  // apply integral feedback
+            gy += nIntegralFBy;
+            gz += nIntegralFBz;
+        }
+        else
+        {
+            nIntegralFBx = 0.0f; // prevent integral windup
+            nIntegralFBy = 0.0f;
+            nIntegralFBz = 0.0f;
+        }
+        
+        // Apply proportional feedback
+        gx += TWO_KP_DEF * halfex;
+        gy += TWO_KP_DEF * halfey;
+        gz += TWO_KP_DEF * halfez;
+    }
+    
+    // Integrate rate of change of quaternion
+    gx *= (0.5f * (1.0f / nSampleFreq));   // pre-multiply common factors
+    gy *= (0.5f * (1.0f / nSampleFreq));
+    gz *= (0.5f * (1.0f / nSampleFreq));
+    qa = pFineQ[0];
+    qb = pFineQ[1];
+    qc = pFineQ[2];
+    pFineQ[0] += ((-qb * gx) - (qc * gy) - (pFineQ[3] * gz));
+    pFineQ[1] += (( qa * gx) + (qc * gz) - (pFineQ[3] * gy));
+    pFineQ[2] += (( qa * gy) - (qb * gz) + (pFineQ[3] * gx));
+    pFineQ[3] += (( qa * gz) + (qb * gy) - (qc * gx));
+    
+    // Normalise quaternion
+    nRecipNorm = _InvSqrt((pFineQ[0] * pFineQ[0]) + (pFineQ[1] * pFineQ[1]) + (pFineQ[2] * pFineQ[2]) + (pFineQ[3] * pFineQ[3]));
+    pFineQ[0] *= nRecipNorm;
+    pFineQ[1] *= nRecipNorm;
+    pFineQ[2] *= nRecipNorm;
+    pFineQ[3] *= nRecipNorm;
+}
+
+
+void _GetYawPitchRoll()
+{
+    _GetYawPitchRollRad();
+    
+    // Convert Radian to Degree
+    _Convert_Rad_to_Deg(&(nSelfFlyHndl.nFineRPY[0]));
+}
+
+
+void _GetSensorRawData()
+{
+    // Get AccelGyro Raw Data
+    _AccelGyro_GetData();
+    
+    // Get Magnetic Raw Data
+    _Mag_GetData();
+    
+    nSelfFlyHndl.nLatestSensorCapTime = micros();
+}
+
+
+void _GetQuaternion()
+{
+    float                   nVal[9];
+    float                   *pFineQ = &(nSelfFlyHndl.nFineQ[0]);
     
     //getValues(val);
-    _GetSensorRawData(pAccelGyroParam, pMagParam);
+    _GetSensorRawData();
     
-    //now = micros();
-    //sampleFreq = 1.0 / ((now - lastUpdate) / 1000000.0);
-    //lastUpdate = now;
-
+    nSelfFlyHndl.nSampleFreq = 1.0 / ((nSelfFlyHndl.nLatestSensorCapTime - nSelfFlyHndl.nPrevSensorCapTime) / 1000000.0);
+    nSelfFlyHndl.nPrevSensorCapTime = nSelfFlyHndl.nLatestSensorCapTime;
+    
     // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
-    //AHRSupdate(val[3] * M_PI/180, val[4] * M_PI/180, val[5] * M_PI/180, val[0], val[1], val[2], val[6], val[7], val[8]);
-    
-    //pQ[0] = q0;
-    //pQ[1] = q1;
-    //pQ[2] = q2;
-    //pQ[3] = q3;
+    //AHRSupdate(val[3] * DEG_TO_RAD_SCALE, val[4] * DEG_TO_RAD_SCALE, val[5] * DEG_TO_RAD_SCALE,
+    //           val[0], val[1], val[2], val[6], val[7], val[8]);
 }
 
 
-void _GetYawPitchRollRad(struct _AccelGyroParam_T *pAccelGyroParam, struct _MagParam_T *pMagParam, float *pYPR)
+void _GetYawPitchRollRad()
 {
-    float               nQ[4]; // quaternion
-    float               gx, gy, gz; // estimated gravity direction
+    float                   *pFineG = &(nSelfFlyHndl.nFineG[0]);
+    float                   *pFineQ = &(nSelfFlyHndl.nFineQ[0]);
+    float                   *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
     
-    _GetQuaternion(pAccelGyroParam, pMagParam, &nQ[0]);
+    _GetQuaternion();
     
-    //gx = 2 * (q[1]*q[3] - q[0]*q[2]);
-    //gy = 2 * (q[0]*q[1] + q[2]*q[3]);
-    //gz = q[0]*q[0] - q[1]*q[1] - q[2]*q[2] + q[3]*q[3];
+    pFineG[X_AXIS] = 2 * ((pFineQ[1] * pFineQ[3]) - (pFineQ[0] * pFineQ[2]));
+    pFineG[Y_AXIS] = 2 * ((pFineQ[0] * pFineQ[1]) + (pFineQ[2] * pFineQ[3]));
+    pFineG[Z_AXIS] = (pFineQ[0] * pFineQ[0]) - (pFineQ[1] * pFineQ[1]) - (pFineQ[2] * pFineQ[2]) + (pFineQ[3] * pFineQ[3]);
     
-    //pYPR[0] = atan2(2 * q[1] * q[2] - 2 * q[0] * q[3], 2 * q[0]*q[0] + 2 * q[1] * q[1] - 1);
-    //pYPR[1] = atan(gx / sqrt(gy*gy + gz*gz));
-    //pYPR[2] = atan(gy / sqrt(gx*gx + gz*gz));
+    pFineRPY[0] = atan2((2 * pFineQ[1] * pFineQ[2]) - (2 * pFineQ[0] * pFineQ[3]), (2 * pFineQ[0] * pFineQ[0]) + (2 * pFineQ[1] * pFineQ[1]) - 1);
+    pFineRPY[1] = atan(pFineG[X_AXIS] / sqrt((pFineG[Y_AXIS] * pFineG[Y_AXIS]) + (pFineG[Z_AXIS] * pFineG[Z_AXIS])));
+    pFineRPY[2] = atan(pFineG[Y_AXIS] / sqrt((pFineG[X_AXIS] * pFineG[X_AXIS]) + (pFineG[Z_AXIS] * pFineG[Z_AXIS])));
 }
 
 
@@ -931,59 +1171,65 @@ float _InvSqrt(float nNumber)
 }
 
 
-inline void _CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, float nGyro[3], float nRPY[3])
+inline void _CalculatePID()
 {
-    static float            nRC_PrevCh[5] = {0, };              // Filter variables
-    static float            nPrevRPY[3];
+    static float            nRCPrevCh[5] = {0, };              // Filter variables
+    static float            nPrevFineRPY[3];
+    AxisErrRate_T           *pPitch = &(nSelfFlyHndl.nPitch);
+    AxisErrRate_T           *pRoll = &(nSelfFlyHndl.nRoll);
+    AxisErrRate_T           *pYaw = &(nSelfFlyHndl.nYaw);
+    float                   *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
+    float                   *pFineGyro = &(nSelfFlyHndl.nFineGyro[0]);
+    float                   *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
     
-    acquireLock();
+    _AcquireLock();
     
-    nRC_Ch[0] = floor(nRC_Ch[0] / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch[1] = floor(nRC_Ch[1] / ROUNDING_BASE) * ROUNDING_BASE;
-    nRC_Ch[3] = floor(nRC_Ch[3] / ROUNDING_BASE) * ROUNDING_BASE;
+    pRCCh[0] = floor(pRCCh[0] / ROUNDING_BASE) * ROUNDING_BASE;
+    pRCCh[1] = floor(pRCCh[1] / ROUNDING_BASE) * ROUNDING_BASE;
+    pRCCh[3] = floor(pRCCh[3] / ROUNDING_BASE) * ROUNDING_BASE;
     
-    nRC_Ch[0] = map(nRC_Ch[0], RC_LOW_CH1, RC_HIGH_CH1, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    nRC_Ch[1] = map(nRC_Ch[1], RC_LOW_CH2, RC_HIGH_CH2, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    nRC_Ch[3] = map(nRC_Ch[3], RC_LOW_CH4, RC_HIGH_CH4, YAW_RATE_MIN, YAW_RATE_MAX);
+    pRCCh[0] = map(pRCCh[0], RC_CH_LOW0, RC_CH_HIGH0, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    pRCCh[1] = map(pRCCh[1], RC_CH_LOW1, RC_CH_HIGH1, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    pRCCh[3] = map(pRCCh[3], RC_CH_LOW3, RC_CH_HIGH3, YAW_RATE_MIN, YAW_RATE_MAX);
     
-    if((nRC_Ch[0] < ROLL_ANG_MIN) || (nRC_Ch[0] > ROLL_ANG_MAX))
-        nRC_Ch[0] = nRC_PrevCh[0];
-    if((nRC_Ch[1] < PITCH_ANG_MIN) || (nRC_Ch[1] > PITCH_ANG_MAX))
-        nRC_Ch[1] = nRC_PrevCh[1];
-    if((nRC_Ch[3] < YAW_RATE_MIN) || (nRC_Ch[3] > YAW_RATE_MAX))
-        nRC_Ch[3] = nRC_PrevCh[3];
+    if((pRCCh[0] < ROLL_ANG_MIN) || (pRCCh[0] > ROLL_ANG_MAX))
+        pRCCh[0] = nRCPrevCh[0];
+    if((pRCCh[1] < PITCH_ANG_MIN) || (pRCCh[1] > PITCH_ANG_MAX))
+        pRCCh[1] = nRCPrevCh[1];
+    if((pRCCh[3] < YAW_RATE_MIN) || (pRCCh[3] > YAW_RATE_MAX))
+        pRCCh[3] = nRCPrevCh[3];
     
-    nRC_PrevCh[0] = nRC_Ch[0];
-    nRC_PrevCh[1] = nRC_Ch[1];
-    nRC_PrevCh[3] = nRC_Ch[3];
+    nRCPrevCh[0] = pRCCh[0];
+    nRCPrevCh[1] = pRCCh[1];
+    nRCPrevCh[3] = pRCCh[3];
     
-    nRPY[1] = nRPY[1] * 180 / M_PI + PITCH_ANG_OFFSET;
-    nRPY[2] = nRPY[2] * 180 / M_PI + ROLL_ANG_OFFSET;
+    pFineRPY[1] = pFineRPY[1] * RAD_TO_DEG_SCALE + PITCH_ANG_OFFSET;
+    pFineRPY[2] = pFineRPY[2] * RAD_TO_DEG_SCALE + ROLL_ANG_OFFSET;
     
-    if(abs(nRPY[1] - nPrevRPY[1]) > 30)
-        nRPY[1] = nPrevRPY[1];
+    if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 30)
+        pFineRPY[1] = nPrevFineRPY[1];
     
-    if(abs(nRPY[2] - nPrevRPY[2]) > 30)
-        nRPY[2] = nPrevRPY[2];
+    if(abs(pFineRPY[2] - nPrevFineRPY[2]) > 30)
+        pFineRPY[2] = nPrevFineRPY[2];
     
     //ROLL control
-    pRoll->nAngleErr = nRC_Ch[0] - nRPY[2];
-    pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - nGyro[0];
+    pRoll->nAngleErr = pRCCh[0] - pFineRPY[2];
+    pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
     pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
     pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / SAMPLING_TIME;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
     
     //PITCH control
-    pPitch->nAngleErr = nRC_Ch[1] - nRPY[1];
-    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + nGyro[1];
+    pPitch->nAngleErr = pRCCh[1] - pFineRPY[1];
+    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
     pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / SAMPLING_TIME;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
     
     //YAW control
-    pYaw->nCurrErrRate = nRC_Ch[3] - nGyro[2];
+    pYaw->nCurrErrRate = pRCCh[3] - pFineGyro[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
     pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
@@ -991,223 +1237,140 @@ inline void _CalculatePID(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *p
     // Backup for Next
     pRoll->nPrevErrRate = pRoll->nCurrErrRate;
     pPitch->nPrevErrRate = pPitch->nCurrErrRate;
-    nPrevRPY[1] = nRPY[1];
-    nPrevRPY[2] = nRPY[2];
+    nPrevFineRPY[1] = pFineRPY[1];
+    nPrevFineRPY[2] = pFineRPY[2];
     
-    releaseLock();
+    _ReleaseLock();
 }
 
 
-inline void CalculateThrottleVal(struct _AxisErrRate_T *pRoll, struct _AxisErrRate_T *pPitch, struct _AxisErrRate_T *pYaw, int nThrottle[4])
+inline void CalculateThrottleVal()
 {
     float                   nEstimatedThrottle = 0.0f;
     static float            nPrevEstimatedThrottle = 0.0f;
+    AxisErrRate_T           *pPitch = &(nSelfFlyHndl.nPitch);
+    AxisErrRate_T           *pRoll = &(nSelfFlyHndl.nRoll);
+    AxisErrRate_T           *pYaw = &(nSelfFlyHndl.nYaw);
+    int32_t                 *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
+    float                   *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
     
-    acquireLock();
+    _AcquireLock();
     
-    nRC_Ch[2] = floor(nRC_Ch[2] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(nRC_Ch[2], RC_LOW_CH3, RC_HIGH_CH3, ESC_MIN, ESC_MAX));
+    pRCCh[2] = floor(pRCCh[2] / ROUNDING_BASE) * ROUNDING_BASE;
+    nEstimatedThrottle = (float)(map(pRCCh[2], RC_CH_LOW2, RC_CH_HIGH2, ESC_MIN, ESC_MAX));
     
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
     
     nPrevEstimatedThrottle = nEstimatedThrottle;
     
-    releaseLock();
+    _ReleaseLock();
     
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
-        nThrottle[0] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        nThrottle[1] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        nThrottle[2] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        nThrottle[3] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[0] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[1] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[2] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[3] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
     }
-}
-
-
-inline void UpdateESCs(int nThrottle[4])
-{
-    nESC[1].writeMicroseconds(nThrottle[0]);
-    nESC[3].writeMicroseconds(nThrottle[1]);
-    nESC[2].writeMicroseconds(nThrottle[2]);
-    nESC[4].writeMicroseconds(nThrottle[3]);
-}
-
-
-inline void nRCInterrupt_CB1()
-{
-    if(!nInterruptLockFlag)
-        nRC_Ch[0] = micros() - nRCPrevChangeTime1;
-    
-    nRCPrevChangeTime1 = micros();
-}
-
-
-inline void nRCInterrupt_CB2()
-{
-    if(!nInterruptLockFlag)
-        nRC_Ch[1] = micros() - nRCPrevChangeTime2;
-    
-    nRCPrevChangeTime2 = micros();
-}
-
-
-inline void nRCInterrupt_CB3()
-{
-    if(!nInterruptLockFlag)
-        nRC_Ch[2] = micros() - nRCPrevChangeTime3;
-    
-    nRCPrevChangeTime3 = micros();
-}
-
-
-inline void nRCInterrupt_CB4()
-{
-    if(!nInterruptLockFlag)
-        nRC_Ch[3] = micros() - nRCPrevChangeTime4;
-    
-    nRCPrevChangeTime4 = micros();
-}
-
-
-inline void nRCInterrupt_CB5()
-{
-    if(!nInterruptLockFlag)
-        nRC_Ch[4] = micros() - nRCPrevChangeTime5;
-    
-    nRCPrevChangeTime5 = micros();
-}
-
-inline void dmpDataReady()
-{
-    nMPUInterruptFlag = true;
-}
-
-
-inline void arm()
-{
-    nESC[1].writeMicroseconds(ESC_MIN);
-    nESC[2].writeMicroseconds(ESC_MIN);
-    nESC[3].writeMicroseconds(ESC_MIN);
-    nESC[4].writeMicroseconds(ESC_MIN);
-    
-    delay(ESC_ARM_DELAY);
-}
-
-
-void _ESC_Initialize()
-{
-    nESC[1].attach(PIN_ESC_1);
-    nESC[2].attach(PIN_ESC_2);
-    nESC[3].attach(PIN_ESC_3);
-    nESC[4].attach(PIN_ESC_4);
-    
-    delay(1000);
-    
-    arm();
-}
-
-
-void _RC_Initialize()
-{
-    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
-    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
-    
-    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH5, nRCInterrupt_CB5, CHANGE);
 }
 
 
 #if __DEBUG__
 void _print_RC_Signals()
 {
+    float                   *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
+    
     Serialprint("   //   RC_Roll:");
-    if(nRC_Ch[0] - 1480 < 0)Serialprint("<<<");
-    else if(nRC_Ch[0] - 1520 > 0)Serialprint(">>>");
+    if(pRCCh[0] - 1480 < 0)Serialprint("<<<");
+    else if(pRCCh[0] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(nRC_Ch[0]);
+    Serialprint(pRCCh[0]);
     
     Serialprint("   RC_Pitch:");
-    if(nRC_Ch[1] - 1480 < 0)Serialprint("^^^");
-    else if(nRC_Ch[1] - 1520 > 0)Serialprint("vvv");
+    if(pRCCh[1] - 1480 < 0)Serialprint("^^^");
+    else if(pRCCh[1] - 1520 > 0)Serialprint("vvv");
     else Serialprint("-+-");
-    Serialprint(nRC_Ch[1]);
+    Serialprint(pRCCh[1]);
     
     Serialprint("   RC_Throttle:");
-    if(nRC_Ch[2] - 1480 < 0)Serialprint("vvv");
-    else if(nRC_Ch[2] - 1520 > 0)Serialprint("^^^");
+    if(pRCCh[2] - 1480 < 0)Serialprint("vvv");
+    else if(pRCCh[2] - 1520 > 0)Serialprint("^^^");
     else Serialprint("-+-");
-    Serialprint(nRC_Ch[2]);
+    Serialprint(pRCCh[2]);
     
     Serialprint("   RC_Yaw:");
-    if(nRC_Ch[3] - 1480 < 0)Serialprint("<<<");
-    else if(nRC_Ch[3] - 1520 > 0)Serialprint(">>>");
+    if(pRCCh[3] - 1480 < 0)Serialprint("<<<");
+    else if(pRCCh[3] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(nRC_Ch[3]);
+    Serialprint(pRCCh[3]);
     
     Serialprint("   RC_Gear:");
-    if(nRC_Ch[4] - 1480 < 0)Serialprint("<<<");
-    else if(nRC_Ch[4] - 1520 > 0)Serialprint(">>>");
+    if(pRCCh[4] - 1480 < 0)Serialprint("<<<");
+    else if(pRCCh[4] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(nRC_Ch[4]);
+    Serialprint(pRCCh[4]);
 }
 
 
-void _print_Gyro_Signals(float nGyro[3])
+void _print_Gyro_Signals()
 {
+    float                   *pFineGyro = &(nSelfFlyHndl.nFineGyro[0]);
+    
     Serialprint("   //    Roll Gyro : ");
-    Serialprint(nGyro[0]);
+    Serialprint(pFineGyro[0]);
     Serialprint("   Pitch Gyro : ");
-    Serialprint(nGyro[1]);
+    Serialprint(pFineGyro[1]);
     Serialprint("   Yaw Gyro : ");
-    Serialprint(nGyro[2]);
+    Serialprint(pFineGyro[2]);
 }
 
 
-void _print_Throttle_Signals(int nThrottle[4])
+void _print_Throttle_Signals()
 {
+    int32_t                 *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
+
     Serialprint("   //    Thrt1 : ");
-    Serialprint(nThrottle[0]);
+    Serialprint(pThrottle[0]);
     Serialprint("  Thrt2 : ");
-    Serialprint(nThrottle[1]);
+    Serialprint(pThrottle[1]);
     Serialprint("  Thrt3 : ");
-    Serialprint(nThrottle[2]);
+    Serialprint(pThrottle[2]);
     Serialprint("  Thrt4 : ");
-    Serialprint(nThrottle[3]);
+    Serialprint(pThrottle[3]);
 }
 
 
-void _print_RPY_Signals(float nRPY[3])
+void _print_RPY_Signals()
 {
+    float                   *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
+    
     Serialprint("   //    Roll: ");
-    Serialprint(nRPY[2]);
+    Serialprint(pFineRPY[2]);
     Serialprint("   Pitch: ");
-    Serialprint(nRPY[1]);
+    Serialprint(pFineRPY[1]);
     Serialprint("   Yaw: ");
-    Serialprint(nRPY[0]);
+    Serialprint(pFineRPY[0]);
 }
 
-void _print_MagData(struct _MagParam_T *pMagParam)
+void _print_MagData()
 {
-    #if __MAG_ENABLED__
+    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+
     Serialprint("   //    Magnetic -> X:"); Serialprint(pMagParam->nNormMagData[X_AXIS]);
     Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[Y_AXIS]);
     Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[Z_AXIS]);
     Serialprint("   Head:"); Serialprint(pMagParam->nMagHeadingDeg);
-    #endif
 }
 
-void _print_BarometerData(struct _BaroParam_T *pBaroParam)
+void _print_BarometerData()
 {
-    #if __BAROMETER_ENABLED__
+    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
+
     Serialprint("   //    Barometer -> Temp:"); Serialprint(pBaroParam->nRealTemperature);
     Serialprint("   Press:"); Serialprint(pBaroParam->nRealPressure);
     Serialprint("   AvgPress:"); Serialprint(pBaroParam->nAvgpressure);
     Serialprint("   AbsAlt:"); Serialprint(pBaroParam->nAbsoluteAltitude);
-    #endif
 }
 #endif
 
