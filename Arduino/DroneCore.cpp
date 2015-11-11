@@ -386,7 +386,7 @@ void loop()
 
     #if __PROFILE__
     nEndTime = micros();
-    Serialprint(" Loop Duration"); Serialprintln((nEndTime - nStartTime0)/1000);
+    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
 }
 
@@ -1410,5 +1410,4 @@ void _print_BarometerData()
     Serialprint("   VerticalSpeed:"); Serialprint(pBaroParam->nVerticalSpeed);
 }
 #endif
-
 

@@ -61,7 +61,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MS561101BA_PROM_REG_SIZE        (2)             // size in bytes of a prom registry.
 
 
-#define PRESSURE_ARRY_SIZE              (32)
+#define AVERAGE_ARRY_SIZE              (16)
 
 class MS561101BA
 {
@@ -76,6 +76,10 @@ class MS561101BA
         float getAltitude(float press, float temp);
         void pushPressure(float nPressure);
         float getAvgPressure();
+        void pushAltitude(float nAltitude);
+        float getAvgAltitude();
+        void pushTemp(float nTemp);
+        float getAvgTemp();
         int readPROM();
         void reset();
         uint32_t lastPresConv, lastTempConv;
@@ -85,8 +89,12 @@ class MS561101BA
         uint8_t _addr;
         uint16_t _C[MS561101BA_PROM_REG_COUNT];
         uint32_t pressCache, tempCache;
-        float PressureArry[PRESSURE_ARRY_SIZE];
-        int PressureArryIdx;
+        float nPressureArry[AVERAGE_ARRY_SIZE];
+        int nPressureArryIdx;
+        float nTempArry[AVERAGE_ARRY_SIZE];
+        int nTempArryIdx;
+        float nAltitudeArry[AVERAGE_ARRY_SIZE];
+        int nAltitudeArryIdx;
 };
 
 #endif // MS561101BA_h

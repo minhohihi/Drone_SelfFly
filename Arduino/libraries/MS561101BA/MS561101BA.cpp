@@ -41,8 +41,7 @@ void printLongLong(uint64_t n, uint8_t base) {
 
 
 MS561101BA::MS561101BA() {
-    memset(PressureArry, 0, PRESSURE_ARRY_SIZE * sizeof(float));
-    PressureArryIdx = 0;
+
 }
 
 void MS561101BA::init(uint8_t address)
@@ -65,6 +64,9 @@ void MS561101BA::init(uint8_t address)
     reset();            // reset the device to populate its internal PROM registers
     delay(1000);        // some safety time
     readPROM();         // reads the PROM into object variables for later use
+    
+    memset(&(nPressureArry[0]), 0, AVERAGE_ARRY_SIZE * sizeof(float));
+    nPressureArryIdx = 0;
 }
 
 
@@ -103,15 +105,15 @@ float MS561101BA::getAltitude(float press, float temp)
 {
     const float sea_press = 1013.25;
 
-    //return (1.0f - pow(press/101325.0f, 0.190295f)) * 4433000.0f;
-    return ((pow((sea_press / press), 1/5.257) - 1.0) * (temp + 273.15)) / 0.0065;
+    return (1.0f - pow(press/1013.25f, 0.190295f)) * 4433000.0f;
+    //return ((pow((sea_press / press), 1/5.257) - 1.0) * (temp + 273.15)) / 0.0065;
 }
 
 
 void MS561101BA::pushPressure(float nPressure)
 {
-    PressureArry[PressureArryIdx] = nPressure;
-    PressureArryIdx = (PressureArryIdx + 1) % PRESSURE_ARRY_SIZE;
+    nPressureArry[nPressureArryIdx] = nPressure;
+    nPressureArryIdx = (nPressureArryIdx + 1) % AVERAGE_ARRY_SIZE;
 }
 
 
@@ -120,10 +122,48 @@ float MS561101BA::getAvgPressure()
     int         i = 0;
     float       nPressureSum = 0.0;
     
-    for(i=0; i<PRESSURE_ARRY_SIZE; i++)
-        nPressureSum += PressureArry[i];
+    for(i=0; i<AVERAGE_ARRY_SIZE; i++)
+        nPressureSum += nPressureArry[i];
 
-    return nPressureSum / PRESSURE_ARRY_SIZE;
+    return nPressureSum / AVERAGE_ARRY_SIZE;
+}
+
+
+void MS561101BA::pushAltitude(float nAltitude)
+{
+    nAltitudeArry[nAltitudeArryIdx] = nAltitude;
+    nAltitudeArryIdx = (nAltitudeArryIdx + 1) % AVERAGE_ARRY_SIZE;
+}
+
+
+float MS561101BA::getAvgAltitude()
+{
+    int         i = 0;
+    float       nAltitudeSum = 0.0;
+    
+    for(i=0; i<AVERAGE_ARRY_SIZE; i++)
+        nAltitudeSum += nAltitudeArry[i];
+    
+    return nAltitudeSum / AVERAGE_ARRY_SIZE;
+}
+
+
+void MS561101BA::pushTemp(float nTemp)
+{
+    nTempArry[nTempArryIdx] = nTemp;
+    nTempArryIdx = (nTempArryIdx + 1) % AVERAGE_ARRY_SIZE;
+}
+
+
+float MS561101BA::getAvgTemp()
+{
+    int         i = 0;
+    float       nTempSum = 0.0;
+    
+    for(i=0; i<AVERAGE_ARRY_SIZE; i++)
+        nTempSum += nTempArry[i];
+    
+    return nTempSum / AVERAGE_ARRY_SIZE;
 }
 
 
