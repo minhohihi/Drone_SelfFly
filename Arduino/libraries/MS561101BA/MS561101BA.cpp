@@ -66,7 +66,12 @@ void MS561101BA::init(uint8_t address)
     readPROM();         // reads the PROM into object variables for later use
     
     memset(&(nPressureArry[0]), 0, AVERAGE_ARRY_SIZE * sizeof(float));
-    nPressureArryIdx = 0;
+	memset(&(nAltitudeArry[0]), 0, AVERAGE_ARRY_SIZE * sizeof(float));
+	memset(&(nTempArry[0]), 0, AVERAGE_ARRY_SIZE * sizeof(float));
+
+	nPressureArryIdx = 0;
+	nAltitudeArryIdx = 0;
+	nTempArryIdx = 0;
 }
 
 
@@ -103,10 +108,16 @@ float MS561101BA::getTemperature(uint8_t OSR)
 
 float MS561101BA::getAltitude(float press, float temp)
 {
-    const float sea_press = 1013.25;
+    const float			sea_press = 101325.0f;
+	float				tmp_float;
+	float				Altitude;
 
-    return (1.0f - pow(press/1013.25f, 0.190295f)) * 4433000.0f;
-    //return ((pow((sea_press / press), 1/5.257) - 1.0) * (temp + 273.15)) / 0.0065;
+	tmp_float = (press / 101325.0);
+	tmp_float = pow(tmp_float, 0.190295);
+	Altitude = 44330 * (1.0 - tmp_float);
+
+	//return (Altitude);
+    return ((pow((sea_press / press), 1/5.257) - 1.0) * (temp + 273.15)) / 0.0065;
 }
 
 
