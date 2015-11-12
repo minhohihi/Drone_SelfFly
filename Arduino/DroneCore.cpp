@@ -360,7 +360,7 @@ void loop()
     nStartTime0 = micros();
     #endif
     
-    #if 0
+    #if 1
     // Get AccelGyro & Magnetic & Barometer Sensor Value
     _GetSensorRawData();
 
@@ -385,8 +385,8 @@ void loop()
 
     #if __DEBUG__
     //_print_Gyro_Signals();
-    _print_RPY_Signals();
-    //_print_MagData();
+    //_print_RPY_Signals();
+    _print_MagData();
     //_print_BarometerData();
     //_print_Throttle_Signals();
     //_print_RC_Signals();
@@ -789,7 +789,14 @@ void _Mag_Calibrate()
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
     Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-    
+
+    for(i=0 ; i<5 ; i++)
+    {
+        _Mag_GetData();
+        
+        delay(20);
+    }
+
     for(i=0 ; i<nLoopCnt ; i++)
     {
         float           nMinX = 0.0f;
@@ -818,9 +825,11 @@ void _Mag_Calibrate()
         
         Serialprint(".");
     }
-    
+
+    Serialprint("OffsetX: "); Serialprint((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt));
+    Serialprint("  OffsetY: ");Serialprint((int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
     // Calculate offsets
-    pSelfFlyHndl->nMagHndl.setOffset(((nSumMaxX + nSumMinX) / 2 / nLoopCnt), ((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
+    pSelfFlyHndl->nMagHndl.setOffset((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt), (int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
     
     Serialprintln(F("Done"));
 }
@@ -1408,6 +1417,10 @@ void _print_MagData()
     
     Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
     Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
+    
+    Serialprint("   X:"); Serialprint(pMagParam->nNormMagData[0]);
+    Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[1]);
+    Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[2]);
 }
 
 void _print_BarometerData()

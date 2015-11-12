@@ -360,7 +360,7 @@ void loop()
     nStartTime0 = micros();
     #endif
     
-    #if 0
+    #if 1
     // Get AccelGyro & Magnetic & Barometer Sensor Value
     _GetSensorRawData();
 
@@ -369,7 +369,7 @@ void loop()
     _Mag_CalculateDirection();
     _Barometer_CalculateData();
     #else
-    _GetYawPitchRoll();
+  _GetYawPitchRoll();
     #endif
 
     // PID Computation
@@ -385,8 +385,8 @@ void loop()
 
     #if __DEBUG__
     //_print_Gyro_Signals();
-    _print_RPY_Signals();
-    //_print_MagData();
+    //_print_RPY_Signals();
+    _print_MagData();
     //_print_BarometerData();
     //_print_Throttle_Signals();
     //_print_RC_Signals();
@@ -401,7 +401,7 @@ void loop()
 
 int _AccelGyro_Initialize()
 {
-    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+  pSelfFlyHndl->nAccelGyroHndl = MPU6050();
 
     Serialprintln(F(" Initializing MPU..."));
     pSelfFlyHndl->nAccelGyroHndl.initialize();
@@ -665,14 +665,14 @@ int _AccelGyro_GetDMPData()
 
 inline void dmpDataReady()
 {
-    nMPUInterruptFlag = true;
+  nMPUInterruptFlag = true;
 }
 #endif
 
 
 int _Mag_Initialize()
 {
-    pSelfFlyHndl->nMagHndl = HMC5883L();
+  pSelfFlyHndl->nMagHndl = HMC5883L();
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -789,7 +789,14 @@ void _Mag_Calibrate()
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
     Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-    
+
+    for(i=0 ; i<5 ; i++)
+    {
+        _Mag_GetData();
+        
+        delay(20);
+    }
+
     for(i=0 ; i<nLoopCnt ; i++)
     {
         float           nMinX = 0.0f;
@@ -818,9 +825,11 @@ void _Mag_Calibrate()
         
         Serialprint(".");
     }
-    
+
+    Serialprint("OffsetX: "); Serialprint((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt));
+    Serialprint("  OffsetY: ");Serialprint((int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
     // Calculate offsets
-    pSelfFlyHndl->nMagHndl.setOffset(((nSumMaxX + nSumMinX) / 2 / nLoopCnt), ((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
+    //pSelfFlyHndl->nMagHndl.setOffset((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt), (int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
     
     Serialprintln(F("Done"));
 }
@@ -1039,7 +1048,7 @@ void _GetSensorRawData()
     _AccelGyro_GetData();
     
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nLatestSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nLatestSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
+  pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nLatestSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
 
     // Get Magnetic Raw Data
     _Mag_GetData();
@@ -1068,16 +1077,16 @@ void _GetQuaternion()
     _GetSensorRawData();
     
     // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
-    _AHRSupdate(pRawGyro[X_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Y_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Z_AXIS] * DEG_TO_RAD_SCALE,
-                pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS], pNormMagData[X_AXIS], pNormMagData[Y_AXIS], pNormMagData[Z_AXIS]);
+  _AHRSupdate(pRawGyro[X_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Y_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Z_AXIS] * DEG_TO_RAD_SCALE,
+    pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS], pNormMagData[X_AXIS], pNormMagData[Y_AXIS], pNormMagData[Z_AXIS]);
 }
 
 
 void _GetYawPitchRollRad()
 {
-    float                   *pFineG = &(pSelfFlyHndl->nFineG[X_AXIS]);
-    float                   *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
-    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+  float                   *pFineG = &(pSelfFlyHndl->nFineG[X_AXIS]);
+  float                   *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
+  float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
     
     _GetQuaternion();
     
@@ -1408,6 +1417,10 @@ void _print_MagData()
     
     Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
     Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
+    
+    Serialprint("   X:"); Serialprint(pMagParam->nNormMagData[0]);
+    Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[1]);
+    Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[2]);
 }
 
 void _print_BarometerData()
