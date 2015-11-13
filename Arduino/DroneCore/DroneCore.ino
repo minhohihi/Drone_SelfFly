@@ -69,6 +69,21 @@
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
 #define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
+
+#define ACC_OFFSET_Z                        (205)
+#define ACC_OFFSET_Z                        (-39)
+#define ACC_OFFSET_Z                        (1063)
+#define ACC_SCALE_Z                         (7948.565970)
+#define ACC_SCALE_Z                         (8305.469320)
+#define ACC_SCALE_Z                         (8486.650841)
+
+#define MAG_OFFSET_X                        (67)
+#define MAG_OFFSET_Y                        (-59)
+#define MAG_OFFSET_Z                        (26)
+#define MAG_SCALE_X                         (527.652115)
+#define MAG_SCALE_Y                         (569.016790)
+#define MAG_SCALE_Z                         (514.710857)
+
 // Min & Max Val for Magnetic
 #define MAG_X_MIN                           (-270)                          //-654  -693   -688
 #define MAG_X_MAX                           (585)                           //185   209    170
@@ -173,7 +188,7 @@ typedef struct _AccelGyroParam_T
 
 typedef struct _MagParam_T
 {
-    float               nNormMagData[3];
+    float               nRawMagData[3];
     float               nMagHeadingRad;
     float               nMagHeadingDeg;
     float               nSmoothHeadingDegrees;
@@ -190,7 +205,9 @@ typedef struct _BaroParam_T
     float               nAvgPressure;                           // Average Pressure Data
     float               nAvgTemp;                               // Average Temperature Data
     float               nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
+    float               nRelativeAltitude;              // Relative Absolute Altitude Data
     float               nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
+    float               nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
     float               nVerticalSpeed;                         // Estimated Vertical Speed
 }BaroParam_T;
 
@@ -242,7 +259,7 @@ inline void dmpDataReady();
 int _Mag_Initialize();
 void _Mag_GetData();
 void _Mag_CalculateDirection();
-void _Mag_Calibrate();
+float _Mag_TiltCompensate(float *nRawMagData, float *pAccelGyro);
 int _Barometer_Initialize();
 void _Barometer_GetData();
 void _Barometer_CalculateData();
@@ -301,6 +318,7 @@ void setup()
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
     
+    Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
     
@@ -345,6 +363,7 @@ void setup()
 
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
+    Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
 }
 
 
@@ -381,7 +400,7 @@ void loop()
     // Update BLDCs
     UpdateESCs();
     
-  //delay(100);
+    //delay(100);
 
     #if __DEBUG__
     //_print_Gyro_Signals();
@@ -406,7 +425,7 @@ int _AccelGyro_Initialize()
     Serialprintln(F(" Initializing MPU..."));
     pSelfFlyHndl->nAccelGyroHndl.initialize();
     
-    // verify connection
+    // Verify Vonnection
     Serialprint(F("    Testing device connections..."));
     Serialprintln(pSelfFlyHndl->nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
     
@@ -676,15 +695,21 @@ int _Mag_Initialize()
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
-    pSelfFlyHndl->nMagHndl.begin();
+    pSelfFlyHndl->nMagHndl.initialize();
     
+    // Verify Vonnection
+    Serialprint(F("    Testing device connections..."));
+    Serialprintln(pSelfFlyHndl->nMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
+
     // Calibrate Magnetic
-    _Mag_Calibrate();
+    Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
+    pSelfFlyHndl->nMagHndl.calibrate();
+    Serialprintln(F("Done"));
     
-    pSelfFlyHndl->nMagHndl.setRange(HMC5883L_RANGE_1_3GA);
-    pSelfFlyHndl->nMagHndl.setMeasurementMode(HMC5883L_CONTINOUS);
-    pSelfFlyHndl->nMagHndl.setDataRate(HMC5883L_DATARATE_75HZ);
-    pSelfFlyHndl->nMagHndl.setSamples(HMC5883L_SAMPLES_8);
+    pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
+    pSelfFlyHndl->nMagHndl.setGain(HMC5883L_GAIN_1090);
+    pSelfFlyHndl->nMagHndl.setDataRate(HMC5883L_RATE_75);
+    pSelfFlyHndl->nMagHndl.setSampleAveraging(HMC5883L_AVERAGING_8);
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
@@ -693,56 +718,26 @@ int _Mag_Initialize()
     // Magnetic declination: 7° 59.76' West
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
+    // http://www.magnetic-declination.com/
     pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) / RAD_TO_DEG_SCALE;
+    
     Serialprintln(F(" Done"));
+    
+    // Reference WebSite
+    // http://www.meccanismocomplesso.org/en/arduino-magnetic-magnetic-magnetometer-hmc5883l/
 }
 
 
 void _Mag_GetData()
 {
-    int                     i = 0;
-    Vector                  nNormMagData;
-    float         *pNormMagData = &(pSelfFlyHndl->nMagParam.nNormMagData[X_AXIS]);
+    int16_t                 nRawMagData[3];
+    float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
-    //nNormMagData = pSelfFlyHndl->nMagHndl.readRaw();
-    nNormMagData = pSelfFlyHndl->nMagHndl.readNormalize();
+    pSelfFlyHndl->nMagHndl.getHeading(&(nRawMagData[X_AXIS]), &(nRawMagData[Y_AXIS]), &(nRawMagData[Z_AXIS]));
     
-    pNormMagData[X_AXIS] = nNormMagData.XAxis;
-    pNormMagData[Y_AXIS] = nNormMagData.YAxis;
-    pNormMagData[Z_AXIS] = nNormMagData.ZAxis;
-}
-
-
-float _Mag_TiltCompensate(float* mag, Vector normAccel)
-{
-    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
-    
-//    float roll;
-//    float pitch;
-//    
-//    roll = asin(pAccelGyroParam->nRawAccel);
-//    pitch = asin(-normAccel.XAxis);
-//    
-//    if (roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
-//    {
-//        return -1000;
-//    }
-//    
-//    // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
-//    float cosRoll = cos(roll);
-//    float sinRoll = sin(roll);
-//    float cosPitch = cos(pitch);
-//    float sinPitch = sin(pitch);
-//    
-//    // Tilt compensation
-//    float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
-//    float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
-//    
-//    float heading = atan2(Yh, Xh);
-//    
-//    return heading;
-    return 0.0f;
+    pRawMagData[X_AXIS] = (float)(nRawMagData[X_AXIS]);
+    pRawMagData[Y_AXIS] = (float)(nRawMagData[Y_AXIS]);
+    pRawMagData[Z_AXIS] = (float)(nRawMagData[Z_AXIS]);
 }
 
 
@@ -751,8 +746,8 @@ void _Mag_CalculateDirection()
     int                     i = 0;
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    pMagParam->nMagHeadingRad = atan2(pMagParam->nNormMagData[Y_AXIS], pMagParam->nNormMagData[X_AXIS]);
-    pMagParam->nMagHeadingRad += pMagParam->nDeclinationAngle;
+    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMagData[Y_AXIS], pMagParam->nRawMagData[X_AXIS]);
+    pMagParam->nMagHeadingRad -= pMagParam->nDeclinationAngle;      // If East, then Change Operation to PLUS
     
     if(pMagParam->nMagHeadingRad < 0)
         pMagParam->nMagHeadingRad += DOUBLE_RADIAN;
@@ -762,10 +757,10 @@ void _Mag_CalculateDirection()
     
     pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
     
-    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-    else if(pMagParam->nMagHeadingDeg >= 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+//    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
+//        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
+//    else if(pMagParam->nMagHeadingDeg >= 240)
+//        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
     
     // Smooth angles rotation for +/- 3deg
     pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);
@@ -778,68 +773,60 @@ void _Mag_CalculateDirection()
 }
 
 
-void _Mag_Calibrate()
+float _Mag_TiltCompensate(float *nRawMagData, float *pAccelGyro)
 {
-    int                     i = 0;
-    float                   nSumMinX = 0.0f;
-    float                   nSumMaxX = 0.0f;
-    float                   nSumMinY = 0.0f;
-    float                   nSumMaxY = 0.0f;
-    const int               nLoopCnt = 50;
+    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-
-    for(i=0 ; i<5 ; i++)
-    {
-        _Mag_GetData();
-        
-        delay(20);
-    }
-
-    for(i=0 ; i<nLoopCnt ; i++)
-    {
-        float           nMinX = 0.0f;
-        float           nMaxX = 0.0f;
-        float           nMinY = 0.0f;
-        float           nMaxY = 0.0f;
-        
-        _Mag_GetData();
-        
-        // Determine Min / Max values
-        if(pMagParam->nNormMagData[X_AXIS] < nMinX)
-            nMinX = pMagParam->nNormMagData[X_AXIS];
-        if(pMagParam->nNormMagData[X_AXIS] > nMaxX)
-            nMaxX = pMagParam->nNormMagData[X_AXIS];
-        if(pMagParam->nNormMagData[Y_AXIS] < nMinY)
-            nMinY = pMagParam->nNormMagData[Y_AXIS];
-        if(pMagParam->nNormMagData[Y_AXIS] > nMaxY)
-            nMaxY = pMagParam->nNormMagData[Y_AXIS];
-        
-        nSumMinX += nMinX;
-        nSumMaxX += nMaxX;
-        nSumMinY += nMinY;
-        nSumMaxY += nMaxY;
-        
-        delay(20);
-        
-        Serialprint(".");
-    }
-
-    Serialprint("OffsetX: "); Serialprint((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt));
-    Serialprint("  OffsetY: ");Serialprint((int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
-    // Calculate offsets
-    //pSelfFlyHndl->nMagHndl.setOffset((int)((nSumMaxX + nSumMinX) / 2 / nLoopCnt), (int)((nSumMaxY + nSumMinY) / 2 / nLoopCnt));
-    
-    Serialprintln(F("Done"));
+    //    float roll;
+    //    float pitch;
+    //
+    //    roll = asin(pAccelGyroParam->nRawAccel);
+    //    pitch = asin(-normAccel.XAxis);
+    //
+    //    if (roll > 0.78 || roll < -0.78 || pitch > 0.78 || pitch < -0.78)
+    //    {
+    //        return -1000;
+    //    }
+    //
+    //    // Some of these are used twice, so rather than computing them twice in the algorithem we precompute them before hand.
+    //    float cosRoll = cos(roll);
+    //    float sinRoll = sin(roll);
+    //    float cosPitch = cos(pitch);
+    //    float sinPitch = sin(pitch);
+    //
+    //    // Tilt compensation
+    //    float Xh = mag.XAxis * cosPitch + mag.ZAxis * sinPitch;
+    //    float Yh = mag.XAxis * sinRoll * sinPitch + mag.YAxis * cosRoll - mag.ZAxis * sinRoll * cosPitch;
+    //
+    //    float heading = atan2(Yh, Xh);
+    //    
+    //    return heading;
+    return 0.0f;
 }
 
 
 int _Barometer_Initialize()
 {
+    int                     i = 0;
+    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    
     Serialprint(F(" Initializing Barometer Sensor (MS5611)..."));
     
     pSelfFlyHndl->nBaroHndl.init(MS561101BA_ADDR_CSB_LOW);
+    
+    for(i=0 ; i<50 ; i++)
+    {
+        _Barometer_GetData();
+        delay(20);
+    }
+    
+    // Get Average Pressure & Temperature
+    pBaroParam->nAvgTemp = pSelfFlyHndl->nBaroHndl.getAvgTemp();
+    pBaroParam->nAvgPressure = pSelfFlyHndl->nBaroHndl.getAvgPressure();
+    
+    // Get Reference Altitude
+    pBaroParam->nRefAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAltitude(pBaroParam->nAvgPressure, pBaroParam->nAvgTemp);
     
     Serialprintln(F(" Done"));
 }
@@ -851,6 +838,10 @@ void _Barometer_GetData()
     
     pBaroParam->nRawTemp = pSelfFlyHndl->nBaroHndl.getTemperature(MS561101BA_OSR_512);
     pBaroParam->nRawPressure = pSelfFlyHndl->nBaroHndl.getPressure(MS561101BA_OSR_512);
+
+    // Push to Array to Get Average Pressure & Temperature
+    pSelfFlyHndl->nBaroHndl.pushTemp(pBaroParam->nRawTemp);
+    pSelfFlyHndl->nBaroHndl.pushPressure(pBaroParam->nRawPressure);
 }
 
 
@@ -858,16 +849,12 @@ void _Barometer_CalculateData()
 {
     BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
  
-    // Push to Array to Get Average Pressure & Temperature
-    pSelfFlyHndl->nBaroHndl.pushPressure(pBaroParam->nRawPressure);
-    pSelfFlyHndl->nBaroHndl.pushTemp(pBaroParam->nRawTemp);
-    
     // Get Average Pressure & Temperature
-    pBaroParam->nAvgPressure = pSelfFlyHndl->nBaroHndl.getAvgPressure();
     pBaroParam->nAvgTemp = pSelfFlyHndl->nBaroHndl.getAvgTemp();
+    pBaroParam->nAvgPressure = pSelfFlyHndl->nBaroHndl.getAvgPressure();
 
     // Get Altitude
-    pBaroParam->nRawAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAltitude(pBaroParam->nAvgPressure, pBaroParam->nRawTemp);
+    pBaroParam->nRawAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAltitude(pBaroParam->nAvgPressure, pBaroParam->nAvgTemp);
     
     // Push to Array to Get Average Altitude
     pSelfFlyHndl->nBaroHndl.pushAltitude(pBaroParam->nRawAbsoluteAltitude);
@@ -876,7 +863,8 @@ void _Barometer_CalculateData()
     pBaroParam->nAvgAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAvgAltitude();
     
     // Get Vertical Speed
-    pBaroParam->nVerticalSpeed = abs(pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nPrevAvgAbsoluteAltitude) / (pSelfFlyHndl->nDiffTime * 10000);
+    pBaroParam->nVerticalSpeed = abs(pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nPrevAvgAbsoluteAltitude) / (pSelfFlyHndl->nDiffTime);
+    pBaroParam->nRelativeAltitude = pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nRefAbsoluteAltitude;
     
     pBaroParam->nPrevAvgAbsoluteAltitude = pBaroParam->nAvgAbsoluteAltitude;
 }
@@ -1071,14 +1059,14 @@ void _GetQuaternion()
 {
   int16_t                 *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
   int16_t                 *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-  float         *pNormMagData = &(pSelfFlyHndl->nMagParam.nNormMagData[X_AXIS]);
+  float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
 
     //getValues(val);
     _GetSensorRawData();
     
     // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
   _AHRSupdate(pRawGyro[X_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Y_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Z_AXIS] * DEG_TO_RAD_SCALE,
-    pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS], pNormMagData[X_AXIS], pNormMagData[Y_AXIS], pNormMagData[Z_AXIS]);
+    pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS], pRawMagData[X_AXIS], pRawMagData[Y_AXIS], pRawMagData[Z_AXIS]);
 }
 
 
@@ -1418,9 +1406,9 @@ void _print_MagData()
     Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
     Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
     
-    Serialprint("   X:"); Serialprint(pMagParam->nNormMagData[0]);
-    Serialprint("   Y:"); Serialprint(pMagParam->nNormMagData[1]);
-    Serialprint("   Z:"); Serialprint(pMagParam->nNormMagData[2]);
+    Serialprint("   X:"); Serialprint(pMagParam->nRawMagData[0]);
+    Serialprint("   Y:"); Serialprint(pMagParam->nRawMagData[1]);
+    Serialprint("   Z:"); Serialprint(pMagParam->nRawMagData[2]);
 }
 
 void _print_BarometerData()
@@ -1429,8 +1417,10 @@ void _print_BarometerData()
     
     Serialprint("   //    Barometer AvgTemp:"); Serialprint(pBaroParam->nAvgTemp);
     Serialprint("   AvgPress:"); Serialprint(pBaroParam->nAvgPressure);
-    Serialprint("   AvgAltitude:"); Serialprint(pBaroParam->nAvgAbsoluteAltitude);
+    Serialprint("   AvgAlt:"); Serialprint(pBaroParam->nAvgAbsoluteAltitude);
+    Serialprint("   RelativeAlt:"); Serialprint(pBaroParam->nRelativeAltitude);
     Serialprint("   VerticalSpeed:"); Serialprint(pBaroParam->nVerticalSpeed);
+    Serialprint("   ");
 }
 #endif
 

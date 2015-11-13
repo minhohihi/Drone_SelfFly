@@ -90,11 +90,8 @@ class MS561101BA
         uint16_t _C[MS561101BA_PROM_REG_COUNT];
         uint32_t pressCache, tempCache;
         float nPressureArry[AVERAGE_ARRY_SIZE];
-        int nPressureArryIdx;
         float nTempArry[AVERAGE_ARRY_SIZE];
-        int nTempArryIdx;
         float nAltitudeArry[AVERAGE_ARRY_SIZE];
-        int nAltitudeArryIdx;
 };
 
 #endif // MS561101BA_h

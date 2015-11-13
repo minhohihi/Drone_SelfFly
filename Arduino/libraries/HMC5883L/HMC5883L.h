@@ -1,128 +1,154 @@
-/*
-HMC5883L.h - Header file for the HMC5883L Triple Axis Digital Compass Arduino Library.
+// I2Cdev library collection - HMC5883L I2C device class header file
+// Based on Honeywell HMC5883L datasheet, 10/2010 (Form #900405 Rev B)
+// 6/12/2012 by Jeff Rowberg <jeff@rowberg.net>
+// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
+//
+// Changelog:
+//     2012-06-12 - fixed swapped Y/Z axes
+//     2011-08-22 - small Doxygen comment fixes
+//     2011-07-31 - initial release
 
-Version: 1.1.0
-(c) 2014 Korneliusz Jarzebski
-www.jarzebski.pl
+/* ============================================
+I2Cdev device library code is placed under the MIT license
+Copyright (c) 2011 Jeff Rowberg
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the version 3 GNU General Public License as
-published by the Free Software Foundation.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+===============================================
 */
 
-#ifndef HMC5883L_h
-#define HMC5883L_h
+#ifndef _HMC5883L_H_
+#define _HMC5883L_H_
 
-#if ARDUINO >= 100
-#include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
+#include "I2Cdev.h"
 
-#define HMC5883L_ADDRESS              (0x1E)
-#define HMC5883L_REG_CONFIG_A         (0x00)
-#define HMC5883L_REG_CONFIG_B         (0x01)
-#define HMC5883L_REG_MODE             (0x02)
-#define HMC5883L_REG_OUT_X_M          (0x03)
-#define HMC5883L_REG_OUT_X_L          (0x04)
-#define HMC5883L_REG_OUT_Z_M          (0x05)
-#define HMC5883L_REG_OUT_Z_L          (0x06)
-#define HMC5883L_REG_OUT_Y_M          (0x07)
-#define HMC5883L_REG_OUT_Y_L          (0x08)
-#define HMC5883L_REG_STATUS           (0x09)
-#define HMC5883L_REG_IDENT_A          (0x0A)
-#define HMC5883L_REG_IDENT_B          (0x0B)
-#define HMC5883L_REG_IDENT_C          (0x0C)
+#define HMC5883L_ADDRESS            0x1E // this device only has one address
+#define HMC5883L_DEFAULT_ADDRESS    0x1E
 
-typedef enum
-{
-    HMC5883L_SAMPLES_8     = 0b11,
-    HMC5883L_SAMPLES_4     = 0b10,
-    HMC5883L_SAMPLES_2     = 0b01,
-    HMC5883L_SAMPLES_1     = 0b00
-} hmc5883l_samples_t;
+#define HMC5883L_RA_CONFIG_A        0x00
+#define HMC5883L_RA_CONFIG_B        0x01
+#define HMC5883L_RA_MODE            0x02
+#define HMC5883L_RA_DATAX_H         0x03
+#define HMC5883L_RA_DATAX_L         0x04
+#define HMC5883L_RA_DATAZ_H         0x05
+#define HMC5883L_RA_DATAZ_L         0x06
+#define HMC5883L_RA_DATAY_H         0x07
+#define HMC5883L_RA_DATAY_L         0x08
+#define HMC5883L_RA_STATUS          0x09
+#define HMC5883L_RA_ID_A            0x0A
+#define HMC5883L_RA_ID_B            0x0B
+#define HMC5883L_RA_ID_C            0x0C
 
-typedef enum
-{
-    HMC5883L_DATARATE_75HZ       = 0b110,
-    HMC5883L_DATARATE_30HZ       = 0b101,
-    HMC5883L_DATARATE_15HZ       = 0b100,
-    HMC5883L_DATARATE_7_5HZ      = 0b011,
-    HMC5883L_DATARATE_3HZ        = 0b010,
-    HMC5883L_DATARATE_1_5HZ      = 0b001,
-    HMC5883L_DATARATE_0_75_HZ    = 0b000
-} hmc5883l_dataRate_t;
+#define HMC5883L_CRA_AVERAGE_BIT    6
+#define HMC5883L_CRA_AVERAGE_LENGTH 2
+#define HMC5883L_CRA_RATE_BIT       4
+#define HMC5883L_CRA_RATE_LENGTH    3
+#define HMC5883L_CRA_BIAS_BIT       1
+#define HMC5883L_CRA_BIAS_LENGTH    2
 
-typedef enum
-{
-    HMC5883L_RANGE_8_1GA     = 0b111,
-    HMC5883L_RANGE_5_6GA     = 0b110,
-    HMC5883L_RANGE_4_7GA     = 0b101,
-    HMC5883L_RANGE_4GA       = 0b100,
-    HMC5883L_RANGE_2_5GA     = 0b011,
-    HMC5883L_RANGE_1_9GA     = 0b010,
-    HMC5883L_RANGE_1_3GA     = 0b001,
-    HMC5883L_RANGE_0_88GA    = 0b000
-} hmc5883l_range_t;
+#define HMC5883L_AVERAGING_1        0x00
+#define HMC5883L_AVERAGING_2        0x01
+#define HMC5883L_AVERAGING_4        0x02
+#define HMC5883L_AVERAGING_8        0x03
 
-typedef enum
-{
-    HMC5883L_IDLE          = 0b10,
-    HMC5883L_SINGLE        = 0b01,
-    HMC5883L_CONTINOUS     = 0b00
-} hmc5883l_mode_t;
+#define HMC5883L_RATE_0P75          0x00
+#define HMC5883L_RATE_1P5           0x01
+#define HMC5883L_RATE_3             0x02
+#define HMC5883L_RATE_7P5           0x03
+#define HMC5883L_RATE_15            0x04
+#define HMC5883L_RATE_30            0x05
+#define HMC5883L_RATE_75            0x06
 
-#ifndef VECTOR_STRUCT_H
-#define VECTOR_STRUCT_H
-struct Vector
-{
-    float XAxis;
-    float YAxis;
-    float ZAxis;
-};
-#endif
+#define HMC5883L_BIAS_NORMAL        0x00
+#define HMC5883L_BIAS_POSITIVE      0x01
+#define HMC5883L_BIAS_NEGATIVE      0x02
 
-class HMC5883L
-{
+#define HMC5883L_CRB_GAIN_BIT       7
+#define HMC5883L_CRB_GAIN_LENGTH    3
+
+#define HMC5883L_GAIN_1370          0x00
+#define HMC5883L_GAIN_1090          0x01
+#define HMC5883L_GAIN_820           0x02
+#define HMC5883L_GAIN_660           0x03
+#define HMC5883L_GAIN_440           0x04
+#define HMC5883L_GAIN_390           0x05
+#define HMC5883L_GAIN_330           0x06
+#define HMC5883L_GAIN_230           0x07
+
+#define HMC5883L_MODEREG_BIT        1
+#define HMC5883L_MODEREG_LENGTH     2
+
+#define HMC5883L_MODE_CONTINUOUS    0x00
+#define HMC5883L_MODE_SINGLE        0x01
+#define HMC5883L_MODE_IDLE          0x02
+
+#define HMC5883L_STATUS_LOCK_BIT    1
+#define HMC5883L_STATUS_READY_BIT   0
+
+class HMC5883L {
     public:
+        HMC5883L();
+        HMC5883L(uint8_t address);
+        
+        void initialize();
+        bool testConnection();
 
-	bool begin(void);
+        // CONFIG_A register
+        uint8_t getSampleAveraging();
+        void setSampleAveraging(uint8_t averaging);
+        uint8_t getDataRate();
+        void setDataRate(uint8_t rate);
+        uint8_t getMeasurementBias();
+        void setMeasurementBias(uint8_t bias);
 
-	Vector readRaw(void);
-	Vector readNormalize(void);
+        // CONFIG_B register
+        uint8_t getGain();
+        void setGain(uint8_t gain);
 
-	void  setOffset(int xo, int yo);
+        // MODE register
+        uint8_t getMode();
+        void setMode(uint8_t mode);
 
-	void  setRange(hmc5883l_range_t range);
-	hmc5883l_range_t getRange(void);
+        // DATA* registers
+        void getHeading(int16_t *x, int16_t *y, int16_t *z);
+        void getHeading(float *x, float *y, float *z);
+        int16_t getHeadingX();
+        int16_t getHeadingY();
+        int16_t getHeadingZ();
 
-	void  setMeasurementMode(hmc5883l_mode_t mode);
-	hmc5883l_mode_t getMeasurementMode(void);
+        // STATUS register
+        bool getLockStatus();
+        bool getReadyStatus();
 
-	void  setDataRate(hmc5883l_dataRate_t dataRate);
-	hmc5883l_dataRate_t getDataRate(void);
-
-	void  setSamples(hmc5883l_samples_t samples);
-	hmc5883l_samples_t getSamples(void);
+        // ID_* registers
+        uint8_t getIDA();
+        uint8_t getIDB();
+        uint8_t getIDC();
+    
+        // Calibration
+        void calibrate();
 
     private:
-
-	float mgPerDigit;
-	Vector v;
-	int xOffset, yOffset;
-
-	void writeRegister8(uint8_t reg, uint8_t value);
-	uint8_t readRegister8(uint8_t reg);
-	uint8_t fastRegister8(uint8_t reg);
-	int16_t readRegister16(uint8_t reg);
+        uint8_t devAddr;
+        uint8_t buffer[6];
+        uint8_t mode;
+        int16_t offset[2];
+        float   mgPerDigit;
 };
 
-#endif
+#endif /* _HMC5883L_H_ */
