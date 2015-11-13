@@ -66,15 +66,16 @@
 #define YAW_I_GAIN                          (0.650)
 
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
+#define GYRO_FS                             (131.0f)                         // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
 #define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
 
-#define ACC_OFFSET_Z                        (205)
-#define ACC_OFFSET_Z                        (-39)
+#define ACC_OFFSET_X                        (205)
+#define ACC_OFFSET_Y                        (-39)
 #define ACC_OFFSET_Z                        (1063)
-#define ACC_SCALE_Z                         (7948.565970)
-#define ACC_SCALE_Z                         (8305.469320)
+#define ACC_SCALE_X                         (7948.565970)
+#define ACC_SCALE_Y                         (8305.469320)
 #define ACC_SCALE_Z                         (8486.650841)
 
 #define MAG_OFFSET_X                        (67)
@@ -235,10 +236,10 @@ typedef struct _SelfFly_T
     
     float               nFineRPY[3];
     float               nFineGyro[3];
-    float               nFineQ[4];                              // quaternion
+    volatile float      nFineQ[4];                              // quaternion
     float               nFineG[3];                              // estimated gravity direction
     
-    unsigned long       nLatestSensorCapTime;
+    unsigned long       nCurrSensorCapTime;
     unsigned long       nPrevSensorCapTime;
     float               nDiffTime;
     float               nSampleFreq;                            // half the sample period expressed in seconds
@@ -270,9 +271,9 @@ inline void arm();
 void _ESC_Initialize();
 void _RC_Initialize();
 void _GetSensorRawData();
-void _GetYawPitchRoll();
-void _GetQuaternion();
-void _GetYawPitchRollRad();
+void _Get_RollPitchYaw();
+void _Get_Quaternion();
+void _Get_RollPitchYawRad_By_Q();
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 void _Convert_Rad_to_Deg(float *pArr);
 float _InvSqrt(float nNumber);
@@ -379,7 +380,7 @@ void loop()
     nStartTime0 = micros();
     #endif
     
-    #if 1
+    #if 0
     // Get AccelGyro & Magnetic & Barometer Sensor Value
     _GetSensorRawData();
 
@@ -388,7 +389,7 @@ void loop()
     _Mag_CalculateDirection();
     _Barometer_CalculateData();
     #else
-  _GetYawPitchRoll();
+  _Get_RollPitchYaw();
     #endif
 
     // PID Computation
@@ -400,12 +401,12 @@ void loop()
     // Update BLDCs
     UpdateESCs();
     
-    //delay(100);
+    delay(50);
 
     #if __DEBUG__
     //_print_Gyro_Signals();
-    //_print_RPY_Signals();
-    _print_MagData();
+    _print_RPY_Signals();
+    //_print_MagData();
     //_print_BarometerData();
     //_print_Throttle_Signals();
     //_print_RC_Signals();
@@ -500,12 +501,6 @@ void _AccelGyro_GetData()
     const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
     
     // Read Gyro and Accelerate Data
-    //pSelfFlyHndl->nAccelGyroHndl.getRotation(&pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
-    //pSelfFlyHndl->nAccelGyroHndl.getAcceleration(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS]);
-    //pSelfFlyHndl->nAccelGyroHndl.getMotion6(&pRawAccel[X_AXIS], &pRawAccel[Y_AXIS], &pRawAccel[Z_AXIS],
-    //                                       &pRawGyro[X_AXIS], &pRawGyro[Y_AXIS], &pRawGyro[Z_AXIS]);
-    
-    
     Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);
     Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
     Wire.endTransmission(false);
@@ -529,7 +524,6 @@ void _AccelGyro_GetData()
 void _AccelGyro_CalculateAngle()
 {
     AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    const float             nFS = 131.0f;
     const int16_t           *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
     const int16_t           *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
     const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
@@ -541,9 +535,9 @@ void _AccelGyro_CalculateAngle()
     static float            nPrevRawAngle[3] = {0, };
     
     // Convert Gyro Values to Degrees/Sec
-    nGyroDiffAngle[X_AXIS] = pRawGyro[X_AXIS] / nFS;
-    nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] / nFS;
-    nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] / nFS;
+    nGyroDiffAngle[X_AXIS] = pRawGyro[X_AXIS] / GYRO_FS;
+    nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] / GYRO_FS;
+    nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] / GYRO_FS;
     
     // Calculate
     nAccelAngle[X_AXIS] = atan(pRawAccel[Y_AXIS] / sqrt(pow(pRawAccel[X_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
@@ -1029,14 +1023,14 @@ void _RC_Initialize()
 
 void _GetSensorRawData()
 {
-    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nLatestSensorCapTime;
-    pSelfFlyHndl->nLatestSensorCapTime = micros();
+    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
+    pSelfFlyHndl->nCurrSensorCapTime = micros();
 
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
     
-    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nLatestSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-  pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nLatestSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
+    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
+  pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
 
     // Get Magnetic Raw Data
     _Mag_GetData();
@@ -1046,37 +1040,51 @@ void _GetSensorRawData()
 }
 
 
-void _GetYawPitchRoll()
+void _Get_RollPitchYaw()
 {
-    _GetYawPitchRollRad();
+    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
+    _GetSensorRawData();
+
+    // Calculate Roll & Pitch & Yaw
+    _Get_RollPitchYawRad_By_Q();
     
     // Convert Radian to Degree
     _Convert_Rad_to_Deg(&(pSelfFlyHndl->nFineRPY[0]));
 }
 
 
-void _GetQuaternion()
+void _Get_Quaternion()
 {
   int16_t                 *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
   int16_t                 *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
   float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   nSensorVal[9] = {0, };
 
-    //getValues(val);
-    _GetSensorRawData();
+    nSensorVal[0] = (float)(pRawGyro[X_AXIS]) / GYRO_FS;
+    nSensorVal[1] = (float)(pRawGyro[Y_AXIS]) / GYRO_FS;
+    nSensorVal[2] = (float)(pRawGyro[Z_AXIS]) / GYRO_FS;
+    nSensorVal[3] = (float)(pRawAccel[X_AXIS] - ACC_OFFSET_X) / ACC_SCALE_X;
+    nSensorVal[4] = (float)(pRawAccel[Y_AXIS] - ACC_OFFSET_Y) / ACC_SCALE_Y;
+    nSensorVal[5] = (float)(pRawAccel[Z_AXIS] - ACC_OFFSET_Z) / ACC_SCALE_Z;
+    nSensorVal[6] = (float)(pRawMagData[X_AXIS] - MAG_OFFSET_X) / MAG_SCALE_X;
+    nSensorVal[7] = (float)(pRawMagData[Y_AXIS] - MAG_OFFSET_Y) / MAG_SCALE_Y;
+    nSensorVal[8] = (float)(pRawMagData[Z_AXIS] - MAG_OFFSET_Z) / MAG_SCALE_Z;
     
     // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
-  _AHRSupdate(pRawGyro[X_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Y_AXIS] * DEG_TO_RAD_SCALE, pRawGyro[Z_AXIS] * DEG_TO_RAD_SCALE,
-    pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS], pRawMagData[X_AXIS], pRawMagData[Y_AXIS], pRawMagData[Z_AXIS]);
+  _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
+                nSensorVal[3], nSensorVal[4], nSensorVal[5],
+                -nSensorVal[6], -nSensorVal[7], nSensorVal[8]);
 }
 
 
-void _GetYawPitchRollRad()
+void _Get_RollPitchYawRad_By_Q()
 {
   float                   *pFineG = &(pSelfFlyHndl->nFineG[X_AXIS]);
-  float                   *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
+  const volatile float    *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
   float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
     
-    _GetQuaternion();
+    // Calculate Quaternion
+    _Get_Quaternion();
     
     pFineG[X_AXIS] = 2 * ((pFineQ[1] * pFineQ[3]) - (pFineQ[0] * pFineQ[2]));
     pFineG[Y_AXIS] = 2 * ((pFineQ[0] * pFineQ[1]) + (pFineQ[2] * pFineQ[3]));
@@ -1096,7 +1104,7 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     float                   qa, qb, qc;
     static volatile float   nIntegralFBx = 0.0f,  nIntegralFBy = 0.0f, nIntegralFBz = 0.0f;
     const float             nSampleFreq = pSelfFlyHndl->nSampleFreq;
-    float                   *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
+    volatile float          *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
     
     
     // Auxiliary variables to avoid repeated arithmetic
