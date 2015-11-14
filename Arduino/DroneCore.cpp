@@ -74,16 +74,16 @@
 #define ACC_OFFSET_X                        (205)
 #define ACC_OFFSET_Y                        (-39)
 #define ACC_OFFSET_Z                        (1063)
-#define ACC_SCALE_X                         (7948.565970)
-#define ACC_SCALE_Y                         (8305.469320)
-#define ACC_SCALE_Z                         (8486.650841)
+#define ACC_SCALE_X                         (2*7948.565970)
+#define ACC_SCALE_Y                         (2*8305.469320)
+#define ACC_SCALE_Z                         (2*8486.650841)
 
-#define MAG_OFFSET_X                        (67)
-#define MAG_OFFSET_Y                        (-59)
-#define MAG_OFFSET_Z                        (26)
-#define MAG_SCALE_X                         (527.652115)
-#define MAG_SCALE_Y                         (569.016790)
-#define MAG_SCALE_Z                         (514.710857)
+#define MAG_OFFSET_X                        (67.0f)
+#define MAG_OFFSET_Y                        (-59.0f)
+#define MAG_OFFSET_Z                        (26.0f)
+#define MAG_SCALE_X                         (527.652115f)
+#define MAG_SCALE_Y                         (569.016790f)
+#define MAG_SCALE_Z                         (514.710857f)
 
 // Min & Max Val for Magnetic
 #define MAG_X_MIN                           (-270)                          //-654  -693   -688
@@ -177,9 +177,9 @@ typedef struct _AxisErrRate_T
 
 typedef struct _AccelGyroParam_T
 {
-    int16_t             nRawGyro[3];
-    int16_t             nRawAccel[3];
-    int16_t             nRawTemp;
+    float               nRawGyro[3];
+    float               nRawAccel[3];
+    float               nRawTemp;
     float               nBaseGyro[3];
     float               nBaseAccel[3];
     float               nCurrReadTime;
@@ -236,8 +236,8 @@ typedef struct _SelfFly_T
     
     float               nFineRPY[3];
     float               nFineGyro[3];
-    volatile float      nFineQ[4];                              // quaternion
-    float               nFineG[3];                              // estimated gravity direction
+    volatile float      nQuaternion[4];                              // quaternion
+    float               nEstGravity[3];                              // estimated gravity direction
     
     unsigned long       nCurrSensorCapTime;
     unsigned long       nPrevSensorCapTime;
@@ -275,7 +275,6 @@ void _Get_RollPitchYaw();
 void _Get_Quaternion();
 void _Get_RollPitchYawRad_By_Q();
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
-void _Convert_Rad_to_Deg(float *pArr);
 float _InvSqrt(float nNumber);
 inline void nRCInterrupt_CB0();
 inline void nRCInterrupt_CB1();
@@ -360,7 +359,7 @@ void setup()
     for(i=0 ; i<MAX_CH_RC ; i++)
         pSelfFlyHndl->nRCPrevChangeTime[i] = micros();
     
-	pSelfFlyHndl->nFineQ[0] = 1.0f;
+	pSelfFlyHndl->nQuaternion[0] = 1.0f;
 
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -401,15 +400,13 @@ void loop()
     // Update BLDCs
     UpdateESCs();
     
-    delay(50);
-
     #if __DEBUG__
     //_print_Gyro_Signals();
-    _print_RPY_Signals();
     //_print_MagData();
     //_print_BarometerData();
-    //_print_Throttle_Signals();
+    //_print_RPY_Signals();
     //_print_RC_Signals();
+    //_print_Throttle_Signals();
     #endif
 
     #if __PROFILE__
@@ -496,8 +493,8 @@ int _AccelGyro_Initialize()
 void _AccelGyro_GetData()
 {
     AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    int16_t                 *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
-    int16_t                 *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
+    float                   *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
+    float                   *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
     const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
     
     // Read Gyro and Accelerate Data
@@ -506,13 +503,13 @@ void _AccelGyro_GetData()
     Wire.endTransmission(false);
     Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW, 14, true);  // request a total of 14 registers
     
-    pRawAccel[X_AXIS] = Wire.read()<<8 | Wire.read();               // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    pRawAccel[Y_AXIS] = Wire.read()<<8 | Wire.read();               // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    pRawAccel[Z_AXIS] = Wire.read()<<8 | Wire.read();               // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-    pAccelGyroParam->nRawTemp = Wire.read()<<8 | Wire.read();       // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)        340 per degrees Celsius, -512 at 35 degrees
-    pRawGyro[X_AXIS]= Wire.read()<<8 | Wire.read();                 // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-    pRawGyro[Y_AXIS]= Wire.read()<<8 | Wire.read();                 // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    pRawGyro[Z_AXIS]= Wire.read()<<8 | Wire.read();                 // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    pRawAccel[X_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+    pRawAccel[Y_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+    pRawAccel[Z_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+    pAccelGyroParam->nRawTemp = (float)(Wire.read()<<8 | Wire.read());       // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)        340 per degrees Celsius, -512 at 35 degrees
+    pRawGyro[X_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+    pRawGyro[Y_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    pRawGyro[Z_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
     
     // Remove Bias of Gyro
     pRawGyro[X_AXIS] = (pRawGyro[X_AXIS] - pBaseGyro[X_AXIS]);
@@ -524,8 +521,8 @@ void _AccelGyro_GetData()
 void _AccelGyro_CalculateAngle()
 {
     AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    const int16_t           *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
-    const int16_t           *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
+    const float             *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
+    const float             *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
     const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
     float                   *pFineAngle = &(pAccelGyroParam->nFineAngle[X_AXIS]);
     static float            nGyroAngle[3] = {0, };
@@ -601,12 +598,12 @@ void _AccelGyro_Calibrate()
     }
     
     // Store the raw calibration values globally
-    pAccelGyroParam->nBaseGyro[X_AXIS] = nRawGyro[X_AXIS] / nLoopCnt;
-    pAccelGyroParam->nBaseGyro[Y_AXIS] = nRawGyro[Y_AXIS] / nLoopCnt;
-    pAccelGyroParam->nBaseGyro[Z_AXIS] = nRawGyro[Z_AXIS] / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[X_AXIS] = nRawAccel[X_AXIS] / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[Y_AXIS] = nRawAccel[Y_AXIS] / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[Z_AXIS] = nRawAccel[Z_AXIS] / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[X_AXIS] = (float)(nRawGyro[X_AXIS]) / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[Y_AXIS] = (float)(nRawGyro[Y_AXIS]) / nLoopCnt;
+    pAccelGyroParam->nBaseGyro[Z_AXIS] = (float)(nRawGyro[Z_AXIS]) / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[X_AXIS] = (float)(nRawAccel[X_AXIS]) / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[Y_AXIS] = (float)(nRawAccel[Y_AXIS]) / nLoopCnt;
+    pAccelGyroParam->nBaseAccel[Z_AXIS] = (float)(nRawAccel[Z_AXIS]) / nLoopCnt;
 
     Serialprintln(F("    Done"));
 }
@@ -1042,82 +1039,100 @@ void _GetSensorRawData()
 
 void _Get_RollPitchYaw()
 {
-    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-    _GetSensorRawData();
-
     // Calculate Roll & Pitch & Yaw
     _Get_RollPitchYawRad_By_Q();
     
+    float                   *pFineG = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
+    const volatile float    *pQ = &(pSelfFlyHndl->nQuaternion[0]);
+    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    
     // Convert Radian to Degree
-    _Convert_Rad_to_Deg(&(pSelfFlyHndl->nFineRPY[0]));
+    pFineRPY[0] *= RAD_TO_DEG_SCALE;
+    pFineRPY[1] *= RAD_TO_DEG_SCALE;
+    pFineRPY[2] *= RAD_TO_DEG_SCALE;
+    
+    Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
+    Serialprint("   P_:"); Serialprint(pFineRPY[1]);
+    Serialprint("   R_:"); Serialprint(pFineRPY[2]);
 }
 
 
 void _Get_Quaternion()
 {
-	int16_t                 *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
-	int16_t                 *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-	float					*pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
+    float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
+    float					*pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     float                   nSensorVal[9] = {0, };
 
-    nSensorVal[0] = (float)(pRawGyro[X_AXIS]) / GYRO_FS;
-    nSensorVal[1] = (float)(pRawGyro[Y_AXIS]) / GYRO_FS;
-    nSensorVal[2] = (float)(pRawGyro[Z_AXIS]) / GYRO_FS;
-    nSensorVal[3] = (float)(pRawAccel[X_AXIS] - ACC_OFFSET_X) / ACC_SCALE_X;
-    nSensorVal[4] = (float)(pRawAccel[Y_AXIS] - ACC_OFFSET_Y) / ACC_SCALE_Y;
-    nSensorVal[5] = (float)(pRawAccel[Z_AXIS] - ACC_OFFSET_Z) / ACC_SCALE_Z;
-    nSensorVal[6] = (float)(pRawMagData[X_AXIS] - MAG_OFFSET_X) / MAG_SCALE_X;
-    nSensorVal[7] = (float)(pRawMagData[Y_AXIS] - MAG_OFFSET_Y) / MAG_SCALE_Y;
-    nSensorVal[8] = (float)(pRawMagData[Z_AXIS] - MAG_OFFSET_Z) / MAG_SCALE_Z;
+    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
+    _GetSensorRawData();
     
-    // gyro values are expressed in deg/sec, the * M_PI/180 will convert it to radians/sec
-	_AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
+    nSensorVal[0] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    nSensorVal[1] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    nSensorVal[2] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    nSensorVal[3] = (pRawAccel[X_AXIS]) / 16383.0f * 1.1;
+    nSensorVal[4] = (pRawAccel[Y_AXIS]) / 16383.0f * 1.1;
+    nSensorVal[5] = (pRawAccel[Z_AXIS]) / 16383.0f * 1.1;
+    nSensorVal[6] = (pRawMagData[X_AXIS]) / MAG_SCALE_X;
+    nSensorVal[7] = (pRawMagData[Y_AXIS]) / MAG_SCALE_Y;
+    nSensorVal[8] = (pRawMagData[Z_AXIS]) / MAG_SCALE_Z;
+    
+    Serialprint("   Gx:"); Serialprint(nSensorVal[0]);
+    Serialprint("   Gy:"); Serialprint(nSensorVal[1]);
+    Serialprint("   Gz:"); Serialprint(nSensorVal[2]);
+    Serialprint("   Ax:"); Serialprint(nSensorVal[3]);
+    Serialprint("   Ay:"); Serialprint(nSensorVal[4]);
+    Serialprint("   Az:"); Serialprint(nSensorVal[5]);
+    Serialprint("   Mx:"); Serialprint(nSensorVal[6]);
+    Serialprint("   My:"); Serialprint(nSensorVal[7]);
+    Serialprint("   Mz:"); Serialprint(nSensorVal[8]);
+    
+    _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
                 nSensorVal[3], nSensorVal[4], nSensorVal[5],
-                -nSensorVal[6], -nSensorVal[7], nSensorVal[8]);
+                nSensorVal[6], nSensorVal[7], nSensorVal[8]);
 }
 
 
 void _Get_RollPitchYawRad_By_Q()
 {
-	float                   *pFineG = &(pSelfFlyHndl->nFineG[X_AXIS]);
-	const volatile float    *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
-	float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
-    
+    float                   *pEstGravity = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
+    const volatile float    *pQ = &(pSelfFlyHndl->nQuaternion[0]);
+    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+
     // Calculate Quaternion
     _Get_Quaternion();
+
+    pEstGravity[X_AXIS] = 2 * ((pQ[1] * pQ[3]) - (pQ[0] * pQ[2]));
+    pEstGravity[Y_AXIS] = 2 * ((pQ[0] * pQ[1]) + (pQ[2] * pQ[3]));
+    pEstGravity[Z_AXIS] = (pQ[0] * pQ[0]) - (pQ[1] * pQ[1]) - (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]);
     
-    pFineG[X_AXIS] = 2 * ((pFineQ[1] * pFineQ[3]) - (pFineQ[0] * pFineQ[2]));
-    pFineG[Y_AXIS] = 2 * ((pFineQ[0] * pFineQ[1]) + (pFineQ[2] * pFineQ[3]));
-    pFineG[Z_AXIS] = (pFineQ[0] * pFineQ[0]) - (pFineQ[1] * pFineQ[1]) - (pFineQ[2] * pFineQ[2]) + (pFineQ[3] * pFineQ[3]);
-    
-    pFineRPY[0] = atan2((2 * pFineQ[1] * pFineQ[2]) - (2 * pFineQ[0] * pFineQ[3]), (2 * pFineQ[0] * pFineQ[0]) + (2 * pFineQ[1] * pFineQ[1]) - 1);
-    pFineRPY[1] = atan(pFineG[X_AXIS] / sqrt((pFineG[Y_AXIS] * pFineG[Y_AXIS]) + (pFineG[Z_AXIS] * pFineG[Z_AXIS])));
-    pFineRPY[2] = atan(pFineG[Y_AXIS] / sqrt((pFineG[X_AXIS] * pFineG[X_AXIS]) + (pFineG[Z_AXIS] * pFineG[Z_AXIS])));
+    pFineRPY[0] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * pQ[0] * pQ[0]) + (2 * pQ[1] * pQ[1]) - 1);
+    pFineRPY[1] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS])));
+    pFineRPY[2] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS])));
 }
 
 
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
 {
     float                   nRecipNorm = 0.0f;
-    float                   nFineQ00, nFineQ01, nFineQ02, nFineQ03, nFineQ11, nFineQ12, nFineQ13, nFineQ22, nFineQ23, nFineQ33;
+    float                   nQ00, nQ01, nQ02, nQ03, nQ11, nQ12, nQ13, nQ22, nQ23, nQ33;
     float                   halfex = 0.0f, halfey = 0.0f, halfez = 0.0f;
     float                   qa, qb, qc;
     static volatile float   nIntegralFBx = 0.0f,  nIntegralFBy = 0.0f, nIntegralFBz = 0.0f;
     const float             nSampleFreq = pSelfFlyHndl->nSampleFreq;
-    volatile float          *pFineQ = &(pSelfFlyHndl->nFineQ[0]);
-    
+    volatile float          *pQ = &(pSelfFlyHndl->nQuaternion[0]);
     
     // Auxiliary variables to avoid repeated arithmetic
-    nFineQ00 = pFineQ[0] * pFineQ[0];
-    nFineQ01 = pFineQ[0] * pFineQ[1];
-    nFineQ02 = pFineQ[0] * pFineQ[2];
-    nFineQ03 = pFineQ[0] * pFineQ[3];
-    nFineQ11 = pFineQ[1] * pFineQ[1];
-    nFineQ12 = pFineQ[1] * pFineQ[2];
-    nFineQ13 = pFineQ[1] * pFineQ[3];
-    nFineQ22 = pFineQ[2] * pFineQ[2];
-    nFineQ23 = pFineQ[2] * pFineQ[3];
-    nFineQ33 = pFineQ[3] * pFineQ[3];
+    nQ00 = pQ[0] * pQ[0];
+    nQ01 = pQ[0] * pQ[1];
+    nQ02 = pQ[0] * pQ[2];
+    nQ03 = pQ[0] * pQ[3];
+    nQ11 = pQ[1] * pQ[1];
+    nQ12 = pQ[1] * pQ[2];
+    nQ13 = pQ[1] * pQ[3];
+    nQ22 = pQ[2] * pQ[2];
+    nQ23 = pQ[2] * pQ[3];
+    nQ33 = pQ[3] * pQ[3];
     
     if((mx != 0.0f) && (my != 0.0f) && (mz != 0.0f))
     {
@@ -1131,15 +1146,15 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
         mz *= nRecipNorm;
         
         // Reference direction of Earth's magnetic field
-        hx = 2.0f * (mx * (0.5f - nFineQ22 - nFineQ33) + my * (nFineQ12 - nFineQ03) + mz * (nFineQ13 + nFineQ02));
-        hy = 2.0f * (mx * (nFineQ12 + nFineQ03) + my * (0.5f - nFineQ11 - nFineQ33) + mz * (nFineQ23 - nFineQ01));
+        hx = 2.0f * (mx * (0.5f - nQ22 - nQ33) + my * (nQ12 - nQ03) + mz * (nQ13 + nQ02));
+        hy = 2.0f * (mx * (nQ12 + nQ03) + my * (0.5f - nQ11 - nQ33) + mz * (nQ23 - nQ01));
         bx = sqrt(hx * hx + hy * hy);
-        bz = 2.0f * (mx * (nFineQ13 - nFineQ02) + my * (nFineQ23 + nFineQ01) + mz * (0.5f - nFineQ11 - nFineQ22));
+        bz = 2.0f * (mx * (nQ13 - nQ02) + my * (nQ23 + nQ01) + mz * (0.5f - nQ11 - nQ22));
         
         // Estimated direction of magnetic field
-        halfwx = bx * (0.5f - nFineQ22 - nFineQ33) + bz * (nFineQ13 - nFineQ02);
-        halfwy = bx * (nFineQ12 - nFineQ03) + bz * (nFineQ01 + nFineQ23);
-        halfwz = bx * (nFineQ02 + nFineQ13) + bz * (0.5f - nFineQ11 - nFineQ22);
+        halfwx = bx * (0.5f - nQ22 - nQ33) + bz * (nQ13 - nQ02);
+        halfwy = bx * (nQ12 - nQ03) + bz * (nQ01 + nQ23);
+        halfwz = bx * (nQ02 + nQ13) + bz * (0.5f - nQ11 - nQ22);
         
         // Error is sum of cross product between estimated direction and measured direction of field vectors
         halfex = (my * halfwz - mz * halfwy);
@@ -1159,9 +1174,9 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
         az *= nRecipNorm;
         
         // Estimated direction of gravity
-        halfvx = nFineQ13 - nFineQ02;
-        halfvy = nFineQ01 + nFineQ23;
-        halfvz = nFineQ00 + nFineQ33 - 0.5f;
+        halfvx = nQ13 - nQ02;
+        halfvy = nQ01 + nQ23;
+        halfvz = nQ00 + nQ33 - 0.5f;
         
         // Error is sum of cross product between estimated direction and measured direction of field vectors
         halfex += (ay * halfvz - az * halfvy);
@@ -1199,28 +1214,22 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     gx *= (0.5f * (1.0f / nSampleFreq));   // pre-multiply common factors
     gy *= (0.5f * (1.0f / nSampleFreq));
     gz *= (0.5f * (1.0f / nSampleFreq));
-    qa = pFineQ[0];
-    qb = pFineQ[1];
-    qc = pFineQ[2];
-    pFineQ[0] += ((-qb * gx) - (qc * gy) - (pFineQ[3] * gz));
-    pFineQ[1] += (( qa * gx) + (qc * gz) - (pFineQ[3] * gy));
-    pFineQ[2] += (( qa * gy) - (qb * gz) + (pFineQ[3] * gx));
-    pFineQ[3] += (( qa * gz) + (qb * gy) - (qc * gx));
+    
+    qa = pQ[0];
+    qb = pQ[1];
+    qc = pQ[2];
+    
+    pQ[0] += ((-qb * gx) - (qc * gy) - (pQ[3] * gz));
+    pQ[1] += (( qa * gx) + (qc * gz) - (pQ[3] * gy));
+    pQ[2] += (( qa * gy) - (qb * gz) + (pQ[3] * gx));
+    pQ[3] += (( qa * gz) + (qb * gy) - (qc * gx));
     
     // Normalise quaternion
-    nRecipNorm = _InvSqrt((pFineQ[0] * pFineQ[0]) + (pFineQ[1] * pFineQ[1]) + (pFineQ[2] * pFineQ[2]) + (pFineQ[3] * pFineQ[3]));
-    pFineQ[0] *= nRecipNorm;
-    pFineQ[1] *= nRecipNorm;
-    pFineQ[2] *= nRecipNorm;
-    pFineQ[3] *= nRecipNorm;
-}
-
-
-void _Convert_Rad_to_Deg(float *pArr)
-{
-    pArr[0] *= RAD_TO_DEG_SCALE;
-    pArr[1] *= RAD_TO_DEG_SCALE;
-    pArr[2] *= RAD_TO_DEG_SCALE;
+    nRecipNorm = _InvSqrt((pQ[0] * pQ[0]) + (pQ[1] * pQ[1]) + (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]));
+    pQ[0] *= nRecipNorm;
+    pQ[1] *= nRecipNorm;
+    pQ[2] *= nRecipNorm;
+    pQ[3] *= nRecipNorm;
 }
 
 
@@ -1369,14 +1378,28 @@ void _print_Gyro_Signals()
 {
     float                   *pFineAngle = &(pSelfFlyHndl->nAccelGyroParam.nFineAngle[0]);
     
-    Serialprint("   //    Roll Gyro : ");
-    Serialprint(pFineAngle[0]);
-    Serialprint("   Pitch Gyro : ");
-    Serialprint(pFineAngle[1]);
-    Serialprint("   Yaw Gyro : ");
-    Serialprint(pFineAngle[2]);
-    Serialprint("   Temp : ");
-    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
+//    Serialprint("   //    Roll Gyro : ");
+//    Serialprint(pFineAngle[0]);
+//    Serialprint("   Pitch Gyro : ");
+//    Serialprint(pFineAngle[1]);
+//    Serialprint("   Yaw Gyro : ");
+//    Serialprint(pFineAngle[2]);
+//    Serialprint("   Temp : ");
+//    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
+    
+    Serialprint("   Gx: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[0]);
+    Serialprint("   Gy: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[1]);
+    Serialprint("   Gz: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[2]);
+
+    Serialprint("   Ax: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[0]);
+    Serialprint("   Ay: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[1]);
+    Serialprint("   Az: ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[2]);
 }
 
 
@@ -1411,12 +1434,12 @@ void _print_MagData()
 {
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
-    Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
+//    Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
+//    Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
     
-    Serialprint("   X:"); Serialprint(pMagParam->nRawMagData[0]);
-    Serialprint("   Y:"); Serialprint(pMagParam->nRawMagData[1]);
-    Serialprint("   Z:"); Serialprint(pMagParam->nRawMagData[2]);
+    Serialprint("   Mx:"); Serialprint(pMagParam->nRawMagData[0]);
+    Serialprint("   My:"); Serialprint(pMagParam->nRawMagData[1]);
+    Serialprint("   Mz:"); Serialprint(pMagParam->nRawMagData[2]);
 }
 
 void _print_BarometerData()
