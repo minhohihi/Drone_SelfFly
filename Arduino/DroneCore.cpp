@@ -411,7 +411,7 @@ void loop()
 
     #if __PROFILE__
     nEndTime = micros();
-    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    //Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
 }
 
@@ -694,7 +694,8 @@ int _Mag_Initialize()
 
     // Calibrate Magnetic
     Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-    pSelfFlyHndl->nMagHndl.calibrate();
+    //pSelfFlyHndl->nMagHndl.calibrate();
+    pSelfFlyHndl->nMagHndl.calibration_offset(1);
     Serialprintln(F("Done"));
     
     pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
@@ -724,11 +725,8 @@ void _Mag_GetData()
     int16_t                 nRawMagData[3];
     float					*pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
-    pSelfFlyHndl->nMagHndl.getHeading(&(nRawMagData[X_AXIS]), &(nRawMagData[Y_AXIS]), &(nRawMagData[Z_AXIS]));
-    
-    pRawMagData[X_AXIS] = (float)(nRawMagData[X_AXIS]);
-    pRawMagData[Y_AXIS] = (float)(nRawMagData[Y_AXIS]);
-    pRawMagData[Z_AXIS] = (float)(nRawMagData[Z_AXIS]);
+    //pSelfFlyHndl->nMagHndl.getHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
+    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
 }
 
 
@@ -1051,9 +1049,9 @@ void _Get_RollPitchYaw()
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
     
-    Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
-    Serialprint("   P_:"); Serialprint(pFineRPY[1]);
-    Serialprint("   R_:"); Serialprint(pFineRPY[2]);
+    //Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
+    //Serialprint("   P_:"); Serialprint(pFineRPY[1]);
+    //Serialprint("   R_:"); Serialprint(pFineRPY[2]);
 }
 
 
@@ -1067,25 +1065,35 @@ void _Get_Quaternion()
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
     
-    nSensorVal[0] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-    nSensorVal[1] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-    nSensorVal[2] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-    nSensorVal[3] = (pRawAccel[X_AXIS]) / 16383.0f * 1.1;
-    nSensorVal[4] = (pRawAccel[Y_AXIS]) / 16383.0f * 1.1;
-    nSensorVal[5] = (pRawAccel[Z_AXIS]) / 16383.0f * 1.1;
-    nSensorVal[6] = (pRawMagData[X_AXIS]) / MAG_SCALE_X;
-    nSensorVal[7] = (pRawMagData[Y_AXIS]) / MAG_SCALE_Y;
-    nSensorVal[8] = (pRawMagData[Z_AXIS]) / MAG_SCALE_Z;
-    
-    Serialprint("   Gx:"); Serialprint(nSensorVal[0]);
-    Serialprint("   Gy:"); Serialprint(nSensorVal[1]);
-    Serialprint("   Gz:"); Serialprint(nSensorVal[2]);
-    Serialprint("   Ax:"); Serialprint(nSensorVal[3]);
-    Serialprint("   Ay:"); Serialprint(nSensorVal[4]);
-    Serialprint("   Az:"); Serialprint(nSensorVal[5]);
-    Serialprint("   Mx:"); Serialprint(nSensorVal[6]);
-    Serialprint("   My:"); Serialprint(nSensorVal[7]);
-    Serialprint("   Mz:"); Serialprint(nSensorVal[8]);
+//    nSensorVal[0] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+//    nSensorVal[1] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+//    nSensorVal[2] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+//    nSensorVal[3] = (pRawAccel[X_AXIS]) / 16383.0f * 1.1;
+//    nSensorVal[4] = (pRawAccel[Y_AXIS]) / 16383.0f * 1.1;
+//    nSensorVal[5] = (pRawAccel[Z_AXIS]) / 16383.0f * 1.1;
+//    nSensorVal[6] = (pRawMagData[X_AXIS]) / MAG_SCALE_X;
+//    nSensorVal[7] = (pRawMagData[Y_AXIS]) / MAG_SCALE_Y;
+//    nSensorVal[8] = (pRawMagData[Z_AXIS]) / MAG_SCALE_Z;
+
+    nSensorVal[0] = pRawGyro[X_AXIS];
+    nSensorVal[1] = pRawGyro[Y_AXIS];
+    nSensorVal[2] = pRawGyro[Z_AXIS];
+    nSensorVal[3] = (pRawAccel[X_AXIS]);
+    nSensorVal[4] = (pRawAccel[Y_AXIS]);
+    nSensorVal[5] = (pRawAccel[Z_AXIS]);
+    nSensorVal[6] = (pRawMagData[X_AXIS]);
+    nSensorVal[7] = (pRawMagData[Y_AXIS]);
+    nSensorVal[8] = (pRawMagData[Z_AXIS]);
+
+    Serialprint(nSensorVal[0]);
+    Serialprint(","); Serialprint(nSensorVal[1]);
+    Serialprint(","); Serialprint(nSensorVal[2]);
+    Serialprint(","); Serialprint(nSensorVal[3]);
+    Serialprint(","); Serialprint(nSensorVal[4]);
+    Serialprint(","); Serialprint(nSensorVal[5]);
+    Serialprint(","); Serialprint(nSensorVal[6]);
+    Serialprint(","); Serialprint(nSensorVal[7]);
+    Serialprint(","); Serialprintln(nSensorVal[8]);
     
     _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
                 nSensorVal[3], nSensorVal[4], nSensorVal[5],
