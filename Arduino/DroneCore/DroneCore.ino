@@ -138,8 +138,8 @@
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
 #if __DEBUG__
-  #define Serialprint(...)                Serial.print(__VA_ARGS__)
-  #define Serialprintln(...)              Serial.println(__VA_ARGS__)
+  #define Serialprint(...)                //Serial.print(__VA_ARGS__)
+  #define Serialprintln(...)              //Serial.println(__VA_ARGS__)
 #else
   #define Serialprint(...)
   #define Serialprintln(...)
@@ -335,7 +335,7 @@ void setup()
     #endif
     
     #if __DEBUG__
-    Serial.begin(115200);
+    Serial.begin(19200);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
@@ -399,6 +399,8 @@ void loop()
     
     // Update BLDCs
     UpdateESCs();
+
+    delay(50);
     
     #if __DEBUG__
     //_print_Gyro_Signals();
@@ -1085,15 +1087,17 @@ void _Get_Quaternion()
     nSensorVal[7] = (pRawMagData[Y_AXIS]);
     nSensorVal[8] = (pRawMagData[Z_AXIS]);
 
-    Serialprint(nSensorVal[0]);
-    Serialprint(","); Serialprint(nSensorVal[1]);
-    Serialprint(","); Serialprint(nSensorVal[2]);
-    Serialprint(","); Serialprint(nSensorVal[3]);
-    Serialprint(","); Serialprint(nSensorVal[4]);
-    Serialprint(","); Serialprint(nSensorVal[5]);
-    Serialprint(","); Serialprint(nSensorVal[6]);
-    Serialprint(","); Serialprint(nSensorVal[7]);
-    Serialprint(","); Serialprintln(nSensorVal[8]);
+    Serial.print(F("DEL:"));              //Delta T
+    Serial.print(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
+    Serial.print("#ACC:");Serial.print(nSensorVal[0]);
+    Serial.print(","); Serial.print(nSensorVal[1]);
+    Serial.print(","); Serial.print(nSensorVal[2]);
+    Serial.print("#GYR"); Serial.print(nSensorVal[3]);
+    Serial.print(","); Serial.print(nSensorVal[4]);
+    Serial.print(","); Serial.print(nSensorVal[5]);
+    Serial.print("#MAG"); Serial.print(nSensorVal[6]);
+    Serial.print(","); Serial.print(nSensorVal[7]);
+    Serial.print(","); Serial.println(nSensorVal[8]);
     
     _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
                 nSensorVal[3], nSensorVal[4], nSensorVal[5],
