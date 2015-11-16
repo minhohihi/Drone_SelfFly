@@ -321,9 +321,36 @@ void HMC5883L::getHeading(int16_t *x, int16_t *y, int16_t *z) {
 void HMC5883L::getHeading(float *x, float *y, float *z) {
     I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
     if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
-    *x = ((float)((((int16_t)buffer[0]) << 8) | buffer[1]) - offset[0]) * mgPerDigit;
-    *y = ((float)((((int16_t)buffer[4]) << 8) | buffer[5]) - offset[1]) * mgPerDigit;
+    *x = ((float)((((int16_t)buffer[0]) << 8) | buffer[1]) - magoffset[0]) * mgPerDigit;
+    *y = ((float)((((int16_t)buffer[4]) << 8) | buffer[5]) - magoffset[1]) * mgPerDigit;
     *z = ((float)((((int16_t)buffer[2]) << 8) | buffer[3])) * mgPerDigit;
+}
+
+
+void HMC5883L::getScaledHeading(float *x, float *y, float *z)
+{
+    I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+    if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
+    *x = ((((int16_t)buffer[0]) << 8) | buffer[1])*compass_gain_fact * maggainerr[0] + magoffset[0];
+    *y = ((((int16_t)buffer[4]) << 8) | buffer[5])*compass_gain_fact * maggainerr[1] + magoffset[1];
+    *z = ((((int16_t)buffer[2]) << 8) | buffer[3])*compass_gain_fact * maggainerr[2] + magoffset[2];
+}
+
+
+float HMC5883L::getBearing()
+{
+    float               x, y, z;
+    
+    getScaledHeading(&x, &y, &z);
+    
+    if(y > 0)
+        return (90.0f - (atan(x / y) * COMPASS_RAD2DEGREE));
+    else if(y < 0)
+        return (270.0f - (atan(x / y) * COMPASS_RAD2DEGREE));
+    else if((y == 0) && (x < 0))
+        return 180.0f;
+    else
+        return 0.0f;
 }
 
 /** Get X-axis heading measurement.
@@ -464,9 +491,164 @@ void HMC5883L::calibrate()
     }
 
     // Calculate offsets
-    offset[0] = (int16_t)((nSumMaxX + nSumMinX) / 2 / nLoopCnt);
-    offset[1] = (int16_t)((nSumMaxY + nSumMinY) / 2 / nLoopCnt);
+    magoffset[0] = (int16_t)((nSumMaxX + nSumMinX) / 2 / nLoopCnt);
+    magoffset[1] = (int16_t)((nSumMaxY + nSumMinY) / 2 / nLoopCnt);
 }
 
 
-
+// --------------------------------------------------------------------------
+// This Function calculates the offset in the Magnetometer
+// using Positive and Negative bias Self test capability
+// This function updates X_offset Y_offset and Z_offset Global variables
+// Call Initialize before
+void HMC5883L::calibration_offset(int select)
+{
+    int             compass_x=0, compass_y=0, compass_z=0;
+    float           compass_x_scaled=0, compass_y_scaled=0, compass_z_scaled=0;
+    
+    // ***********************************************************
+    // offset_calibration() function performs two taskes
+    // 1. It calculates the diffrence in the gain of the each axis magnetometer axis, using
+    //    inbuilt self excitation function of HMC5883L (Which is useless if it is used as a compass
+    //    unless you are very unlucy and got a crapy sensor or live at very High or low temperature)
+    // 2. It calculates the mean of each axes magnetic field, when the Magnetometer is rotated 360 degree
+    // 3. Do Both
+    // ***********************************************************
+    
+    
+    // *****************************************************************************************
+    // Gain offset estimation
+    // *****************************************************************************************
+    if (select == 1 | select == 3)
+    {
+        // User input in the function
+        // Configuring the Control register for Positive Bais mode
+        Serial.println("Calibrating the Magnetometer ....... Gain");
+        Wire.beginTransmission(devAddr);
+        Wire.write(0x00);
+        Wire.write(0b01110001); // bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
+        
+        /*
+         A A                        DO2 DO1 DO0      Sample Rate [Hz]      MS1 MS0    Measurment Mode
+         0 0 = No Average            0   0   0   =   0.75                   0   0   = Normal
+         0 1 = 2 Sample average      0   0   1   =   1.5                    0   1   = Positive Bias
+         1 0 = 4 Sample Average      0   1   0   =   3                      1   0   = Negative Bais
+         1 1 = 8 Sample Average      0   1   1   =   7.5                    1   1   = -
+         1   0   0   =   15 (Default)
+         1   0   1   =   30
+         1   1   0   =   75
+         1   1   1   =   -
+         */
+        Wire.endTransmission();
+        
+        getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+        
+        // Reading the Positive baised Data
+        while(compass_x<200 | compass_y<200 | compass_z<200){   // Making sure the data is with Positive baised
+            getHeading(&compass_x, &compass_y, &compass_z);
+        }
+        
+        compass_x_scaled = compass_x * compass_gain_fact;
+        compass_y_scaled = compass_y * compass_gain_fact;
+        compass_z_scaled = compass_z * compass_gain_fact;
+        
+        
+        // Offset = 1160 - Data_positive
+        compass_x_gainError = (float)COMPASS_XY_EXCITATION / compass_x_scaled;
+        compass_y_gainError = (float)COMPASS_XY_EXCITATION / compass_y_scaled;
+        compass_z_gainError = (float)COMPASS_Z_EXCITATION / compass_z_scaled;
+        
+        
+        // Configuring the Control register for Negative Bais mode
+        Wire.beginTransmission(devAddr);
+        Wire.write(0x00);
+        Wire.write(0b01110010); // bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
+        
+        /*
+         A A                        DO2 DO1 DO0      Sample Rate [Hz]      MS1 MS0    Measurment Mode
+         0 0 = No Average            0   0   0   =   0.75                   0   0   = Normal
+         0 1 = 2 Sample average      0   0   1   =   1.5                    0   1   = Positive Bias
+         1 0 = 4 Sample Average      0   1   0   =   3                      1   0   = Negative Bais
+         1 1 = 8 Sample Average      0   1   1   =   7.5                    1   1   = -
+         1   0   0   =   15 (Default)
+         1   0   1   =   30
+         1   1   0   =   75
+         1   1   1   =   -
+         */
+        Wire.endTransmission();
+        
+        
+        getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+        // Reading the Negative baised Data
+        while(compass_x>-200 | compass_y>-200 | compass_z>-200){   // Making sure the data is with negative baised
+            getHeading(&compass_x, &compass_y, &compass_z);
+        }
+        
+        compass_x_scaled=compass_x*compass_gain_fact;
+        compass_y_scaled=compass_y*compass_gain_fact;
+        compass_z_scaled=compass_z*compass_gain_fact;
+        
+        
+        // Taking the average of the offsets
+        maggainerr[0] = (float)((COMPASS_XY_EXCITATION / abs(compass_x_scaled)) + compass_x_gainError) / 2;
+        maggainerr[1] = (float)((COMPASS_XY_EXCITATION / abs(compass_y_scaled)) + compass_y_gainError) / 2;
+        maggainerr[2] = (float)((COMPASS_Z_EXCITATION / abs(compass_z_scaled)) + compass_z_gainError) / 2;
+    }
+    
+    // Configuring the Control register for normal mode
+    Wire.beginTransmission(devAddr);
+    Wire.write(0x00);
+    Wire.write(0b01111000); // bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
+    
+    /*
+     A A                        DO2 DO1 DO0      Sample Rate [Hz]      MS1 MS0    Measurment Mode
+     0 0 = No Average            0   0   0   =   0.75                   0   0   = Normal
+     0 1 = 2 Sample average      0   0   1   =   1.5                    0   1   = Positive Bias
+     1 0 = 4 Sample Average      0   1   0   =   3                      1   0   = Negative Bais
+     1 1 = 8 Sample Average      0   1   1   =   7.5                    1   1   = -
+     1   0   0   =   15 (Default)
+     1   0   1   =   30
+     1   1   0   =   75
+     1   1   1   =   -
+     */
+    Wire.endTransmission();
+    
+    // *****************************************************************************************
+    // Offset estimation
+    // *****************************************************************************************
+    if (select == 2 | select == 3)
+    {
+        // User input in the function
+        for(byte i=0;i<10;i++)
+        {
+            // Disregarding first few data
+            getHeading(&compass_x, &compass_y, &compass_z);
+        }
+        
+        float x_max=-4000,y_max=-4000,z_max=-4000;
+        float x_min=4000,y_min=4000,z_min=4000;
+        
+        unsigned long t = millis();
+        while(millis()-t <= 30000)
+        {
+            getHeading(&compass_x, &compass_y, &compass_z);
+            
+            compass_x_scaled=(float)compass_x * compass_gain_fact * maggainerr[0];
+            compass_y_scaled=(float)compass_y * compass_gain_fact * maggainerr[1];
+            compass_z_scaled=(float)compass_z * compass_gain_fact * maggainerr[2];
+            
+            x_max = max(x_max, compass_x_scaled);
+            y_max = max(y_max, compass_y_scaled);
+            z_max = max(z_max, compass_z_scaled);
+            
+            x_min = min(x_min, compass_x_scaled);
+            y_min = min(y_min, compass_y_scaled);
+            z_min = min(z_min, compass_z_scaled);
+        }
+        
+        magoffset[0] = ((x_max - x_min) / 2) - x_max;
+        magoffset[1] = ((y_max - y_min) / 2) - y_max;
+        magoffset[2] = ((z_max - z_min) / 2) - z_max;
+    }
+    
+}

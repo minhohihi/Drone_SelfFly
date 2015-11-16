@@ -38,7 +38,9 @@ THE SOFTWARE.
 #define _MPU60X0_H_
 
 #include "I2Cdev.h"
-#include <avr/pgmspace.h>
+#if defined(__AVR__)
+  #include <avr/pgmspace.h>
+#endif
 
 //#define DEBUG
 #ifdef DEBUG
@@ -71,6 +73,10 @@ THE SOFTWARE.
 #define MPU60X0_RA_YA_OFFS_L_TC     0x09
 #define MPU60X0_RA_ZA_OFFS_H        0x0A //[15:0] ZA_OFFS
 #define MPU60X0_RA_ZA_OFFS_L_TC     0x0B
+#define MPU6050_RA_SELF_TEST_X      0x0D //[7:5] XA_TEST[4-2], [4:0] XG_TEST[4-0]
+#define MPU6050_RA_SELF_TEST_Y      0x0E //[7:5] YA_TEST[4-2], [4:0] YG_TEST[4-0]
+#define MPU6050_RA_SELF_TEST_Z      0x0F //[7:5] ZA_TEST[4-2], [4:0] ZG_TEST[4-0]
+#define MPU6050_RA_SELF_TEST_A      0x10 //[5:4] XA_TEST[1-0], [3:2] YA_TEST[1-0], [1:0] ZA_TEST[1-0]
 #define MPU60X0_RA_XG_OFFS_USRH     0x13 //[15:0] XG_OFFS_USR
 #define MPU60X0_RA_XG_OFFS_USRL     0x14
 #define MPU60X0_RA_YG_OFFS_USRH     0x15 //[15:0] YG_OFFS_USR
@@ -754,6 +760,7 @@ class MPU60X0 {
         int16_t getZGyroOffsetUser();
         void setZGyroOffsetUser(int16_t offset);
         
+#if defined(__AVR__)
         // INT_ENABLE register (DMP functions)
         bool getIntPLLReadyEnabled();
         void setIntPLLReadyEnabled(bool enabled);
@@ -800,7 +807,7 @@ class MPU60X0 {
         // DMP_CFG_2 register
         uint8_t getDMPConfig2();
         void setDMPConfig2(uint8_t config);
-		
+#endif
 		
 
         // special methods for MotionApps 2.0 implementation

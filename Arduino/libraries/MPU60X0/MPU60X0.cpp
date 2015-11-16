@@ -41,7 +41,7 @@ THE SOFTWARE.
  * @see MPU60X0_DEFAULT_SS_PIN
  */
 MPU60X0::MPU60X0() {
-
+  devAddr = MPU60X0_DEFAULT_ADDRESS;
 }
 
 /** Specific address constructor.
@@ -52,8 +52,8 @@ MPU60X0::MPU60X0() {
  * @see MPU60X0_ADDRESS_AD0_HIGH
  */
 MPU60X0::MPU60X0(bool useSPI, uint8_t address) {
-	bSPI = useSPI;
-    devAddr = address;
+  bSPI = useSPI;
+  devAddr = address;
 }
 
 /** Power on and prepare for general usage.
@@ -2856,6 +2856,7 @@ void MPU60X0::setZGyroOffsetUser(int16_t offset) {
    I2Cdev::writeWord(bSPI, devAddr, MPU60X0_RA_ZG_OFFS_USRH, offset);
 }
 
+#if defined(__AVR__)
 // INT_ENABLE register (DMP functions)
 
 bool MPU60X0::getIntPLLReadyEnabled() {
@@ -3158,3 +3159,4 @@ uint8_t MPU60X0::getDMPConfig2() {
 void MPU60X0::setDMPConfig2(uint8_t config) {
     I2Cdev::writeByte(bSPI, devAddr, MPU60X0_RA_DMP_CFG_2, config);
 }
+#endif

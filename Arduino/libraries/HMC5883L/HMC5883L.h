@@ -100,6 +100,19 @@ THE SOFTWARE.
 #define HMC5883L_STATUS_LOCK_BIT    1
 #define HMC5883L_STATUS_READY_BIT   0
 
+#define COMPASS_XY_EXCITATION       1160 // The magnetic field excitation in X and Y direction during Self Test (Calibration)
+#define COMPASS_Z_EXCITATION        1080  // The magnetic field excitation in Z direction during Self Test (Calibration)
+#define COMPASS_RAD2DEGREE          57.3
+
+
+#define COMPASS_X_OFFSET            116   // Manually calculated offset in X direction
+#define COMPASS_Y_OFFSET            225   // Manually calculated offset in Y direction
+#define COMPASS_X_GAIN              1.1     // Stored Gain offset at room temperature
+#define COMPASS_Y_GAIN              1.12    // Stored Gain offset at room temperature
+
+
+
+
 class HMC5883L {
     public:
         HMC5883L();
@@ -127,6 +140,8 @@ class HMC5883L {
         // DATA* registers
         void getHeading(int16_t *x, int16_t *y, int16_t *z);
         void getHeading(float *x, float *y, float *z);
+        void getScaledHeading(float *x, float *y, float *z);
+        float getBearing();
         int16_t getHeadingX();
         int16_t getHeadingY();
         int16_t getHeadingZ();
@@ -142,13 +157,17 @@ class HMC5883L {
     
         // Calibration
         void calibrate();
+        void calibration_offset(int select);
 
     private:
         uint8_t devAddr;
         uint8_t buffer[6];
         uint8_t mode;
-        int16_t offset[2];
+        float   magoffset[3];
+        float   maggainerr[3];
         float   mgPerDigit;
+        float   compass_gain_fact;
+        float   compass_x_gainError, compass_y_gainError, compass_z_gainError;
 };
 
 #endif /* _HMC5883L_H_ */
