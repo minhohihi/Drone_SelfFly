@@ -331,9 +331,12 @@ void HMC5883L::getScaledHeading(float *x, float *y, float *z)
 {
     I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
     if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
-    *x = ((((int16_t)buffer[0]) << 8) | buffer[1])*compass_gain_fact * maggainerr[0] + magoffset[0];
-    *y = ((((int16_t)buffer[4]) << 8) | buffer[5])*compass_gain_fact * maggainerr[1] + magoffset[1];
-    *z = ((((int16_t)buffer[2]) << 8) | buffer[3])*compass_gain_fact * maggainerr[2] + magoffset[2];
+    //*x = ((((int16_t)buffer[0]) << 8) | buffer[1])*mgPerDigit * maggainerr[0] + magoffset[0];
+    //*y = ((((int16_t)buffer[4]) << 8) | buffer[5])*mgPerDigit * maggainerr[1] + magoffset[1];
+    //*z = ((((int16_t)buffer[2]) << 8) | buffer[3])*mgPerDigit * maggainerr[2] + magoffset[2];
+    *x = ((((int16_t)buffer[0]) << 8) | buffer[1])*mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET;
+    *y = ((((int16_t)buffer[4]) << 8) | buffer[5])*mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET;
+    *z = ((((int16_t)buffer[2]) << 8) | buffer[3])*mgPerDigit * COMPASS_Z_GAINERR + COMPASS_Z_OFFSET;
 }
 
 
@@ -523,7 +526,7 @@ void HMC5883L::calibration_offset(int select)
     {
         // User input in the function
         // Configuring the Control register for Positive Bais mode
-        Serial.println("Calibrating the Magnetometer ....... Gain");
+        Serial.print("          Calibrating the Magnetometer (Gain)  ");
         Wire.beginTransmission(devAddr);
         Wire.write(0x00);
         Wire.write(0b01110001); // bit configuration = 0 A A DO2 DO1 DO0 MS1 MS2
@@ -546,11 +549,12 @@ void HMC5883L::calibration_offset(int select)
         // Reading the Positive baised Data
         while(compass_x<200 | compass_y<200 | compass_z<200){   // Making sure the data is with Positive baised
             getHeading(&compass_x, &compass_y, &compass_z);
+            Serial.print(".");            
         }
         
-        compass_x_scaled = compass_x * compass_gain_fact;
-        compass_y_scaled = compass_y * compass_gain_fact;
-        compass_z_scaled = compass_z * compass_gain_fact;
+        compass_x_scaled = compass_x * mgPerDigit;
+        compass_y_scaled = compass_y * mgPerDigit;
+        compass_z_scaled = compass_z * mgPerDigit;
         
         
         // Offset = 1160 - Data_positive
@@ -582,17 +586,24 @@ void HMC5883L::calibration_offset(int select)
         // Reading the Negative baised Data
         while(compass_x>-200 | compass_y>-200 | compass_z>-200){   // Making sure the data is with negative baised
             getHeading(&compass_x, &compass_y, &compass_z);
+            Serial.print(".");
         }
         
-        compass_x_scaled=compass_x*compass_gain_fact;
-        compass_y_scaled=compass_y*compass_gain_fact;
-        compass_z_scaled=compass_z*compass_gain_fact;
+        compass_x_scaled=compass_x*mgPerDigit;
+        compass_y_scaled=compass_y*mgPerDigit;
+        compass_z_scaled=compass_z*mgPerDigit;
         
         
         // Taking the average of the offsets
         maggainerr[0] = (float)((COMPASS_XY_EXCITATION / abs(compass_x_scaled)) + compass_x_gainError) / 2;
         maggainerr[1] = (float)((COMPASS_XY_EXCITATION / abs(compass_y_scaled)) + compass_y_gainError) / 2;
         maggainerr[2] = (float)((COMPASS_Z_EXCITATION / abs(compass_z_scaled)) + compass_z_gainError) / 2;
+        Serial.println("");
+        Serial.print("            Gain:");
+        Serial.print(maggainerr[0]);Serial.print(",  ");
+        Serial.print(maggainerr[1]);Serial.print(",  ");
+        Serial.println(maggainerr[2]);
+        Serial.println("        Done");
     }
     
     // Configuring the Control register for normal mode
@@ -618,6 +629,7 @@ void HMC5883L::calibration_offset(int select)
     // *****************************************************************************************
     if (select == 2 | select == 3)
     {
+        Serial.println("          Calibrating the Magnetometer (Offset)  ");
         // User input in the function
         for(byte i=0;i<10;i++)
         {
@@ -627,15 +639,17 @@ void HMC5883L::calibration_offset(int select)
         
         float x_max=-4000,y_max=-4000,z_max=-4000;
         float x_min=4000,y_min=4000,z_min=4000;
+        float last_time = 0;
         
         unsigned long t = millis();
-        while(millis()-t <= 30000)
+        Serial.println("                Rotate Sensor for 20 Sec. ");
+        while(millis()-t <= 20000)
         {
             getHeading(&compass_x, &compass_y, &compass_z);
             
-            compass_x_scaled=(float)compass_x * compass_gain_fact * maggainerr[0];
-            compass_y_scaled=(float)compass_y * compass_gain_fact * maggainerr[1];
-            compass_z_scaled=(float)compass_z * compass_gain_fact * maggainerr[2];
+            compass_x_scaled=(float)compass_x * mgPerDigit * maggainerr[0];
+            compass_y_scaled=(float)compass_y * mgPerDigit * maggainerr[1];
+            compass_z_scaled=(float)compass_z * mgPerDigit * maggainerr[2];
             
             x_max = max(x_max, compass_x_scaled);
             y_max = max(y_max, compass_y_scaled);
@@ -644,11 +658,23 @@ void HMC5883L::calibration_offset(int select)
             x_min = min(x_min, compass_x_scaled);
             y_min = min(y_min, compass_y_scaled);
             z_min = min(z_min, compass_z_scaled);
+
+            if(((millis()-t) - last_time) > 1000)
+            {
+                last_time = millis() - t;
+                Serial.print(".");
+            }
         }
         
         magoffset[0] = ((x_max - x_min) / 2) - x_max;
         magoffset[1] = ((y_max - y_min) / 2) - y_max;
         magoffset[2] = ((z_max - z_min) / 2) - z_max;
+        Serial.println("");
+        Serial.print("            Offset:");
+        Serial.print(magoffset[0]);Serial.print(",  ");
+        Serial.print(magoffset[1]);Serial.print(",  ");
+        Serial.println(magoffset[2]);
+        Serial.println("        Done");        
     }
     
 }

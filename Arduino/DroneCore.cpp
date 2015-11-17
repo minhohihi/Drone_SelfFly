@@ -126,7 +126,7 @@
 #include <I2Cdev.h>
 #include <PinChangeInt.h>
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-	#include <Wire.h>
+    #include <Wire.h>
 #endif
 //#include <MPU6050.h>
 #include <MPU6050_6Axis_MotionApps20.h>
@@ -138,11 +138,11 @@
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
 #if __DEBUG__
-	#define Serialprint(...)                Serial.print(__VA_ARGS__)
-	#define Serialprintln(...)              Serial.println(__VA_ARGS__)
+    #define Serialprint(...)                Serial.print(__VA_ARGS__)
+    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
 #else
-	#define Serialprint(...)
-	#define Serialprintln(...)
+    #define Serialprint(...)
+    #define Serialprintln(...)
 #endif
 
 
@@ -359,7 +359,7 @@ void setup()
     for(i=0 ; i<MAX_CH_RC ; i++)
         pSelfFlyHndl->nRCPrevChangeTime[i] = micros();
     
-	pSelfFlyHndl->nQuaternion[0] = 1.0f;
+    pSelfFlyHndl->nQuaternion[0] = 1.0f;
 
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -388,7 +388,7 @@ void loop()
     _Mag_CalculateDirection();
     _Barometer_CalculateData();
     #else
-	_Get_RollPitchYaw();
+    _Get_RollPitchYaw();
     #endif
 
     // PID Computation
@@ -418,7 +418,7 @@ void loop()
 
 int _AccelGyro_Initialize()
 {
-	pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
 
     Serialprintln(F(" Initializing MPU..."));
     pSelfFlyHndl->nAccelGyroHndl.initialize();
@@ -675,14 +675,14 @@ int _AccelGyro_GetDMPData()
 
 inline void dmpDataReady()
 {
-	nMPUInterruptFlag = true;
+    nMPUInterruptFlag = true;
 }
 #endif
 
 
 int _Mag_Initialize()
 {
-	pSelfFlyHndl->nMagHndl = HMC5883L();
+  pSelfFlyHndl->nMagHndl = HMC5883L();
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -693,10 +693,10 @@ int _Mag_Initialize()
     Serialprintln(pSelfFlyHndl->nMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
 
     // Calibrate Magnetic
-    Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
+    //Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
     //pSelfFlyHndl->nMagHndl.calibrate();
-    pSelfFlyHndl->nMagHndl.calibration_offset(1);
-    Serialprintln(F("Done"));
+    //pSelfFlyHndl->nMagHndl.calibration_offset(1);
+    //Serialprintln(F("Done"));
     
     pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
     pSelfFlyHndl->nMagHndl.setGain(HMC5883L_GAIN_1090);
@@ -723,7 +723,7 @@ int _Mag_Initialize()
 void _Mag_GetData()
 {
     int16_t                 nRawMagData[3];
-    float					*pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
     //pSelfFlyHndl->nMagHndl.getHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
     pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
@@ -1025,7 +1025,7 @@ void _GetSensorRawData()
     _AccelGyro_GetData();
     
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-	pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
+    pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
 
     // Get Magnetic Raw Data
     _Mag_GetData();
@@ -1059,7 +1059,7 @@ void _Get_Quaternion()
 {
     float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-    float					*pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     float                   nSensorVal[9] = {0, };
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)

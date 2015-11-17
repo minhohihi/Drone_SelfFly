@@ -100,15 +100,17 @@ THE SOFTWARE.
 #define HMC5883L_STATUS_LOCK_BIT    1
 #define HMC5883L_STATUS_READY_BIT   0
 
-#define COMPASS_XY_EXCITATION       1160 // The magnetic field excitation in X and Y direction during Self Test (Calibration)
-#define COMPASS_Z_EXCITATION        1080  // The magnetic field excitation in Z direction during Self Test (Calibration)
+#define COMPASS_XY_EXCITATION       1160             // The magnetic field excitation in X and Y direction during Self Test (Calibration)
+#define COMPASS_Z_EXCITATION        1080              // The magnetic field excitation in Z direction during Self Test (Calibration)
 #define COMPASS_RAD2DEGREE          57.3
 
 
-#define COMPASS_X_OFFSET            116   // Manually calculated offset in X direction
-#define COMPASS_Y_OFFSET            225   // Manually calculated offset in Y direction
-#define COMPASS_X_GAIN              1.1     // Stored Gain offset at room temperature
-#define COMPASS_Y_GAIN              1.12    // Stored Gain offset at room temperature
+#define COMPASS_X_OFFSET            (44.20)           // Manually calculated offset in X direction
+#define COMPASS_Y_OFFSET            (70.69)           // Manually calculated offset in Y direction
+#define COMPASS_Z_OFFSET            (-242.22)   // Manually calculated offset in Y direction
+#define COMPASS_X_GAINERR           (0.99)     // Stored Gain offset at room temperature
+#define COMPASS_Y_GAINERR           (1.06)    // Stored Gain offset at room temperature
+#define COMPASS_Z_GAINERR           (0.99)    // Stored Gain offset at room temperature
 
 
 
@@ -166,7 +168,6 @@ class HMC5883L {
         float   magoffset[3];
         float   maggainerr[3];
         float   mgPerDigit;
-        float   compass_gain_fact;
         float   compass_x_gainError, compass_y_gainError, compass_z_gainError;
 };
 

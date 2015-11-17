@@ -126,7 +126,7 @@
 #include <I2Cdev.h>
 #include <PinChangeInt.h>
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  #include <Wire.h>
+    #include <Wire.h>
 #endif
 //#include <MPU6050.h>
 #include <MPU6050_6Axis_MotionApps20.h>
@@ -138,11 +138,11 @@
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
 #if __DEBUG__
-  #define Serialprint(...)                //Serial.print(__VA_ARGS__)
-  #define Serialprintln(...)              //Serial.println(__VA_ARGS__)
+    #define Serialprint(...)                Serial.print(__VA_ARGS__)
+    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
 #else
-  #define Serialprint(...)
-  #define Serialprintln(...)
+    #define Serialprint(...)
+    #define Serialprintln(...)
 #endif
 
 
@@ -335,7 +335,7 @@ void setup()
     #endif
     
     #if __DEBUG__
-    Serial.begin(19200);
+    Serial.begin(115200);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
@@ -359,7 +359,7 @@ void setup()
     for(i=0 ; i<MAX_CH_RC ; i++)
         pSelfFlyHndl->nRCPrevChangeTime[i] = micros();
     
-  pSelfFlyHndl->nQuaternion[0] = 1.0f;
+    pSelfFlyHndl->nQuaternion[0] = 1.0f;
 
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -388,7 +388,7 @@ void loop()
     _Mag_CalculateDirection();
     _Barometer_CalculateData();
     #else
-  _Get_RollPitchYaw();
+    _Get_RollPitchYaw();
     #endif
 
     // PID Computation
@@ -399,8 +399,6 @@ void loop()
     
     // Update BLDCs
     UpdateESCs();
-
-    delay(50);
     
     #if __DEBUG__
     //_print_Gyro_Signals();
@@ -420,7 +418,7 @@ void loop()
 
 int _AccelGyro_Initialize()
 {
-  pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
 
     Serialprintln(F(" Initializing MPU..."));
     pSelfFlyHndl->nAccelGyroHndl.initialize();
@@ -677,7 +675,7 @@ int _AccelGyro_GetDMPData()
 
 inline void dmpDataReady()
 {
-  nMPUInterruptFlag = true;
+    nMPUInterruptFlag = true;
 }
 #endif
 
@@ -695,10 +693,10 @@ int _Mag_Initialize()
     Serialprintln(pSelfFlyHndl->nMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
 
     // Calibrate Magnetic
-    Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
+    //Serialprint(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
     //pSelfFlyHndl->nMagHndl.calibrate();
-    pSelfFlyHndl->nMagHndl.calibration_offset(1);
-    Serialprintln(F("Done"));
+    //pSelfFlyHndl->nMagHndl.calibration_offset(1);
+    //Serialprintln(F("Done"));
     
     pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
     pSelfFlyHndl->nMagHndl.setGain(HMC5883L_GAIN_1090);
@@ -707,9 +705,9 @@ int _Mag_Initialize()
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
-    // Latitude: 37.0000° North
-    // Longitude: 126.0000° East
-    // Magnetic declination: 7° 59.76' West
+    // Latitude: 37.0000째 North
+    // Longitude: 126.0000째 East
+    // Magnetic declination: 7째 59.76' West
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
@@ -1027,7 +1025,7 @@ void _GetSensorRawData()
     _AccelGyro_GetData();
     
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-  pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
+    pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
 
     // Get Magnetic Raw Data
     _Mag_GetData();
@@ -1087,17 +1085,15 @@ void _Get_Quaternion()
     nSensorVal[7] = (pRawMagData[Y_AXIS]);
     nSensorVal[8] = (pRawMagData[Z_AXIS]);
 
-    Serial.print(F("DEL:"));              //Delta T
-    Serial.print(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
-    Serial.print("#ACC:");Serial.print(nSensorVal[0]);
-    Serial.print(","); Serial.print(nSensorVal[1]);
-    Serial.print(","); Serial.print(nSensorVal[2]);
-    Serial.print("#GYR"); Serial.print(nSensorVal[3]);
-    Serial.print(","); Serial.print(nSensorVal[4]);
-    Serial.print(","); Serial.print(nSensorVal[5]);
-    Serial.print("#MAG"); Serial.print(nSensorVal[6]);
-    Serial.print(","); Serial.print(nSensorVal[7]);
-    Serial.print(","); Serial.println(nSensorVal[8]);
+    Serialprint(nSensorVal[0]);
+    Serialprint(","); Serialprint(nSensorVal[1]);
+    Serialprint(","); Serialprint(nSensorVal[2]);
+    Serialprint(","); Serialprint(nSensorVal[3]);
+    Serialprint(","); Serialprint(nSensorVal[4]);
+    Serialprint(","); Serialprint(nSensorVal[5]);
+    Serialprint(","); Serialprint(nSensorVal[6]);
+    Serialprint(","); Serialprint(nSensorVal[7]);
+    Serialprint(","); Serialprintln(nSensorVal[8]);
     
     _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
                 nSensorVal[3], nSensorVal[4], nSensorVal[5],
