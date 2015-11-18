@@ -335,7 +335,7 @@ void setup()
     #endif
     
     #if __DEBUG__
-    Serial.begin(115200);
+    Serial.begin(19200);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
@@ -682,7 +682,7 @@ inline void dmpDataReady()
 
 int _Mag_Initialize()
 {
-  pSelfFlyHndl->nMagHndl = HMC5883L();
+    pSelfFlyHndl->nMagHndl = HMC5883L();
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -1059,7 +1059,7 @@ void _Get_Quaternion()
 {
     float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-    float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     float                   nSensorVal[9] = {0, };
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
@@ -1085,15 +1085,23 @@ void _Get_Quaternion()
     nSensorVal[7] = (pRawMagData[Y_AXIS]);
     nSensorVal[8] = (pRawMagData[Z_AXIS]);
 
-    Serialprint(nSensorVal[0]);
-    Serialprint(","); Serialprint(nSensorVal[1]);
-    Serialprint(","); Serialprint(nSensorVal[2]);
-    Serialprint(","); Serialprint(nSensorVal[3]);
-    Serialprint(","); Serialprint(nSensorVal[4]);
-    Serialprint(","); Serialprint(nSensorVal[5]);
-    Serialprint(","); Serialprint(nSensorVal[6]);
-    Serialprint(","); Serialprint(nSensorVal[7]);
-    Serialprint(","); Serialprintln(nSensorVal[8]);
+//    Serialprint(F("DEL:"));
+//    Serialprint(nSensorVal[0], DEC);
+//    Serialprint(F("#GYR:"));
+//    Serialprint(nSensorVal[0], DEC); Serialprint(F(","));
+//    Serialprint(nSensorVal[1], DEC); Serialprint(F(","));
+//    Serialprint(nSensorVal[2], DEC);
+//    Serialprint(F("#ACC:"));
+//    Serialprint(nSensorVal[3], DEC); Serialprint(F(","));
+//    Serialprint(nSensorVal[4], DEC); Serialprint(F(","));
+//    Serialprint(nSensorVal[5], DEC);
+//    Serialprint(F("#MAG:"));
+    Serialprint(nSensorVal[6], DEC); Serialprint(F(":"));
+    Serialprint(nSensorVal[7], DEC); Serialprint(F(":"));
+    Serialprint(nSensorVal[8], DEC); Serialprint(F(":"));
+    Serialprint(atan2(nSensorVal[6], nSensorVal[7])*180/3.14, DEC); Serialprint(F(":"));
+    Serialprint(atan2(nSensorVal[7], nSensorVal[6])*180/3.14, DEC); Serialprint(F(":"));
+    Serialprintln(atan2(nSensorVal[6], nSensorVal[8])*180/3.14, DEC);
     
     _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
                 nSensorVal[3], nSensorVal[4], nSensorVal[5],
