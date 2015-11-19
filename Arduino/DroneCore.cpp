@@ -412,7 +412,7 @@ void loop()
 
     #if __PROFILE__
     nEndTime = micros();
-    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    //Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
 }
 
@@ -1034,7 +1034,7 @@ void _GetSensorRawData()
     // Normalize Sensor Values
     //_Normailize_SensorVal();
 
-    if(0)
+    if(1)
     {
         float           *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
         float           *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
@@ -1051,23 +1051,20 @@ void _GetSensorRawData()
         nSensorVal[7] = (pRawMagData[Y_AXIS]);
         nSensorVal[8] = (pRawMagData[Z_AXIS]);
         
-        //    Serialprint(F("DEL:"));
-        //    Serialprint(nSensorVal[0], DEC);
-        //    Serialprint(F("#GYR:"));
-        //    Serialprint(nSensorVal[0], DEC); Serialprint(F(","));
-        //    Serialprint(nSensorVal[1], DEC); Serialprint(F(","));
-        //    Serialprint(nSensorVal[2], DEC);
-        //    Serialprint(F("#ACC:"));
-        //    Serialprint(nSensorVal[3], DEC); Serialprint(F(","));
-        //    Serialprint(nSensorVal[4], DEC); Serialprint(F(","));
-        //    Serialprint(nSensorVal[5], DEC);
-        //    Serialprint(F("#MAG:"));
-        Serialprint(nSensorVal[6], DEC); Serialprint(F(":"));
-        Serialprint(nSensorVal[7], DEC); Serialprint(F(":"));
-        Serialprint(nSensorVal[8], DEC); Serialprint(F(":"));
-        Serialprint(atan2(nSensorVal[6], nSensorVal[7]), DEC); Serialprint(F(":"));
-        Serialprint(atan2(nSensorVal[7], nSensorVal[6]), DEC); Serialprint(F(":"));
-        Serialprintln(atan2(nSensorVal[6], nSensorVal[8]), DEC);
+        //Serialprint(F("DEL:"));
+        //Serialprint(nSensorVal[0], DEC);
+        //Serialprint(F("#GYR:"));
+        Serialprint(nSensorVal[0], DEC); Serialprint(F(","));
+        Serialprint(nSensorVal[1], DEC); Serialprint(F(","));
+        Serialprint(nSensorVal[2], DEC); Serialprint(F(","));
+        //Serialprint(F("#ACC:"));
+        Serialprint(nSensorVal[3], DEC); Serialprint(F(","));
+        Serialprint(nSensorVal[4], DEC); Serialprint(F(","));
+        Serialprint(nSensorVal[5], DEC); Serialprint(F(","));
+        //Serialprint(F("#MAG:"));
+        Serialprint(nSensorVal[6], DEC); Serialprint(F(","));
+        Serialprint(nSensorVal[7], DEC); Serialprint(F(","));
+        Serialprintln(nSensorVal[8], DEC);
     }
 }
 
@@ -1104,9 +1101,9 @@ void _Get_RollPitchYaw()
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
     
-    Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
-    Serialprint("   P_:"); Serialprint(pFineRPY[1]);
-    Serialprint("   R_:"); Serialprint(pFineRPY[2]);
+    //Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
+    //Serialprint("   P_:"); Serialprint(pFineRPY[1]);
+    //Serialprint("   R_:"); Serialprint(pFineRPY[2]);
 }
 
 
