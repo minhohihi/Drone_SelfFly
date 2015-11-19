@@ -182,8 +182,6 @@ typedef struct _AccelGyroParam_T
     float               nRawTemp;
     float               nBaseGyro[3];
     float               nBaseAccel[3];
-    float               nCurrReadTime;
-    float               nPrevReadTime;
     float               nFineAngle[3];                          // Filtered Angles
 }AccelGyroParam_T;
 
@@ -271,6 +269,7 @@ inline void arm();
 void _ESC_Initialize();
 void _RC_Initialize();
 void _GetSensorRawData();
+void _Normailize_SensorVal();
 void _Get_RollPitchYaw();
 void _Get_Quaternion();
 void _Get_RollPitchYawRad_By_Q();
@@ -335,7 +334,7 @@ void setup()
     #endif
     
     #if __DEBUG__
-    Serial.begin(19200);
+    Serial.begin(115200);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
@@ -400,6 +399,8 @@ void loop()
     // Update BLDCs
     UpdateESCs();
     
+    delay(50);
+    
     #if __DEBUG__
     //_print_Gyro_Signals();
     //_print_MagData();
@@ -411,7 +412,7 @@ void loop()
 
     #if __PROFILE__
     nEndTime = micros();
-    //Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
 }
 
@@ -530,11 +531,12 @@ void _AccelGyro_CalculateAngle()
     float                   nGyroDiffAngle[3] = {0, };
     float                   nRawAngle[3] = {0, };
     static float            nPrevRawAngle[3] = {0, };
+    const float             nGyroWeight = pSelfFlyHndl->nDiffTime / GYRO_FS;
     
     // Convert Gyro Values to Degrees/Sec
-    nGyroDiffAngle[X_AXIS] = pRawGyro[X_AXIS] / GYRO_FS;
-    nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] / GYRO_FS;
-    nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] / GYRO_FS;
+    nGyroDiffAngle[X_AXIS] = pRawGyro[X_AXIS] * nGyroWeight;
+    nGyroDiffAngle[Y_AXIS] = pRawGyro[Y_AXIS] * nGyroWeight;
+    nGyroDiffAngle[Z_AXIS] = pRawGyro[Z_AXIS] * nGyroWeight;
     
     // Calculate
     nAccelAngle[X_AXIS] = atan(pRawAccel[Y_AXIS] / sqrt(pow(pRawAccel[X_AXIS], 2) + pow(pRawAccel[Z_AXIS], 2))) * RAD_TO_DEG_SCALE;
@@ -543,16 +545,14 @@ void _AccelGyro_CalculateAngle()
     
     // Compute the (filtered) gyro angles
     {
-        const float         nDiffTime = pSelfFlyHndl->nDiffTime;
-        
-        nGyroAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * nDiffTime + pFineAngle[X_AXIS];
-        nGyroAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * nDiffTime + pFineAngle[Y_AXIS];
-        nGyroAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] * nDiffTime + pFineAngle[Z_AXIS];
+        nGyroAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] + pFineAngle[X_AXIS];
+        nGyroAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] + pFineAngle[Y_AXIS];
+        nGyroAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] + pFineAngle[Z_AXIS];
         
         // Compute the drifting gyro angles
-        //nRawAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] * nDiffTime + nPrevRawAngle[X_AXIS];
-        //nRawAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] * nDiffTime + nPrevRawAngle[Y_AXIS];
-        //nRawAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] * nDiffTime + nPrevRawAngle[Z_AXIS];
+        //nRawAngle[X_AXIS] = nGyroDiffAngle[X_AXIS] + nPrevRawAngle[X_AXIS];
+        //nRawAngle[Y_AXIS] = nGyroDiffAngle[Y_AXIS] + nPrevRawAngle[Y_AXIS];
+        //nRawAngle[Z_AXIS] = nGyroDiffAngle[Z_AXIS] + nPrevRawAngle[Z_AXIS];
     }
     
     // Apply the complementary filter to figure out the change in angle - choice of alpha is
@@ -565,9 +565,6 @@ void _AccelGyro_CalculateAngle()
         pFineAngle[Y_AXIS] = nOffset0 * nGyroAngle[Y_AXIS] + nOffset1 * nAccelAngle[Y_AXIS];
         pFineAngle[Z_AXIS] = nGyroAngle[Z_AXIS];  //Accelerometer doesn't give z-angle
     }
-    
-    // Update the saved data with the latest values
-    pAccelGyroParam->nPrevReadTime = pAccelGyroParam->nCurrReadTime;
 }
 
 
@@ -607,6 +604,7 @@ void _AccelGyro_Calibrate()
 
     Serialprintln(F("    Done"));
 }
+
 
 #if __GYROACCEL_DMP_ENABLED__
 VectorFloat nGravity;
@@ -1021,17 +1019,74 @@ void _GetSensorRawData()
     pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
-    // Get AccelGyro Raw Data
-    _AccelGyro_GetData();
-    
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
     pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
 
+    // Get AccelGyro Raw Data
+    _AccelGyro_GetData();
+    
     // Get Magnetic Raw Data
     _Mag_GetData();
     
     // Get Barometer Raw Data
     _Barometer_GetData();
+
+    // Normalize Sensor Values
+    //_Normailize_SensorVal();
+
+    if(0)
+    {
+        float           *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
+        float           *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
+        float           *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+        float           nSensorVal[9] = {0, };
+
+        nSensorVal[0] = pRawGyro[X_AXIS];
+        nSensorVal[1] = pRawGyro[Y_AXIS];
+        nSensorVal[2] = pRawGyro[Z_AXIS];
+        nSensorVal[3] = (pRawAccel[X_AXIS]);
+        nSensorVal[4] = (pRawAccel[Y_AXIS]);
+        nSensorVal[5] = (pRawAccel[Z_AXIS]);
+        nSensorVal[6] = (pRawMagData[X_AXIS]);
+        nSensorVal[7] = (pRawMagData[Y_AXIS]);
+        nSensorVal[8] = (pRawMagData[Z_AXIS]);
+        
+        //    Serialprint(F("DEL:"));
+        //    Serialprint(nSensorVal[0], DEC);
+        //    Serialprint(F("#GYR:"));
+        //    Serialprint(nSensorVal[0], DEC); Serialprint(F(","));
+        //    Serialprint(nSensorVal[1], DEC); Serialprint(F(","));
+        //    Serialprint(nSensorVal[2], DEC);
+        //    Serialprint(F("#ACC:"));
+        //    Serialprint(nSensorVal[3], DEC); Serialprint(F(","));
+        //    Serialprint(nSensorVal[4], DEC); Serialprint(F(","));
+        //    Serialprint(nSensorVal[5], DEC);
+        //    Serialprint(F("#MAG:"));
+        Serialprint(nSensorVal[6], DEC); Serialprint(F(":"));
+        Serialprint(nSensorVal[7], DEC); Serialprint(F(":"));
+        Serialprint(nSensorVal[8], DEC); Serialprint(F(":"));
+        Serialprint(atan2(nSensorVal[6], nSensorVal[7]), DEC); Serialprint(F(":"));
+        Serialprint(atan2(nSensorVal[7], nSensorVal[6]), DEC); Serialprint(F(":"));
+        Serialprintln(atan2(nSensorVal[6], nSensorVal[8]), DEC);
+    }
+}
+
+
+void _Normailize_SensorVal()
+{
+    float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
+    float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
+    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    
+    //pRawGyro[X_AXIS] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    //pRawGyro[Y_AXIS] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    //pRawGyro[Z_AXIS] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    //pRawAccel[X_AXIS] = (pRawAccel[X_AXIS]) / 16383.0f * 1.1;
+    //pRawAccel[Y_AXIS] = (pRawAccel[Y_AXIS]) / 16383.0f * 1.1;
+    //pRawAccel[Z_AXIS] = (pRawAccel[Z_AXIS]) / 16383.0f * 1.1;
+    //pRawMagData[X_AXIS] = (pRawMagData[X_AXIS]) / MAG_SCALE_X;
+    //pRawMagData[Y_AXIS] = (pRawMagData[Y_AXIS]) / MAG_SCALE_Y;
+    //pRawMagData[Z_AXIS] = (pRawMagData[Z_AXIS]) / MAG_SCALE_Z;
 }
 
 
@@ -1049,9 +1104,9 @@ void _Get_RollPitchYaw()
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
     
-    //Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
-    //Serialprint("   P_:"); Serialprint(pFineRPY[1]);
-    //Serialprint("   R_:"); Serialprint(pFineRPY[2]);
+    Serialprint("   Y_:"); Serialprint(pFineRPY[0]);
+    Serialprint("   P_:"); Serialprint(pFineRPY[1]);
+    Serialprint("   R_:"); Serialprint(pFineRPY[2]);
 }
 
 
@@ -1060,52 +1115,13 @@ void _Get_Quaternion()
     float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
     float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
-    float                   nSensorVal[9] = {0, };
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
     
-//    nSensorVal[0] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-//    nSensorVal[1] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-//    nSensorVal[2] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
-//    nSensorVal[3] = (pRawAccel[X_AXIS]) / 16383.0f * 1.1;
-//    nSensorVal[4] = (pRawAccel[Y_AXIS]) / 16383.0f * 1.1;
-//    nSensorVal[5] = (pRawAccel[Z_AXIS]) / 16383.0f * 1.1;
-//    nSensorVal[6] = (pRawMagData[X_AXIS]) / MAG_SCALE_X;
-//    nSensorVal[7] = (pRawMagData[Y_AXIS]) / MAG_SCALE_Y;
-//    nSensorVal[8] = (pRawMagData[Z_AXIS]) / MAG_SCALE_Z;
-
-    nSensorVal[0] = pRawGyro[X_AXIS];
-    nSensorVal[1] = pRawGyro[Y_AXIS];
-    nSensorVal[2] = pRawGyro[Z_AXIS];
-    nSensorVal[3] = (pRawAccel[X_AXIS]);
-    nSensorVal[4] = (pRawAccel[Y_AXIS]);
-    nSensorVal[5] = (pRawAccel[Z_AXIS]);
-    nSensorVal[6] = (pRawMagData[X_AXIS]);
-    nSensorVal[7] = (pRawMagData[Y_AXIS]);
-    nSensorVal[8] = (pRawMagData[Z_AXIS]);
-
-//    Serialprint(F("DEL:"));
-//    Serialprint(nSensorVal[0], DEC);
-//    Serialprint(F("#GYR:"));
-//    Serialprint(nSensorVal[0], DEC); Serialprint(F(","));
-//    Serialprint(nSensorVal[1], DEC); Serialprint(F(","));
-//    Serialprint(nSensorVal[2], DEC);
-//    Serialprint(F("#ACC:"));
-//    Serialprint(nSensorVal[3], DEC); Serialprint(F(","));
-//    Serialprint(nSensorVal[4], DEC); Serialprint(F(","));
-//    Serialprint(nSensorVal[5], DEC);
-//    Serialprint(F("#MAG:"));
-    Serialprint(nSensorVal[6], DEC); Serialprint(F(":"));
-    Serialprint(nSensorVal[7], DEC); Serialprint(F(":"));
-    Serialprint(nSensorVal[8], DEC); Serialprint(F(":")); 
-    Serialprint(atan2(nSensorVal[6], nSensorVal[7])*180/3.14, DEC); Serialprint(F(":"));
-    Serialprint(atan2(nSensorVal[7], nSensorVal[6])*180/3.14, DEC); Serialprint(F(":"));
-    Serialprintln(atan2(nSensorVal[6], nSensorVal[8])*180/3.14, DEC);
-    
-    _AHRSupdate(nSensorVal[0], nSensorVal[1], nSensorVal[2],
-                nSensorVal[3], nSensorVal[4], nSensorVal[5],
-                nSensorVal[6], nSensorVal[7], nSensorVal[8]);
+    _AHRSupdate(pRawGyro[X_AXIS], pRawGyro[Y_AXIS], pRawGyro[Z_AXIS],
+                pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS],
+                pRawMagData[X_AXIS], pRawMagData[Y_AXIS], pRawMagData[Z_AXIS]);
 }
 
 
@@ -1156,7 +1172,7 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
         float halfwx, halfwy, halfwz;
         
         // Normalise magnetometer measurement
-        nRecipNorm = _InvSqrt(mx * mx + my * my + mz * mz);
+        nRecipNorm = 1.0 / sqrt(mx * mx + my * my + mz * mz);//_InvSqrt(mx * mx + my * my + mz * mz);
         mx *= nRecipNorm;
         my *= nRecipNorm;
         mz *= nRecipNorm;
@@ -1184,7 +1200,7 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
         float halfvx, halfvy, halfvz;
         
         // Normalise accelerometer measurement
-        nRecipNorm = _InvSqrt(ax * ax + ay * ay + az * az);
+        nRecipNorm = 1.0f / sqrt(ax * ax + ay * ay + az * az);//_InvSqrt(ax * ax + ay * ay + az * az);
         ax *= nRecipNorm;
         ay *= nRecipNorm;
         az *= nRecipNorm;
@@ -1241,7 +1257,7 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     pQ[3] += (( qa * gz) + (qb * gy) - (qc * gx));
     
     // Normalise quaternion
-    nRecipNorm = _InvSqrt((pQ[0] * pQ[0]) + (pQ[1] * pQ[1]) + (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]));
+    nRecipNorm = 1.0f / sqrt((pQ[0] * pQ[0]) + (pQ[1] * pQ[1]) + (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]));//_InvSqrt((pQ[0] * pQ[0]) + (pQ[1] * pQ[1]) + (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]));
     pQ[0] *= nRecipNorm;
     pQ[1] *= nRecipNorm;
     pQ[2] *= nRecipNorm;
