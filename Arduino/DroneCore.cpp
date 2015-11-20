@@ -19,13 +19,14 @@
 #define MAX_CH_ESC                          (4)
 
 // Arduino Pin configuration
-#define PIN_GY86_EXT_INTERRUPT              (13)
-#define PIN_RESERVED_12                     (12)
+//#define PIN_GY86_EXT_INTERRUPT              (13)
+#define PIN_SONIC_TRIG                      (13)
+#define PIN_SONIC_ECHO                      (12)
 #define PIN_ESC_CH0                         (11)
 #define PIN_ESC_CH1                         (10)
 #define PIN_ESC_CH2                         (9)
 #define PIN_ESC_CH3                         (8)
-#define PIN_RESERVED_07                     (7)
+#define PIN_GY86_EXT_INTERRUPT              (7)
 #define PIN_RC_CH0                          (6)
 #define PIN_RC_CH1                          (5)
 #define PIN_RC_CH2                          (4)
@@ -116,6 +117,7 @@
 
 #define RAD_TO_DEG_SCALE                    (57.2958f)                      // = 180 / PI
 #define DEG_TO_RAD_SCALE                    (0.0175f)                       // = PI / 180
+#define SINGLE_RADIAN                       (3.141592)                      // = PI
 #define DOUBLE_RADIAN                       (6.283184)                      // = 2 * PI
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
 
@@ -204,11 +206,17 @@ typedef struct _BaroParam_T
     float               nAvgPressure;                           // Average Pressure Data
     float               nAvgTemp;                               // Average Temperature Data
     float               nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
-    float               nRelativeAltitude;              // Relative Absolute Altitude Data
+    float               nRelativeAltitude;                      // Relative Absolute Altitude Data
     float               nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
     float               nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
     float               nVerticalSpeed;                         // Estimated Vertical Speed
 }BaroParam_T;
+
+typedef struct _SonicParam_T
+{
+    float               nRawDist;                               // Indicate Distance Calculated From Sensor
+    float               nDistFromGnd;                           // Indicate istance from Ground
+}SonicParam_T;
 
 typedef struct _SelfFly_T
 {
@@ -223,6 +231,8 @@ typedef struct _SelfFly_T
     
     MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
     BaroParam_T         nBaroParam;
+    
+    SonicParam_T        SonicParam;                             // HC-SR04 SuperSonic Sensor
     
     AxisErrRate_T       nPitch;
     AxisErrRate_T       nRoll;
@@ -262,6 +272,8 @@ float _Mag_TiltCompensate(float *nRawMagData, float *pAccelGyro);
 int _Barometer_Initialize();
 void _Barometer_GetData();
 void _Barometer_CalculateData();
+void _Sonic_Initialize();
+void _Sonic_GetData();
 inline void UpdateESCs();
 inline void _CalculatePID();
 inline void CalculateThrottleVal();
@@ -349,6 +361,9 @@ void setup()
     // Initialize Barometer
     _Barometer_Initialize();
     
+    // Initialize SuperSonic Sensor
+    //_Sonic_Initialize();
+
     // Initialize RemoteController
     _RC_Initialize();
     
@@ -709,7 +724,7 @@ int _Mag_Initialize()
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
-    pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) / RAD_TO_DEG_SCALE;
+    pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
     
     Serialprintln(F(" Done"));
     
@@ -723,7 +738,6 @@ void _Mag_GetData()
     int16_t                 nRawMagData[3];
     float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
-    //pSelfFlyHndl->nMagHndl.getHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
     pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
 }
 
@@ -744,10 +758,10 @@ void _Mag_CalculateDirection()
     
     pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
     
-//    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-//        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-//    else if(pMagParam->nMagHeadingDeg >= 240)
-//        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
+        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
+    else if(pMagParam->nMagHeadingDeg >= 240)
+        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
     
     // Smooth angles rotation for +/- 3deg
     pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);
@@ -854,6 +868,37 @@ void _Barometer_CalculateData()
     pBaroParam->nRelativeAltitude = pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nRefAbsoluteAltitude;
     
     pBaroParam->nPrevAvgAbsoluteAltitude = pBaroParam->nAvgAbsoluteAltitude;
+}
+
+
+void _Sonic_Initialize()
+{
+    int                     i = 0;
+    
+    // Set PinMode for SuperSonic Sensor (HC-SR04)
+    pinMode(PIN_SONIC_TRIG, OUTPUT);
+    pinMode(PIN_SONIC_ECHO, INPUT);
+    
+    // Calibrate SuperSonic Sensor
+    for(i=0 ; i<50 ; i++)
+    {
+        _Sonic_GetData();
+        delay(20);
+    }
+}
+
+
+void _Sonic_GetData()
+{
+    digitalWrite(PIN_SONIC_TRIG, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(PIN_SONIC_TRIG, LOW);
+    
+    // Get Raw Distance Value
+    pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONIC_ECHO, HIGH);
+    
+    // Calculate Distance From Ground
+    pSelfFlyHndl->SonicParam.nDistFromGnd = pSelfFlyHndl->SonicParam.nRawDist / 170000; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
 }
 
 
@@ -1031,6 +1076,9 @@ void _GetSensorRawData()
     // Get Barometer Raw Data
     _Barometer_GetData();
 
+    // Get Supersonic Raw Data
+    //_Sonic_GetData();
+    
     // Normalize Sensor Values
     //_Normailize_SensorVal();
 
