@@ -383,10 +383,10 @@ void loop()
     _CalculatePID();
     
     // Throttle Calculation
-    CalculateThrottleVal();
+    //CalculateThrottleVal();
     
     // Update BLDCs
-    UpdateESCs();
+    //UpdateESCs();
     
     //delay(50);
     
@@ -571,9 +571,9 @@ int _Mag_Initialize()
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
-    // Latitude: 37.0000° North
-    // Longitude: 126.0000° East
-    // Magnetic declination: 7° 59.76' West
+    // Latitude: 37.0000째 North
+    // Longitude: 126.0000째 East
+    // Magnetic declination: 7째 59.76' West
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
@@ -885,7 +885,7 @@ void _GetSensorRawData()
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0);
+    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
 
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
@@ -925,6 +925,13 @@ void _Get_RollPitchYaw()
     pFineRPY[0] *= RAD_TO_DEG_SCALE;
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
+
+    Serialprint("   //    Roll: ");
+    Serialprint(pFineRPY[2]);
+    Serialprint("   Pitch: ");
+    Serialprint(pFineRPY[1]);
+    Serialprint("   Yaw: ");
+    Serialprint(pFineRPY[0]);
 }
 
 
@@ -962,6 +969,8 @@ void _Get_RollPitchYawRad_By_Q()
 }
 
 
+// Reference Site
+// http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
 {
     float                   recipNorm;
@@ -1069,10 +1078,10 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     }
     
     // Integrate rate of change of quaternion to yield quaternion
-    pQ[0] += qDot1 * nSampleFreq;//(1.0f / SAMPLEFREQ);
-    pQ[1] += qDot2 * nSampleFreq;//(1.0f / SAMPLEFREQ);
-    pQ[2] += qDot3 * nSampleFreq;//(1.0f / SAMPLEFREQ);
-    pQ[3] += qDot4 * nSampleFreq;//(1.0f / SAMPLEFREQ);
+    pQ[0] += qDot1 * (1.0f / nSampleFreq);
+    pQ[1] += qDot2 * (1.0f / nSampleFreq);
+    pQ[2] += qDot3 * (1.0f / nSampleFreq);
+    pQ[3] += qDot4 * (1.0f / nSampleFreq);
     
     // Normalise quaternion
     recipNorm = _InvSqrt(pQ[0] * pQ[0] + pQ[1] * pQ[1] + pQ[2] * pQ[2] + pQ[3] * pQ[3]);
