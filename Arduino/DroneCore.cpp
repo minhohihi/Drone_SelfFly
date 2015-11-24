@@ -352,12 +352,7 @@ void setup()
     pSelfFlyHndl->nInterruptLockFlag = false;
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
-    
-    pSelfFlyHndl->nRCCh[0] = 1500;
-    pSelfFlyHndl->nRCCh[1] = 1500;
-    pSelfFlyHndl->nRCCh[2] = 1500;
-    pSelfFlyHndl->nRCCh[3] = 1500;
-    
+        
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
     Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
@@ -375,6 +370,12 @@ void loop()
 
     nStartTime0 = micros();
     #endif
+
+    pSelfFlyHndl->nRCCh[0] = 1500.0f;
+    pSelfFlyHndl->nRCCh[1] = 1500.0f;
+    pSelfFlyHndl->nRCCh[2] = 1500.0f;
+    pSelfFlyHndl->nRCCh[3] = 1500.0f;
+    pSelfFlyHndl->nRCCh[4] = 1500.0f;
 
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
@@ -752,7 +753,7 @@ inline void _CalculatePID()
     const float             nDiffTime = pSelfFlyHndl->nDiffTime;
 
     _AcquireLock();
-    
+
     pRCCh[0] = floor(pRCCh[0] / ROUNDING_BASE) * ROUNDING_BASE;
     pRCCh[1] = floor(pRCCh[1] / ROUNDING_BASE) * ROUNDING_BASE;
     pRCCh[3] = floor(pRCCh[3] / ROUNDING_BASE) * ROUNDING_BASE;
@@ -798,7 +799,7 @@ inline void _CalculatePID()
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
     
     //YAW control
-    pYaw->nCurrErrRate = pRCCh[3] - pFineRPY[2];
+    pYaw->nCurrErrRate = pRCCh[3] + pFineGyro[2];// - pFineRPY[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
     pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
@@ -893,7 +894,7 @@ void _GetSensorRawData()
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1.0 / pSelfFlyHndl->nDiffTime;//1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
+    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
 
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
@@ -1190,8 +1191,8 @@ float _InvSqrt(float nNumber)
 
 inline void nRCInterrupt_CB0()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[0] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    //    pSelfFlyHndl->nRCCh[0] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
     
     pSelfFlyHndl->nRCPrevChangeTime[0] = micros();
 }
@@ -1199,8 +1200,8 @@ inline void nRCInterrupt_CB0()
 
 inline void nRCInterrupt_CB1()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[1] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    //    pSelfFlyHndl->nRCCh[1] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
     
     pSelfFlyHndl->nRCPrevChangeTime[1] = micros();
 }
@@ -1208,8 +1209,8 @@ inline void nRCInterrupt_CB1()
 
 inline void nRCInterrupt_CB2()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[2] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    //    pSelfFlyHndl->nRCCh[2] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
     
     pSelfFlyHndl->nRCPrevChangeTime[2] = micros();
 }
@@ -1217,8 +1218,8 @@ inline void nRCInterrupt_CB2()
 
 inline void nRCInterrupt_CB3()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[3] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    //    pSelfFlyHndl->nRCCh[3] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
     
     pSelfFlyHndl->nRCPrevChangeTime[3] = micros();
 }
@@ -1226,8 +1227,8 @@ inline void nRCInterrupt_CB3()
 
 inline void nRCInterrupt_CB4()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[4] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    //    pSelfFlyHndl->nRCCh[4] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
     
     pSelfFlyHndl->nRCPrevChangeTime[4] = micros();
 }
