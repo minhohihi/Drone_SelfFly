@@ -44,16 +44,16 @@
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
-#define RC_CH_HIGH0                         (1900)
-#define RC_CH_LOW0                          (1050)
-#define RC_CH_HIGH1                         (1900)
-#define RC_CH_LOW1                          (1050)
-#define RC_CH_HIGH2                         (1900)
-#define RC_CH_LOW2                          (1050)
-#define RC_CH_HIGH3                         (1900)
-#define RC_CH_LOW3                          (1050)
-#define RC_CH_HIGH4                         (1900)
-#define RC_CH_LOW4                          (1050)
+#define RC_CH0_HIGH                         (1900)
+#define RC_CH0_LOW                          (1050)
+#define RC_CH1_HIGH                         (1900)
+#define RC_CH1_LOW                          (1050)
+#define RC_CH2_HIGH                         (1900)
+#define RC_CH2_LOW                          (1050)
+#define RC_CH3_HIGH                         (1900)
+#define RC_CH3_LOW                          (1050)
+#define RC_CH4_HIGH                         (1900)
+#define RC_CH4_LOW                          (1050)
 
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)                         // angle control
@@ -68,7 +68,7 @@
 #define YAW_I_GAIN                          (0.650)
 
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
-#define GYRO_FS                             (131.0f)                         // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
+#define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
 #define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
@@ -353,6 +353,11 @@ void setup()
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
     
+    pSelfFlyHndl->nRCCh[0] = 1500;
+    pSelfFlyHndl->nRCCh[1] = 1500;
+    pSelfFlyHndl->nRCCh[2] = 1500;
+    pSelfFlyHndl->nRCCh[3] = 1500;
+    
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
     Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
@@ -384,7 +389,7 @@ void loop()
     _CalculatePID();
     
     // Throttle Calculation
-    //CalculateThrottleVal();
+    CalculateThrottleVal();
     
     // Update BLDCs
     //UpdateESCs();
@@ -397,7 +402,7 @@ void loop()
     //_print_BarometerData();
     //_print_RPY_Signals();
     //_print_RC_Signals();
-    //_print_Throttle_Signals();
+    _print_Throttle_Signals();
     #endif
 
     #if __PROFILE__
@@ -744,16 +749,17 @@ inline void _CalculatePID()
     float                   *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
     float                   *pFineGyro = &(pSelfFlyHndl->nFineGyro[0]);
     float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
-    
+    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
+
     _AcquireLock();
     
     pRCCh[0] = floor(pRCCh[0] / ROUNDING_BASE) * ROUNDING_BASE;
     pRCCh[1] = floor(pRCCh[1] / ROUNDING_BASE) * ROUNDING_BASE;
     pRCCh[3] = floor(pRCCh[3] / ROUNDING_BASE) * ROUNDING_BASE;
     
-    pRCCh[0] = map(pRCCh[0], RC_CH_LOW0, RC_CH_HIGH0, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    pRCCh[1] = map(pRCCh[1], RC_CH_LOW1, RC_CH_HIGH1, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    pRCCh[3] = map(pRCCh[3], RC_CH_LOW3, RC_CH_HIGH3, YAW_RATE_MIN, YAW_RATE_MAX);
+    pRCCh[0] = map(pRCCh[0], RC_CH0_LOW, RC_CH0_HIGH, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    pRCCh[1] = map(pRCCh[1], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    pRCCh[3] = map(pRCCh[3], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
     
     if((pRCCh[0] < ROLL_ANG_MIN) || (pRCCh[0] > ROLL_ANG_MAX))
         pRCCh[0] = nRCPrevCh[0];
@@ -766,35 +772,35 @@ inline void _CalculatePID()
     nRCPrevCh[1] = pRCCh[1];
     nRCPrevCh[3] = pRCCh[3];
     
+    //pFineRPY[0] = pFineRPY[0] * RAD_TO_DEG_SCALE + ROLL_ANG_OFFSET;
     //pFineRPY[1] = pFineRPY[1] * RAD_TO_DEG_SCALE + PITCH_ANG_OFFSET;
-    //pFineRPY[2] = pFineRPY[2] * RAD_TO_DEG_SCALE + ROLL_ANG_OFFSET;
+    
+    if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 30)
+        pFineRPY[0] = nPrevFineRPY[0];
     
     if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 30)
         pFineRPY[1] = nPrevFineRPY[1];
     
-    if(abs(pFineRPY[2] - nPrevFineRPY[2]) > 30)
-        pFineRPY[2] = nPrevFineRPY[2];
-    
     //ROLL control
-    pRoll->nAngleErr = pRCCh[0] - pFineRPY[2];
+    pRoll->nAngleErr = pRCCh[0] - pFineRPY[0];
     pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
-    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
-    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / SAMPLING_TIME;
+    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / nDiffTime;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
     
     //PITCH control
     pPitch->nAngleErr = pRCCh[1] - pFineRPY[1];
     pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
-    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * SAMPLING_TIME), -100, 100);
-    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / SAMPLING_TIME;
+    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
     
     //YAW control
-    pYaw->nCurrErrRate = pRCCh[3] - pFineRPY[0];
+    pYaw->nCurrErrRate = pRCCh[3] - pFineRPY[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
-    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * SAMPLING_TIME), -50, 50);
+    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
     
     // Backup for Next
@@ -823,7 +829,7 @@ inline void CalculateThrottleVal()
     memset(&(pThrottle[0]), ESC_MIN, 4 * sizeof(int32_t));
     
     pRCCh[2] = floor(pRCCh[2] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(pRCCh[2], RC_CH_LOW2, RC_CH_HIGH2, ESC_MIN, ESC_MAX));
+    nEstimatedThrottle = (float)(map(pRCCh[2], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
     
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
@@ -887,7 +893,7 @@ void _GetSensorRawData()
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
+    pSelfFlyHndl->nSampleFreq = 1.0 / pSelfFlyHndl->nDiffTime;//1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
 
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
@@ -927,13 +933,6 @@ void _Get_RollPitchYaw()
     pFineRPY[0] *= RAD_TO_DEG_SCALE;
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
-
-    Serialprint("   //    Roll: ");
-    Serialprint(pFineRPY[2]);
-    Serialprint("   Pitch: ");
-    Serialprint(pFineRPY[1]);
-    Serialprint("   Yaw: ");
-    Serialprint(pFineRPY[0]);
 }
 
 
@@ -961,13 +960,15 @@ void _Get_RollPitchYawRad_By_Q()
     // Calculate Quaternion
     _Get_Quaternion();
 
+    // Estimate Gravity
     pEstGravity[X_AXIS] = 2 * ((pQ[1] * pQ[3]) - (pQ[0] * pQ[2]));
     pEstGravity[Y_AXIS] = 2 * ((pQ[0] * pQ[1]) + (pQ[2] * pQ[3]));
     pEstGravity[Z_AXIS] = (pQ[0] * pQ[0]) - (pQ[1] * pQ[1]) - (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]);
     
-    pFineRPY[0] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * pQ[0] * pQ[0]) + (2 * pQ[1] * pQ[1]) - 1);
+    // Calculate Roll, Pitch, and Yaw
+    pFineRPY[0] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS])));
     pFineRPY[1] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS])));
-    pFineRPY[2] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS])));
+    pFineRPY[2] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * pQ[0] * pQ[0]) + (2 * pQ[1] * pQ[1]) - 1);
 }
 
 
@@ -983,7 +984,7 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     float                   _2bx, _2bz, _4bx, _4bz;
     float                   _2q0, _2q1, _2q2, _2q3, _2q0q2, _2q2q3;
     float                   q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
-    const float             nSampleFreq = pSelfFlyHndl->nSampleFreq;
+    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
     volatile float          *pQ = &(pSelfFlyHndl->nQuaternion[0]);
     
     // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
@@ -1080,10 +1081,10 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     }
     
     // Integrate rate of change of quaternion to yield quaternion
-    pQ[0] += qDot1 * (1.0f / nSampleFreq);
-    pQ[1] += qDot2 * (1.0f / nSampleFreq);
-    pQ[2] += qDot3 * (1.0f / nSampleFreq);
-    pQ[3] += qDot4 * (1.0f / nSampleFreq);
+    pQ[0] += qDot1 * nDiffTime;
+    pQ[1] += qDot2 * nDiffTime;
+    pQ[2] += qDot3 * nDiffTime;
+    pQ[3] += qDot4 * nDiffTime;
     
     // Normalise quaternion
     recipNorm = _InvSqrt(pQ[0] * pQ[0] + pQ[1] * pQ[1] + pQ[2] * pQ[2] + pQ[3] * pQ[3]);
@@ -1356,11 +1357,11 @@ void _print_RPY_Signals()
     float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
     
     Serialprint("   //    Roll: ");
-    Serialprint(pFineRPY[2]);
+    Serialprint(pFineRPY[0]);
     Serialprint("   Pitch: ");
     Serialprint(pFineRPY[1]);
     Serialprint("   Yaw: ");
-    Serialprint(pFineRPY[0]);
+    Serialprint(pFineRPY[2]);
 }
 
 void _print_MagData()
