@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
-#define __DEBUG__                           (1)
+#define __DEBUG__                           (0)
 #if (__DEBUG__)
     #define __PROFILE__                     (1)
 #else
@@ -21,12 +21,12 @@
 
 // Arduino Pin configuration
 //#define PIN_GY86_EXT_INTERRUPT              (13)
-#define PIN_SONIC_TRIG                      (13)
-#define PIN_SONIC_ECHO                      (12)
-#define PIN_ESC_CH0                         (11)
+#define PIN_SONAR_TRIG                      (13)
+#define PIN_SONAR_ECHO                      (12)
+#define PIN_ESC_CH2                         (11)
 #define PIN_ESC_CH1                         (10)
-#define PIN_ESC_CH2                         (9)
-#define PIN_ESC_CH3                         (8)
+#define PIN_ESC_CH3                         (9)
+#define PIN_ESC_CH0                         (8)
 #define PIN_GY86_EXT_INTERRUPT              (7)
 #define PIN_RC_CH0                          (6)
 #define PIN_RC_CH1                          (5)
@@ -38,8 +38,8 @@
 #define PIN_CHECK_POWER_STAT                (A0)
 
 // ESC configuration
-#define ESC_MIN                             (800)
-#define ESC_MAX                             (2200)
+#define ESC_MIN                             (1000)
+#define ESC_MAX                             (2000)
 #define ESC_TAKEOFF_OFFSET                  (900)
 #define ESC_ARM_DELAY                       (1000)
 
@@ -86,6 +86,10 @@
 
 #define SAMPLEFREQ                          (133.0f)                        // sample frequency in Hz
 #define BETADEF                             (1.1f)
+
+// Sonar sensor
+#define SONAR_MAX_WAIT                      (30000)                         // microsecond             
+#define SONAR_INTERVAL                      (50000)                         // microsecond             
 
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)                          // Seconds
@@ -196,7 +200,7 @@ typedef struct _SonicParam_T
 
 typedef struct _SelfFly_T
 {
-    Servo               nESC[MAX_CH_ESC];
+    Servo               *pESC[MAX_CH_ESC];
     MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
     AccelGyroParam_T    nAccelGyroParam;
     Quaternion          nQuater;
@@ -327,6 +331,12 @@ void setup()
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
     #endif
     
+    // Initialize RemoteController
+    _RC_Initialize();
+    
+    // Initialize ESCs
+    _ESC_Initialize();
+
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
     
@@ -338,12 +348,6 @@ void setup()
     
     // Initialize SuperSonic Sensor
     //_Sonic_Initialize();
-
-    // Initialize RemoteController
-    _RC_Initialize();
-    
-    // Initialize ESCs
-    _ESC_Initialize();
     
     for(i=0 ; i<MAX_CH_RC ; i++)
         pSelfFlyHndl->nRCPrevChangeTime[i] = micros();
@@ -373,9 +377,9 @@ void loop()
 
     pSelfFlyHndl->nRCCh[0] = 1500.0f;
     pSelfFlyHndl->nRCCh[1] = 1500.0f;
-    pSelfFlyHndl->nRCCh[2] = 1500.0f;
+    pSelfFlyHndl->nRCCh[2] = 1100.0f;
     pSelfFlyHndl->nRCCh[3] = 1500.0f;
-    pSelfFlyHndl->nRCCh[4] = 1500.0f;
+    pSelfFlyHndl->nRCCh[4] = 1000.0f;
 
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
@@ -393,7 +397,7 @@ void loop()
     CalculateThrottleVal();
     
     // Update BLDCs
-    //UpdateESCs();
+    UpdateESCs();
     
     //delay(50);
     
@@ -403,12 +407,12 @@ void loop()
     //_print_BarometerData();
     //_print_RPY_Signals();
     //_print_RC_Signals();
-    _print_Throttle_Signals();
+    //_print_Throttle_Signals();
     #endif
 
     #if __PROFILE__
     nEndTime = micros();
-    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    //Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
 }
 
@@ -703,8 +707,8 @@ void _Sonic_Initialize()
     int                     i = 0;
     
     // Set PinMode for SuperSonic Sensor (HC-SR04)
-    pinMode(PIN_SONIC_TRIG, OUTPUT);
-    pinMode(PIN_SONIC_ECHO, INPUT);
+    pinMode(PIN_SONAR_TRIG, OUTPUT);
+    pinMode(PIN_SONAR_ECHO, INPUT);
     
     // Calibrate SuperSonic Sensor
     for(i=0 ; i<50 ; i++)
@@ -717,26 +721,19 @@ void _Sonic_Initialize()
 
 void _Sonic_GetData()
 {
-    digitalWrite(PIN_SONIC_TRIG, HIGH);
+    digitalWrite(PIN_SONAR_TRIG, HIGH);
     delayMicroseconds(10);
-    digitalWrite(PIN_SONIC_TRIG, LOW);
+    digitalWrite(PIN_SONAR_TRIG, LOW);
     
     // Get Raw Distance Value
-    pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONIC_ECHO, HIGH);
+    pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
     
     // Calculate Distance From Ground
     pSelfFlyHndl->SonicParam.nDistFromGnd = pSelfFlyHndl->SonicParam.nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
-}
 
-
-inline void UpdateESCs()
-{
-    Servo                   *pESC = &(pSelfFlyHndl->nESC[0]);
-    int32_t                 *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
-    int                     i = 0;
-    
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pESC[i].writeMicroseconds(pThrottle[i]);
+    Serialprint(pSelfFlyHndl->SonicParam.nDistFromGnd);
+    Serialprint("cm");
+    Serialprintln();    
 }
 
 
@@ -841,37 +838,42 @@ inline void CalculateThrottleVal()
     
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
-        pThrottle[0] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[1] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[2] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[3] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[0] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[1] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[2] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[3] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
     }
-}
-
-
-inline void arm()
-{
-    Servo                   *pESC = &(pSelfFlyHndl->nESC[0]);
-    int                     i = 0;
-    
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pESC[i].writeMicroseconds(ESC_MIN);
-    
-    delay(ESC_ARM_DELAY);
 }
 
 
 void _ESC_Initialize()
 {
-    Servo                   *pESC = &(pSelfFlyHndl->nESC[0]);
     int                     i = 0;
     
     for(i=0 ; i<MAX_CH_ESC ; i++)
-        pESC[i].attach(PIN_ESC_CH0);
+        pSelfFlyHndl->pESC[i] = new Servo;
+
+    pSelfFlyHndl->pESC[0]->attach(PIN_ESC_CH0, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[1]->attach(PIN_ESC_CH1, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[2]->attach(PIN_ESC_CH2, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[3]->attach(PIN_ESC_CH3, ESC_MIN, ESC_MAX);
     
-    delay(1000);
+    delay(300);
     
-    arm();
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pSelfFlyHndl->pESC[i]->writeMicroseconds(0);
+    
+    delay(ESC_ARM_DELAY);
+}
+
+
+inline void UpdateESCs()
+{
+    int32_t                 *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    int                     i = 0;
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pSelfFlyHndl->pESC[i]->writeMicroseconds(pThrottle[i]);
 }
 
 
@@ -890,6 +892,8 @@ void _RC_Initialize()
 
 void _GetSensorRawData()
 {
+    static unsigned long    nPrevSonarCapture = 0;
+    
     pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
@@ -906,7 +910,11 @@ void _GetSensorRawData()
     _Barometer_GetData();
 
     // Get Supersonic Raw Data
-    //_Sonic_GetData();
+    if(SONAR_INTERVAL < (pSelfFlyHndl->nCurrSensorCapTime - nPrevSonarCapture))
+    {
+        //_Sonic_GetData();
+        nPrevSonarCapture = pSelfFlyHndl->nCurrSensorCapTime;
+    }
     
     // Normalize Sensor Values
     //_Normailize_SensorVal();
