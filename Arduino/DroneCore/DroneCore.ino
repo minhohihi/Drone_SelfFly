@@ -1,3 +1,19 @@
+
+/*----------------------------------------------------------------------------------------
+ File Inclusions
+ ----------------------------------------------------------------------------------------*/
+#include <Servo.h>
+#include <I2Cdev.h>
+#include <PinChangeInt.h>
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+#include <Wire.h>
+#endif
+#include <MPU6050_6Axis_MotionApps20.h>
+#include <HMC5883L.h>
+#include <MS561101BA.h>
+#include <math.h>
+
+
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
@@ -40,7 +56,7 @@
 // ESC configuration
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
-#define ESC_TAKEOFF_OFFSET                  (900)
+#define ESC_TAKEOFF_OFFSET                  (999)
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
@@ -88,32 +104,17 @@
 #define BETADEF                             (1.1f)
 
 // Sonar sensor
-#define SONAR_MAX_WAIT                      (30000)                         // microsecond             
-#define SONAR_INTERVAL                      (50000)                         // microsecond             
+#define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
+#define SONAR_INTERVAL                      (50000)                         // Unit: microsecond
 
 #define ROUNDING_BASE                       (50)
-#define SAMPLING_TIME                       (0.01)                          // Seconds
+#define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
 
 #define RAD_TO_DEG_SCALE                    (57.2958f)                      // = 180 / PI
 #define DEG_TO_RAD_SCALE                    (0.0175f)                       // = PI / 180
 #define SINGLE_RADIAN                       (3.141592)                      // = PI
 #define DOUBLE_RADIAN                       (6.283184)                      // = 2 * PI
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
-
-/*----------------------------------------------------------------------------------------
- File Inclusions
- ----------------------------------------------------------------------------------------*/
-#include <Servo.h>
-#include <I2Cdev.h>
-#include <PinChangeInt.h>
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include <Wire.h>
-#endif
-//#include <MPU6050.h>
-#include <MPU6050_6Axis_MotionApps20.h>
-#include <HMC5883L.h>
-#include <MS561101BA.h>
-#include <math.h>
 
 
 /*----------------------------------------------------------------------------------------
@@ -200,40 +201,46 @@ typedef struct _SonicParam_T
 
 typedef struct _SelfFly_T
 {
-    Servo               *pESC[MAX_CH_ESC];
+    // For Accelerator & Gyroscope Sensor
     MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
     AccelGyroParam_T    nAccelGyroParam;
-    Quaternion          nQuater;
-    VectorFloat         nGravity;
-    
+
+    // For Magnetometer Sensor
     HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
     MagneticParam_T     nMagParam;
     
+    // For Barometer Sensor
     MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
     BaroParam_T         nBaroParam;
     
-    SonicParam_T        SonicParam;                             // HC-SR04 SuperSonic Sensor
+    // For Sonar Sensor
+    SonicParam_T        SonicParam;                             // HC-SR04 Sonar Sensor
     
+    // For PID Control
     AxisErrRate_T       nPitch;
     AxisErrRate_T       nRoll;
     AxisErrRate_T       nYaw;
-    float               nRCCh[MAX_CH_RC];                       // RC channel inputs
+    
+    // For Motor Control
+    Servo               *pESC[MAX_CH_ESC];
+    volatile float      nRCCh[MAX_CH_RC];                       // RC channel inputs
     unsigned long       nRCPrevChangeTime[MAX_CH_RC];
+    volatile int32_t    nThrottle[MAX_CH_ESC];
     
-    int32_t             nThrottle[MAX_CH_ESC];
-    
-    float               nFineRPY[3];
-    float               nFineGyro[3];
+    // For Estimated Status of Drone
+    volatile float      nFineRPY[3];
+    volatile float      nFineGyro[3];
     volatile float      nQuaternion[4];                         // quaternion
-    float               nEstGravity[3];                         // estimated gravity direction
+    volatile float      nEstGravity[3];                         // estimated gravity direction
     
+    // For Control Interval
     unsigned long       nCurrSensorCapTime;
     unsigned long       nPrevSensorCapTime;
     float               nDiffTime;
     float               nSampleFreq;                            // half the sample period expressed in seconds
     volatile float      nBeta;
     
-    volatile bool       nMPUInterruptFlag;
+    // For RC Inte
     bool                nInterruptLockFlag;                     // Interrupt lock
 }SelfFly_T;
 
@@ -241,9 +248,11 @@ typedef struct _SelfFly_T
 /*----------------------------------------------------------------------------------------
  Static Function
  ----------------------------------------------------------------------------------------*/
+void _ESC_Initialize();
+void _RC_Initialize();
 int _AccelGyro_Initialize();
 void _AccelGyro_GetData();
-#if !(USE_AHRS)
+#if (!USE_AHRS)
 void _AccelGyro_CalculateAngle();
 #endif
 void _AccelGyro_Calibrate();
@@ -253,22 +262,17 @@ void _Mag_CalculateDirection();
 int _Barometer_Initialize();
 void _Barometer_GetData();
 void _Barometer_CalculateData();
-void _Sonic_Initialize();
-void _Sonic_GetData();
-inline void UpdateESCs();
-inline void _CalculatePID();
-inline void CalculateThrottleVal();
-inline void arm();
-void _ESC_Initialize();
-void _RC_Initialize();
+void _Sonar_Initialize();
+void _Sonar_GetData();
 void _GetSensorRawData();
-void _Normailize_SensorVal();
 void _Get_RollPitchYaw();
 void _Get_Quaternion();
 void _Get_RollPitchYawRad_By_Q();
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 //void _AHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
-float _InvSqrt(float nNumber);
+inline void _CalculatePID();
+inline void CalculateThrottleVal();
+inline void UpdateESCs();
 inline void nRCInterrupt_CB0();
 inline void nRCInterrupt_CB1();
 inline void nRCInterrupt_CB2();
@@ -276,6 +280,7 @@ inline void nRCInterrupt_CB3();
 inline void nRCInterrupt_CB4();
 float Clip3Float(const float nValue, const int MIN, const int MAX);
 int Clip3Int(const int nValue, const int MIN, const int MAX);
+float _InvSqrt(float nNumber);
 inline void _AcquireLock();
 inline void _ReleaseLock();
 #if __DEBUG__
@@ -285,6 +290,7 @@ void _print_Throttle_Signals();
 void _print_RPY_Signals();
 void _print_MagData();
 void _print_BarometerData();
+void _print_SonarData();
 #endif
 
 /*----------------------------------------------------------------------------------------
@@ -346,13 +352,12 @@ void setup()
     // Initialize Barometer
     _Barometer_Initialize();
     
-    // Initialize SuperSonic Sensor
-    //_Sonic_Initialize();
+    // Initialize Sonar Sensor
+    //_Sonar_Initialize();
     
     for(i=0 ; i<MAX_CH_RC ; i++)
         pSelfFlyHndl->nRCPrevChangeTime[i] = micros();
     
-    pSelfFlyHndl->nMPUInterruptFlag = false;
     pSelfFlyHndl->nInterruptLockFlag = false;
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
@@ -375,12 +380,14 @@ void loop()
     nStartTime0 = micros();
     #endif
 
+    #if __DEBUG__
     pSelfFlyHndl->nRCCh[0] = 1500.0f;
     pSelfFlyHndl->nRCCh[1] = 1500.0f;
     pSelfFlyHndl->nRCCh[2] = 1100.0f;
     pSelfFlyHndl->nRCCh[3] = 1500.0f;
     pSelfFlyHndl->nRCCh[4] = 1000.0f;
-
+    #endif
+    
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
 
@@ -408,12 +415,47 @@ void loop()
     //_print_RPY_Signals();
     //_print_RC_Signals();
     //_print_Throttle_Signals();
+    //_print_SonarData();
     #endif
 
     #if __PROFILE__
     nEndTime = micros();
-    //Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
     #endif
+}
+
+
+void _ESC_Initialize()
+{
+    int                     i = 0;
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pSelfFlyHndl->pESC[i] = new Servo;
+    
+    pSelfFlyHndl->pESC[0]->attach(PIN_ESC_CH0, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[1]->attach(PIN_ESC_CH1, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[2]->attach(PIN_ESC_CH2, ESC_MIN, ESC_MAX);
+    pSelfFlyHndl->pESC[3]->attach(PIN_ESC_CH3, ESC_MIN, ESC_MAX);
+    
+    delay(300);
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pSelfFlyHndl->pESC[i]->writeMicroseconds(0);
+    
+    delay(ESC_ARM_DELAY);
+}
+
+
+void _RC_Initialize()
+{
+    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
+    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
+    
+    PCintPort::attachInterrupt(PIN_RC_CH0, nRCInterrupt_CB0, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
 }
 
 
@@ -477,7 +519,7 @@ void _AccelGyro_GetData()
     pRawGyro[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]);
 }
 
-#if USE_AHRS
+#if (!USE_AHRS)
 void _AccelGyro_CalculateAngle()
 {
     AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
@@ -702,24 +744,24 @@ void _Barometer_CalculateData()
 }
 
 
-void _Sonic_Initialize()
+void _Sonar_Initialize()
 {
     int                     i = 0;
     
-    // Set PinMode for SuperSonic Sensor (HC-SR04)
+    // Set PinMode for Sonar Sensor (HC-SR04)
     pinMode(PIN_SONAR_TRIG, OUTPUT);
     pinMode(PIN_SONAR_ECHO, INPUT);
     
-    // Calibrate SuperSonic Sensor
+    // Calibrate Sonar Sensor
     for(i=0 ; i<50 ; i++)
     {
-        _Sonic_GetData();
+        _Sonar_GetData();
         delay(20);
     }
 }
 
 
-void _Sonic_GetData()
+void _Sonar_GetData()
 {
     digitalWrite(PIN_SONAR_TRIG, HIGH);
     delayMicroseconds(10);
@@ -730,163 +772,6 @@ void _Sonic_GetData()
     
     // Calculate Distance From Ground
     pSelfFlyHndl->SonicParam.nDistFromGnd = pSelfFlyHndl->SonicParam.nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
-
-    Serialprint(pSelfFlyHndl->SonicParam.nDistFromGnd);
-    Serialprint("cm");
-    Serialprintln();    
-}
-
-
-inline void _CalculatePID()
-{
-    static float            nRCPrevCh[5] = {0, };              // Filter variables
-    static float            nPrevFineRPY[3];
-    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
-    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
-    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
-    float                   *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
-    float                   *pFineGyro = &(pSelfFlyHndl->nFineGyro[0]);
-    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
-    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
-
-    _AcquireLock();
-
-    pRCCh[0] = floor(pRCCh[0] / ROUNDING_BASE) * ROUNDING_BASE;
-    pRCCh[1] = floor(pRCCh[1] / ROUNDING_BASE) * ROUNDING_BASE;
-    pRCCh[3] = floor(pRCCh[3] / ROUNDING_BASE) * ROUNDING_BASE;
-    
-    pRCCh[0] = map(pRCCh[0], RC_CH0_LOW, RC_CH0_HIGH, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    pRCCh[1] = map(pRCCh[1], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    pRCCh[3] = map(pRCCh[3], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
-    
-    if((pRCCh[0] < ROLL_ANG_MIN) || (pRCCh[0] > ROLL_ANG_MAX))
-        pRCCh[0] = nRCPrevCh[0];
-    if((pRCCh[1] < PITCH_ANG_MIN) || (pRCCh[1] > PITCH_ANG_MAX))
-        pRCCh[1] = nRCPrevCh[1];
-    if((pRCCh[3] < YAW_RATE_MIN) || (pRCCh[3] > YAW_RATE_MAX))
-        pRCCh[3] = nRCPrevCh[3];
-    
-    nRCPrevCh[0] = pRCCh[0];
-    nRCPrevCh[1] = pRCCh[1];
-    nRCPrevCh[3] = pRCCh[3];
-    
-    //pFineRPY[0] = pFineRPY[0] * RAD_TO_DEG_SCALE + ROLL_ANG_OFFSET;
-    //pFineRPY[1] = pFineRPY[1] * RAD_TO_DEG_SCALE + PITCH_ANG_OFFSET;
-    
-    if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 30)
-        pFineRPY[0] = nPrevFineRPY[0];
-    
-    if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 30)
-        pFineRPY[1] = nPrevFineRPY[1];
-    
-    //ROLL control
-    pRoll->nAngleErr = pRCCh[0] - pFineRPY[0];
-    pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
-    pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
-    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
-    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / nDiffTime;
-    pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
-    
-    //PITCH control
-    pPitch->nAngleErr = pRCCh[1] - pFineRPY[1];
-    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
-    pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
-    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
-    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
-    pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
-    
-    //YAW control
-    pYaw->nCurrErrRate = pRCCh[3] + pFineGyro[2];// - pFineRPY[2];
-    pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
-    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
-    pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
-    
-    // Backup for Next
-    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
-    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
-    nPrevFineRPY[0] = pFineRPY[0];
-    nPrevFineRPY[1] = pFineRPY[1];
-    nPrevFineRPY[2] = pFineRPY[2];
-
-    _ReleaseLock();
-}
-
-
-inline void CalculateThrottleVal()
-{
-    float                   nEstimatedThrottle = 0.0f;
-    static float            nPrevEstimatedThrottle = 0.0f;
-    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
-    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
-    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
-    int32_t                 *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
-    float                   *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
-    
-    _AcquireLock();
-    
-    memset(&(pThrottle[0]), ESC_MIN, 4 * sizeof(int32_t));
-    
-    pRCCh[2] = floor(pRCCh[2] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(pRCCh[2], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
-    
-    if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
-        nEstimatedThrottle = nPrevEstimatedThrottle;
-    
-    nPrevEstimatedThrottle = nEstimatedThrottle;
-    
-    _ReleaseLock();
-    
-    if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
-    {
-        pThrottle[0] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[1] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[2] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[3] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-    }
-}
-
-
-void _ESC_Initialize()
-{
-    int                     i = 0;
-    
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pSelfFlyHndl->pESC[i] = new Servo;
-
-    pSelfFlyHndl->pESC[0]->attach(PIN_ESC_CH0, ESC_MIN, ESC_MAX);
-    pSelfFlyHndl->pESC[1]->attach(PIN_ESC_CH1, ESC_MIN, ESC_MAX);
-    pSelfFlyHndl->pESC[2]->attach(PIN_ESC_CH2, ESC_MIN, ESC_MAX);
-    pSelfFlyHndl->pESC[3]->attach(PIN_ESC_CH3, ESC_MIN, ESC_MAX);
-    
-    delay(300);
-    
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pSelfFlyHndl->pESC[i]->writeMicroseconds(0);
-    
-    delay(ESC_ARM_DELAY);
-}
-
-
-inline void UpdateESCs()
-{
-    int32_t                 *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
-    int                     i = 0;
-    
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pSelfFlyHndl->pESC[i]->writeMicroseconds(pThrottle[i]);
-}
-
-
-void _RC_Initialize()
-{
-    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
-    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
-    
-    PCintPort::attachInterrupt(PIN_RC_CH0, nRCInterrupt_CB0, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
 }
 
 
@@ -909,31 +794,19 @@ void _GetSensorRawData()
     // Get Barometer Raw Data
     _Barometer_GetData();
 
-    // Get Supersonic Raw Data
+    // Get Sonar Raw Data
     if(SONAR_INTERVAL < (pSelfFlyHndl->nCurrSensorCapTime - nPrevSonarCapture))
     {
-        //_Sonic_GetData();
+        //_Sonar_GetData();
         nPrevSonarCapture = pSelfFlyHndl->nCurrSensorCapTime;
     }
-    
-    // Normalize Sensor Values
-    //_Normailize_SensorVal();
-}
-
-
-void _Normailize_SensorVal()
-{
-    float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
-    float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
 }
 
 
 void _Get_RollPitchYaw()
 {
-    float                   *pFineG = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
-    const volatile float    *pQ = &(pSelfFlyHndl->nQuaternion[0]);
-    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    volatile float          *pFineG = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
+    volatile float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
 
     // Calculate Roll & Pitch & Yaw
     _Get_RollPitchYawRad_By_Q();
@@ -962,9 +835,9 @@ void _Get_Quaternion()
 
 void _Get_RollPitchYawRad_By_Q()
 {
-    float                   *pEstGravity = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
+    volatile float          *pEstGravity = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
     const volatile float    *pQ = &(pSelfFlyHndl->nQuaternion[0]);
-    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    volatile float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
 
     // Calculate Quaternion
     _Get_Quaternion();
@@ -1176,31 +1049,126 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
 //}
 
 
-/**
- * Fast inverse square root implementation
- * @see http://en.wikipedia.org/wiki/Fast_inverse_square_root
- */
-float _InvSqrt(float nNumber)
+inline void _CalculatePID()
 {
-    volatile long           i;
-    volatile float          x, y;
-    volatile const float    f = 1.5F;
+    static float            nRCPrevCh[5] = {0, };              // Filter variables
+    static float            nPrevFineRPY[3];
+    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
+    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
+    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
+    volatile float          *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
+    volatile float          *pFineGyro = &(pSelfFlyHndl->nFineGyro[0]);
+    volatile float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
     
-    x = nNumber * 0.5F;
-    y = nNumber;
-    i = * ( long * ) &y;
-    i = 0x5f375a86 - ( i >> 1 );
-    y = * ( float * ) &i;
-    y = y * ( f - ( x * y * y ) );
+    _AcquireLock();
     
-    return y;
+    pRCCh[0] = floor(pRCCh[0] / ROUNDING_BASE) * ROUNDING_BASE;
+    pRCCh[1] = floor(pRCCh[1] / ROUNDING_BASE) * ROUNDING_BASE;
+    pRCCh[3] = floor(pRCCh[3] / ROUNDING_BASE) * ROUNDING_BASE;
+    
+    pRCCh[0] = map(pRCCh[0], RC_CH0_LOW, RC_CH0_HIGH, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    pRCCh[1] = map(pRCCh[1], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    pRCCh[3] = map(pRCCh[3], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
+    
+    if((pRCCh[0] < ROLL_ANG_MIN) || (pRCCh[0] > ROLL_ANG_MAX))
+        pRCCh[0] = nRCPrevCh[0];
+    if((pRCCh[1] < PITCH_ANG_MIN) || (pRCCh[1] > PITCH_ANG_MAX))
+        pRCCh[1] = nRCPrevCh[1];
+    if((pRCCh[3] < YAW_RATE_MIN) || (pRCCh[3] > YAW_RATE_MAX))
+        pRCCh[3] = nRCPrevCh[3];
+    
+    nRCPrevCh[0] = pRCCh[0];
+    nRCPrevCh[1] = pRCCh[1];
+    nRCPrevCh[3] = pRCCh[3];
+    
+    if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 30)
+        pFineRPY[0] = nPrevFineRPY[0];
+    
+    if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 30)
+        pFineRPY[1] = nPrevFineRPY[1];
+    
+    //ROLL control
+    pRoll->nAngleErr = pRCCh[0] - pFineRPY[0];
+    pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
+    pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
+    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / nDiffTime;
+    pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
+    
+    //PITCH control
+    pPitch->nAngleErr = pRCCh[1] - pFineRPY[1];
+    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
+    pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
+    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
+    pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
+    
+    //YAW control
+    pYaw->nCurrErrRate = pRCCh[3] + pFineGyro[2];// - pFineRPY[2];
+    pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
+    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
+    pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
+    
+    // Backup for Next
+    pRoll->nPrevErrRate = pRoll->nCurrErrRate;
+    pPitch->nPrevErrRate = pPitch->nCurrErrRate;
+    nPrevFineRPY[0] = pFineRPY[0];
+    nPrevFineRPY[1] = pFineRPY[1];
+    nPrevFineRPY[2] = pFineRPY[2];
+    
+    _ReleaseLock();
+}
+
+
+inline void CalculateThrottleVal()
+{
+    float                   nEstimatedThrottle = 0.0f;
+    static float            nPrevEstimatedThrottle = 0.0f;
+    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
+    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
+    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
+    volatile int32_t        *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    volatile float          *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
+    
+    _AcquireLock();
+    
+    memset((void *)(&(pThrottle[0])), ESC_MIN, 4 * sizeof(int32_t));
+    
+    pRCCh[2] = floor(pRCCh[2] / ROUNDING_BASE) * ROUNDING_BASE;
+    nEstimatedThrottle = (float)(map(pRCCh[2], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
+    
+    if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
+        nEstimatedThrottle = nPrevEstimatedThrottle;
+    
+    nPrevEstimatedThrottle = nEstimatedThrottle;
+    
+    _ReleaseLock();
+    
+    if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
+    {
+        pThrottle[0] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[1] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[2] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[3] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+    }
+}
+
+
+inline void UpdateESCs()
+{
+    volatile int32_t        *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    int                     i = 0;
+    
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pSelfFlyHndl->pESC[i]->writeMicroseconds(pThrottle[i]);
 }
 
 
 inline void nRCInterrupt_CB0()
 {
-    //if(!(pSelfFlyHndl->nInterruptLockFlag))
-    //    pSelfFlyHndl->nRCCh[0] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
+    if(!(pSelfFlyHndl->nInterruptLockFlag))
+        pSelfFlyHndl->nRCCh[0] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
     
     pSelfFlyHndl->nRCPrevChangeTime[0] = micros();
 }
@@ -1208,8 +1176,8 @@ inline void nRCInterrupt_CB0()
 
 inline void nRCInterrupt_CB1()
 {
-    //if(!(pSelfFlyHndl->nInterruptLockFlag))
-    //    pSelfFlyHndl->nRCCh[1] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
+    if(!(pSelfFlyHndl->nInterruptLockFlag))
+        pSelfFlyHndl->nRCCh[1] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
     
     pSelfFlyHndl->nRCPrevChangeTime[1] = micros();
 }
@@ -1217,8 +1185,8 @@ inline void nRCInterrupt_CB1()
 
 inline void nRCInterrupt_CB2()
 {
-    //if(!(pSelfFlyHndl->nInterruptLockFlag))
-    //    pSelfFlyHndl->nRCCh[2] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
+    if(!(pSelfFlyHndl->nInterruptLockFlag))
+        pSelfFlyHndl->nRCCh[2] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
     
     pSelfFlyHndl->nRCPrevChangeTime[2] = micros();
 }
@@ -1226,8 +1194,8 @@ inline void nRCInterrupt_CB2()
 
 inline void nRCInterrupt_CB3()
 {
-    //if(!(pSelfFlyHndl->nInterruptLockFlag))
-    //    pSelfFlyHndl->nRCCh[3] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
+    if(!(pSelfFlyHndl->nInterruptLockFlag))
+        pSelfFlyHndl->nRCCh[3] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
     
     pSelfFlyHndl->nRCPrevChangeTime[3] = micros();
 }
@@ -1235,8 +1203,8 @@ inline void nRCInterrupt_CB3()
 
 inline void nRCInterrupt_CB4()
 {
-    //if(!(pSelfFlyHndl->nInterruptLockFlag))
-    //    pSelfFlyHndl->nRCCh[4] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
+    if(!(pSelfFlyHndl->nInterruptLockFlag))
+        pSelfFlyHndl->nRCCh[4] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
     
     pSelfFlyHndl->nRCPrevChangeTime[4] = micros();
 }
@@ -1268,6 +1236,27 @@ int Clip3Int(const int nValue, const int MIN, const int MAX)
 }
 
 
+/**
+ * Fast inverse square root implementation
+ * @see http://en.wikipedia.org/wiki/Fast_inverse_square_root
+ */
+float _InvSqrt(float nNumber)
+{
+    volatile long           i;
+    volatile float          x, y;
+    volatile const float    f = 1.5F;
+    
+    x = nNumber * 0.5F;
+    y = nNumber;
+    i = * ( long * ) &y;
+    i = 0x5f375a86 - ( i >> 1 );
+    y = * ( float * ) &i;
+    y = y * ( f - ( x * y * y ) );
+    
+    return y;
+}
+
+
 inline void _AcquireLock()
 {
     pSelfFlyHndl->nInterruptLockFlag = true;
@@ -1283,7 +1272,7 @@ inline void _ReleaseLock()
 #if __DEBUG__
 void _print_RC_Signals()
 {
-    float                   *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
+    volatile float          *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
     
     Serialprint("   //   RC_Roll:");
     if(pRCCh[0] - 1480 < 0)Serialprint("<<<");
@@ -1348,7 +1337,7 @@ void _print_Gyro_Signals()
 
 void _print_Throttle_Signals()
 {
-    int32_t                 *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    volatile int32_t        *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     
     Serialprint("   //    Thrt1 : ");
     Serialprint(pThrottle[0]);
@@ -1363,7 +1352,7 @@ void _print_Throttle_Signals()
 
 void _print_RPY_Signals()
 {
-    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    volatile float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
     
     Serialprint("   //    Roll: ");
     Serialprint(pFineRPY[0]);
@@ -1396,4 +1385,13 @@ void _print_BarometerData()
     Serialprint("   VerticalSpeed:"); Serialprint(pBaroParam->nVerticalSpeed);
     Serialprint("   ");
 }
+
+void _print_SonarData()
+{
+    Serialprint("   //    Sonar: ");
+    Serialprint(pSelfFlyHndl->SonicParam.nDistFromGnd);
+    Serialprintln("cm   ");
+}
 #endif
+
+
