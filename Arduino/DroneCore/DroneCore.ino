@@ -105,7 +105,6 @@
 
 // Sonar sensor
 #define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
-#define SONAR_INTERVAL                      (50000)                         // Unit: microsecond
 
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
@@ -222,6 +221,8 @@ typedef struct _SelfFly_T
     // For Accelerator & Gyroscope Sensor
     MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
     AccelGyroParam_T    nAccelGyroParam;
+    int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
+    int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
 
     // For Magnetometer Sensor
     HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
@@ -274,10 +275,13 @@ void _ESC_Initialize();
 void _RC_Initialize();
 void _AccelGyro_Initialize();
 void _AccelGyro_GetData();
+void _AccelGyro_GetMeanSensor();
 #if (!USE_AHRS)
 void _AccelGyro_CalculateAngle();
 #endif
-void _AccelGyro_Calibrate();
+//void _AccelGyro_Calibrate();
+void _AccelGyro_GetMeanSensor();
+void _AccelGyro_Calibration();
 void _Mag_Initialize();
 void _Mag_GetData();
 void _Mag_CalculateDirection();
@@ -293,15 +297,15 @@ void _Get_RollPitchYawRad_By_Q();
 void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
 //void _AHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
 inline void _CalculatePID();
-inline void CalculateThrottleVal();
-inline void UpdateESCs();
-inline void nRCInterrupt_CB0();
-inline void nRCInterrupt_CB1();
-inline void nRCInterrupt_CB2();
-inline void nRCInterrupt_CB3();
-inline void nRCInterrupt_CB4();
-float Clip3Float(const float nValue, const int MIN, const int MAX);
-int Clip3Int(const int nValue, const int MIN, const int MAX);
+inline void _CalculateThrottleVal();
+inline void _UpdateESCs();
+inline void _nRCInterrupt_CB0();
+inline void _nRCInterrupt_CB1();
+inline void _nRCInterrupt_CB2();
+inline void _nRCInterrupt_CB3();
+inline void _nRCInterrupt_CB4();
+float _Clip3Float(const float nValue, const int MIN, const int MAX);
+int _Clip3Int(const int nValue, const int MIN, const int MAX);
 float _InvSqrt(float nNumber);
 inline void _AcquireLock();
 inline void _ReleaseLock();
@@ -429,10 +433,10 @@ void loop()
     _CalculatePID();
     
     // Throttle Calculation
-    CalculateThrottleVal();
+    _CalculateThrottleVal();
     
     // Update BLDCs
-    UpdateESCs();
+    _UpdateESCs();
     
     //delay(50);
     
@@ -527,11 +531,11 @@ void _RC_Initialize()
     pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
     digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
     
-    PCintPort::attachInterrupt(PIN_RC_CH0, nRCInterrupt_CB0, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH1, nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH2, nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH3, nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH4, nRCInterrupt_CB4, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH0, _nRCInterrupt_CB0, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH1, _nRCInterrupt_CB1, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH2, _nRCInterrupt_CB2, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH3, _nRCInterrupt_CB3, CHANGE);
+    PCintPort::attachInterrupt(PIN_RC_CH4, _nRCInterrupt_CB4, CHANGE);
 }
 
 
@@ -550,18 +554,15 @@ void _AccelGyro_Initialize()
     pSelfFlyHndl->nAccelGyroHndl.setI2CBypassEnabled(true);
     pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
     
-    // supply your own gyro offsets here, scaled for min sensitivity
-    pSelfFlyHndl->nAccelGyroHndl.setXGyroOffset(220);
-    pSelfFlyHndl->nAccelGyroHndl.setYGyroOffset(76);
-    pSelfFlyHndl->nAccelGyroHndl.setZGyroOffset(-85);
-    pSelfFlyHndl->nAccelGyroHndl.setZAccelOffset(1788);                                     // 1688 factory default for my test chip
-    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                                // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                           // Low Pass filter 20hz
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);                // 250? / s (MPU6050_GYRO_FS_250)
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);                // +-2g (MPU6050_ACCEL_FS_2)
-    
     // Calibrate GyroAccel
-    _AccelGyro_Calibrate();
+    _AccelGyro_Calibration();
+    
+    // supply your own gyro offsets here, scaled for min sensitivity
+    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    
     Serialprintln(F(" MPU Initialized!!!"));
     
     return;
@@ -594,6 +595,7 @@ void _AccelGyro_GetData()
     pRawGyro[Y_AXIS] = (pRawGyro[Y_AXIS] - pBaseGyro[Y_AXIS]);
     pRawGyro[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]);
 }
+
 
 #if (!USE_AHRS)
 void _AccelGyro_CalculateAngle()
@@ -637,41 +639,139 @@ void _AccelGyro_CalculateAngle()
 #endif
 
 
-void _AccelGyro_Calibrate()
+//void _AccelGyro_Calibrate()
+//{
+//    int                     i = 0;
+//    int32_t                 nRawGyro[3] = {0, };
+//    int32_t                 nRawAccel[3] = {0, };
+//    const int               nLoopCnt = 50;
+//    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
+//
+//    Serialprint(F("    Start Calibration of MPU6050 "));
+//
+//    for(i=0 ; i<nLoopCnt ; i++)
+//    {
+//        _AccelGyro_GetData();
+//        
+//        nRawGyro[X_AXIS] += pAccelGyroParam->nRawGyro[X_AXIS];
+//        nRawGyro[Y_AXIS] += pAccelGyroParam->nRawGyro[Y_AXIS];
+//        nRawGyro[Z_AXIS] += pAccelGyroParam->nRawGyro[Z_AXIS];
+//        nRawAccel[X_AXIS] += pAccelGyroParam->nRawAccel[X_AXIS];
+//        nRawAccel[Y_AXIS] += pAccelGyroParam->nRawAccel[Y_AXIS];
+//        nRawAccel[Z_AXIS] += pAccelGyroParam->nRawAccel[Z_AXIS];
+//        
+//        delay(20);
+//        
+//        Serialprint(".");
+//    }
+//    
+//    // Store the raw calibration values globally
+//    pAccelGyroParam->nBaseGyro[X_AXIS] = (float)(nRawGyro[X_AXIS]) / nLoopCnt;
+//    pAccelGyroParam->nBaseGyro[Y_AXIS] = (float)(nRawGyro[Y_AXIS]) / nLoopCnt;
+//    pAccelGyroParam->nBaseGyro[Z_AXIS] = (float)(nRawGyro[Z_AXIS]) / nLoopCnt;
+//    pAccelGyroParam->nBaseAccel[X_AXIS] = (float)(nRawAccel[X_AXIS]) / nLoopCnt;
+//    pAccelGyroParam->nBaseAccel[Y_AXIS] = (float)(nRawAccel[Y_AXIS]) / nLoopCnt;
+//    pAccelGyroParam->nBaseAccel[Z_AXIS] = (float)(nRawAccel[Z_AXIS]) / nLoopCnt;
+//
+//    Serialprintln(F("    Done"));
+//}
+
+
+void _AccelGyro_GetMeanSensor()
 {
-    int                     i = 0;
-    int32_t                 nRawGyro[3] = {0, };
-    int32_t                 nRawAccel[3] = {0, };
-    const int               nLoopCnt = 50;
-    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-
-    Serialprint(F("    Start Calibration of MPU6050 "));
-
-    for(i=0 ; i<nLoopCnt ; i++)
-    {
-        _AccelGyro_GetData();
-        
-        nRawGyro[X_AXIS] += pAccelGyroParam->nRawGyro[X_AXIS];
-        nRawGyro[Y_AXIS] += pAccelGyroParam->nRawGyro[Y_AXIS];
-        nRawGyro[Z_AXIS] += pAccelGyroParam->nRawGyro[Z_AXIS];
-        nRawAccel[X_AXIS] += pAccelGyroParam->nRawAccel[X_AXIS];
-        nRawAccel[Y_AXIS] += pAccelGyroParam->nRawAccel[Y_AXIS];
-        nRawAccel[Z_AXIS] += pAccelGyroParam->nRawAccel[Z_AXIS];
-        
-        delay(20);
-        
-        Serialprint(".");
-    }
+    long                i=0;
+    long                nAccelBufX=0, nAccelBufY=0, nAccelBufZ=0;
+    long                nGyroBufX=0, nGyroBufY=0, nGyroBufZ=0;
+    const int           nLoopCnt = 1000;
     
-    // Store the raw calibration values globally
-    pAccelGyroParam->nBaseGyro[X_AXIS] = (float)(nRawGyro[X_AXIS]) / nLoopCnt;
-    pAccelGyroParam->nBaseGyro[Y_AXIS] = (float)(nRawGyro[Y_AXIS]) / nLoopCnt;
-    pAccelGyroParam->nBaseGyro[Z_AXIS] = (float)(nRawGyro[Z_AXIS]) / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[X_AXIS] = (float)(nRawAccel[X_AXIS]) / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[Y_AXIS] = (float)(nRawAccel[Y_AXIS]) / nLoopCnt;
-    pAccelGyroParam->nBaseAccel[Z_AXIS] = (float)(nRawAccel[Z_AXIS]) / nLoopCnt;
+    while (i<(nLoopCnt + 101))
+    {
+        // read raw accel/gyro measurements from device
+        // Read Gyro and Accelerate Data
+        Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);
+        Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
+        Wire.endTransmission(false);
+        Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW, 14, true);  // request a total of 14 registers
+        
+        if (i>100 && i<=(nLoopCnt + 100))
+        {
+            //First 100 measures are discarded
+            nAccelBufX += (Wire.read()<<8 | Wire.read());
+            nAccelBufY += (Wire.read()<<8 | Wire.read());
+            nAccelBufZ += (Wire.read()<<8 | Wire.read());
+            Wire.read(); Wire.read();
+            nGyroBufX += (Wire.read()<<8 | Wire.read());
+            nGyroBufY += (Wire.read()<<8 | Wire.read());
+            nGyroBufZ += (Wire.read()<<8 | Wire.read());
+        }
+        
+        if (i==(nLoopCnt + 100))
+        {
+            pSelfFlyHndl->nCalibMean_AX = nAccelBufX / nLoopCnt;
+            pSelfFlyHndl->nCalibMean_AY = nAccelBufY / nLoopCnt;
+            pSelfFlyHndl->nCalibMean_AZ = nAccelBufZ / nLoopCnt;
+            pSelfFlyHndl->nCalibMean_GX = nGyroBufX / nLoopCnt;
+            pSelfFlyHndl->nCalibMean_GY = nGyroBufY / nLoopCnt;
+            pSelfFlyHndl->nCalibMean_GZ = nGyroBufZ / nLoopCnt;
+        }
+        
+        i++;
+        delay(2); //Needed so we don't get repeated measures
+    }
+}
 
-    Serialprintln(F("    Done"));
+
+void _AccelGyro_Calibration()
+{
+    int             nOffset_AX = 0, nOffset_AY = 0, nOffset_AZ;
+    int             nOffset_GX = 0, nOffset_GY = 0, nOffset_GZ = 0;
+    const int       nAccelDeadZone = 8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+    const int       nGyroDeadZone = 1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+    
+    _AccelGyro_GetMeanSensor();
+    
+    nOffset_AX = -pSelfFlyHndl->nCalibMean_AX / 8;
+    nOffset_AY = -pSelfFlyHndl->nCalibMean_AY / 8;
+    nOffset_AZ = (16384 - pSelfFlyHndl->nCalibMean_AZ) / 8;
+    nOffset_GX = -pSelfFlyHndl->nCalibMean_GX / 4;
+    nOffset_GY = -pSelfFlyHndl->nCalibMean_GY / 4;
+    nOffset_GZ = -pSelfFlyHndl->nCalibMean_GZ / 4;
+    
+    while (1)
+    {
+        int         ready = 0;
+        
+        pSelfFlyHndl->nAccelGyroHndl.setXAccelOffset(nOffset_AX);
+        pSelfFlyHndl->nAccelGyroHndl.setYAccelOffset(nOffset_AY);
+        pSelfFlyHndl->nAccelGyroHndl.setZAccelOffset(nOffset_AZ);
+        pSelfFlyHndl->nAccelGyroHndl.setXGyroOffset(nOffset_GX);
+        pSelfFlyHndl->nAccelGyroHndl.setYGyroOffset(nOffset_GY);
+        pSelfFlyHndl->nAccelGyroHndl.setZGyroOffset(nOffset_GZ);
+        
+        _AccelGyro_GetMeanSensor();
+        Serialprintln("...");
+        
+        if (abs(pSelfFlyHndl->nCalibMean_AX) <= nAccelDeadZone) ready++;
+        else nOffset_AX -= (pSelfFlyHndl->nCalibMean_AX / nAccelDeadZone);
+        
+        if (abs(pSelfFlyHndl->nCalibMean_AY)<=nAccelDeadZone) ready++;
+        else nOffset_AY -= (pSelfFlyHndl->nCalibMean_AY / nAccelDeadZone);
+        
+        if (abs(16384-pSelfFlyHndl->nCalibMean_AZ)<=nAccelDeadZone) ready++;
+        else nOffset_AZ += ((16384 - pSelfFlyHndl->nCalibMean_AZ) / nAccelDeadZone);
+        
+        if (abs(pSelfFlyHndl->nCalibMean_GX)<=nGyroDeadZone) ready++;
+        else nOffset_GX -= (pSelfFlyHndl->nCalibMean_GX / (nGyroDeadZone + 1));
+        
+        if (abs(pSelfFlyHndl->nCalibMean_GY)<=nGyroDeadZone) ready++;
+        else nOffset_GY -= (pSelfFlyHndl->nCalibMean_GY / (nGyroDeadZone + 1));
+        
+        if (abs(pSelfFlyHndl->nCalibMean_GZ)<=nGyroDeadZone) ready++;
+        else nOffset_GZ -= (pSelfFlyHndl->nCalibMean_GZ / (nGyroDeadZone + 1));
+        
+        if(6 == ready)
+            break;
+    }
 }
 
 
@@ -853,8 +953,6 @@ void _Sonar_GetData()
 
 void _GetSensorRawData()
 {
-    static unsigned long    nPrevSonarCapture = 0;
-    
     pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
     pSelfFlyHndl->nCurrSensorCapTime = micros();
 
@@ -871,11 +969,7 @@ void _GetSensorRawData()
     _Barometer_GetData();
 
     // Get Sonar Raw Data
-    if(SONAR_INTERVAL < (pSelfFlyHndl->nCurrSensorCapTime - nPrevSonarCapture))
-    {
-        //_Sonar_GetData();
-        nPrevSonarCapture = pSelfFlyHndl->nCurrSensorCapTime;
-    }
+    //_Sonar_GetData();
 }
 
 
@@ -1168,7 +1262,7 @@ inline void _CalculatePID()
     pRoll->nAngleErr = pRCCh[CH_TYPE_ROLL] - pFineRPY[0];
     pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
-    pRoll->nI_ErrRate = Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pRoll->nI_ErrRate = _Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
     pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / nDiffTime;
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
     
@@ -1176,14 +1270,14 @@ inline void _CalculatePID()
     pPitch->nAngleErr = pRCCh[CH_TYPE_PITCH] - pFineRPY[1];
     pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
-    pPitch->nI_ErrRate = Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
+    pPitch->nI_ErrRate = _Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
     
     //YAW control
     pYaw->nCurrErrRate = pRCCh[CH_TYPE_YAW] + pFineGyro[2];// - pFineRPY[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
-    pYaw->nI_ErrRate = Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
+    pYaw->nI_ErrRate = _Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
     
     // Backup for Next
@@ -1197,7 +1291,7 @@ inline void _CalculatePID()
 }
 
 
-inline void CalculateThrottleVal()
+inline void _CalculateThrottleVal()
 {
     float                   nEstimatedThrottle = 0.0f;
     static float            nPrevEstimatedThrottle = 0.0f;
@@ -1223,15 +1317,15 @@ inline void CalculateThrottleVal()
     
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
-        pThrottle[0] = Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[1] = Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[2] = Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[3] = Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[0] = _Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[1] = _Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[2] = _Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[3] = _Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
     }
 }
 
 
-inline void UpdateESCs()
+inline void _UpdateESCs()
 {
     volatile int32_t        *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     int                     i = 0;
@@ -1241,7 +1335,7 @@ inline void UpdateESCs()
 }
 
 
-inline void nRCInterrupt_CB0()
+inline void _nRCInterrupt_CB0()
 {
     if(!(pSelfFlyHndl->nInterruptLockFlag))
         pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
@@ -1250,7 +1344,7 @@ inline void nRCInterrupt_CB0()
 }
 
 
-inline void nRCInterrupt_CB1()
+inline void _nRCInterrupt_CB1()
 {
     if(!(pSelfFlyHndl->nInterruptLockFlag))
         pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
@@ -1259,7 +1353,7 @@ inline void nRCInterrupt_CB1()
 }
 
 
-inline void nRCInterrupt_CB2()
+inline void _nRCInterrupt_CB2()
 {
     if(!(pSelfFlyHndl->nInterruptLockFlag))
         pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
@@ -1268,7 +1362,7 @@ inline void nRCInterrupt_CB2()
 }
 
 
-inline void nRCInterrupt_CB3()
+inline void _nRCInterrupt_CB3()
 {
     if(!(pSelfFlyHndl->nInterruptLockFlag))
         pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
@@ -1277,7 +1371,7 @@ inline void nRCInterrupt_CB3()
 }
 
 
-inline void nRCInterrupt_CB4()
+inline void _nRCInterrupt_CB4()
 {
     if(!(pSelfFlyHndl->nInterruptLockFlag))
         pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
@@ -1286,7 +1380,7 @@ inline void nRCInterrupt_CB4()
 }
 
 
-float Clip3Float(const float nValue, const int MIN, const int MAX)
+float _Clip3Float(const float nValue, const int MIN, const int MAX)
 {
     float               nClipVal = nValue;
     
@@ -1299,7 +1393,7 @@ float Clip3Float(const float nValue, const int MIN, const int MAX)
 }
 
 
-int Clip3Int(const int nValue, const int MIN, const int MAX)
+int _Clip3Int(const int nValue, const int MIN, const int MAX)
 {
     int                 nClipVal = nValue;
     
@@ -1469,5 +1563,6 @@ void _print_SonarData()
     Serialprintln("cm   ");
 }
 #endif
+
 
 
