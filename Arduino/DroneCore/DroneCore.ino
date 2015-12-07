@@ -336,9 +336,6 @@ void setup()
 {
     int32_t                 i = 0;
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
-    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
     
     Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
     Serialprintln("   **********************************************   ");
@@ -721,6 +718,8 @@ void _AccelGyro_GetMeanSensor()
 }
 
 
+// Reference
+// http://wired.chillibasket.com/2015/01/calibrating-mpu6050/
 void _AccelGyro_Calibration()
 {
     int             nOffset_AX = 0, nOffset_AY = 0, nOffset_AZ;
@@ -817,8 +816,7 @@ void _Mag_Initialize()
 
 void _Mag_GetData()
 {
-    int16_t                 nRawMagData[3];
-    float         *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
     pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
 }

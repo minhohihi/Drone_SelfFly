@@ -93,6 +93,9 @@
 		8B0F2CF11BF57A7F0044F792 /* TCA6424A.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B0F2C971BF57A7F0044F792 /* TCA6424A.h */; };
 		8B1625EC1C000F2E00631D40 /* temp.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B1625EB1C000F2E00631D40 /* temp.c */; };
 		8B367F361BEE301400CB9B92 /* DroneCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B367F351BEE301400CB9B92 /* DroneCore.cpp */; };
+		8B71B73C1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73B1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c */; };
+		8B71B73E1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73D1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c */; };
+		8B71B7401C15D97000A9B7F0 /* Read_Barometer_MS5611.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -428,6 +431,9 @@
 		8B31B8561BEAE0F1005634F8 /* libSelfFly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSelfFly.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = DroneCore.ino; path = ../Arduino/DroneCore/DroneCore.ino; sourceTree = "<group>"; };
 		8B367F351BEE301400CB9B92 /* DroneCore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DroneCore.cpp; path = ../Arduino/DroneCore.cpp; sourceTree = "<group>"; };
+		8B71B73B1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_AccelGyro_MPU6050.c; path = ../Arduino/Example/Read_AccelGyro_MPU6050.c; sourceTree = "<group>"; };
+		8B71B73D1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_Magnetic_HMC5883L.c; path = ../Arduino/Example/Read_Magnetic_HMC5883L.c; sourceTree = "<group>"; };
+		8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_Barometer_MS5611.c; path = ../Arduino/Example/Read_Barometer_MS5611.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1715,6 +1721,9 @@
 		8B31B84D1BEAE0F1005634F8 = {
 			isa = PBXGroup;
 			children = (
+				8B71B73B1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c */,
+				8B71B73D1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c */,
+				8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */,
 				8B1625EB1C000F2E00631D40 /* temp.c */,
 				8B367F351BEE301400CB9B92 /* DroneCore.cpp */,
 				8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */,
@@ -1893,15 +1902,18 @@
 				8B1625EC1C000F2E00631D40 /* temp.c in Sources */,
 				8B0F2CBD1BF57A7F0044F792 /* HMC5883L.cpp in Sources */,
 				8B0F2CB11BF57A7F0044F792 /* AccMagnCalib.m in Sources */,
+				8B71B7401C15D97000A9B7F0 /* Read_Barometer_MS5611.c in Sources */,
 				8B0F2CA61BF57A7F0044F792 /* bma180.cpp in Sources */,
 				8B0F2CB51BF57A7F0044F792 /* Makefile in Sources */,
 				8B0F2CC31BF57A7F0044F792 /* ITG3200.cpp in Sources */,
 				8B0F2CC11BF57A7F0044F792 /* IAQ2000.cpp in Sources */,
 				8B0F2CB31BF57A7F0044F792 /* CommunicationUtils.cpp in Sources */,
 				8B0F2CB01BF57A7F0044F792 /* AccCalib.m in Sources */,
+				8B71B73E1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c in Sources */,
 				8B0F2CC51BF57A7F0044F792 /* ITG3200.cpp in Sources */,
 				8B0F2CBF1BF57A7F0044F792 /* I2Cdev.cpp in Sources */,
 				8B0F2C9C1BF57A7F0044F792 /* ADS1115.cpp in Sources */,
+				8B71B73C1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c in Sources */,
 				8B0F2CAA1BF57A7F0044F792 /* BMP085.cpp in Sources */,
 				8B0F2C9A1BF57A7F0044F792 /* AD7746.cpp in Sources */,
 				8B0F2CA01BF57A7F0044F792 /* ADXL345.cpp in Sources */,
