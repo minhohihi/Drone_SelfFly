@@ -152,10 +152,9 @@ void _Mag_Initialize()
     Serial.println(pSelfFlyHndl->nMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
     
     // Calibrate Magnetic
-    //Serial.print(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-    //pSelfFlyHndl->nMagHndl.calibrate();
-    //pSelfFlyHndl->nMagHndl.calibration_offset(1);
-    //Serial.println(F("Done"));
+    Serial.print(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
+    pSelfFlyHndl->nMagHndl.calibration_offset(3);
+    Serial.println(F("Done"));
     
     pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
     pSelfFlyHndl->nMagHndl.setGain(HMC5883L_GAIN_1090);

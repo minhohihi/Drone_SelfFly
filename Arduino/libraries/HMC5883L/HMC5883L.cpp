@@ -524,6 +524,8 @@ void HMC5883L::calibration_offset(int select)
     // *****************************************************************************************
     if (select == 1 | select == 3)
     {
+        int         i = 0;
+        
         // User input in the function
         // Configuring the Control register for Positive Bais mode
         Serial.print("          Calibrating the Magnetometer (Gain)  ");
@@ -544,18 +546,24 @@ void HMC5883L::calibration_offset(int select)
          */
         Wire.endTransmission();
         
-        getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
-        
+        for(i=0 ; i<50 ; i++)
+        {
+            getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+            delay(10);
+        }
+    
         // Reading the Positive baised Data
-        while(compass_x<200 | compass_y<200 | compass_z<200){   // Making sure the data is with Positive baised
+        while(compass_x<200 | compass_y<200 | compass_z<200)
+        {
+            // Making sure the data is with Positive baised
             getHeading(&compass_x, &compass_y, &compass_z);
-            Serial.print(".");            
+            delay(10);
+            Serial.print(".");
         }
         
         compass_x_scaled = compass_x * mgPerDigit;
         compass_y_scaled = compass_y * mgPerDigit;
         compass_z_scaled = compass_z * mgPerDigit;
-        
         
         // Offset = 1160 - Data_positive
         compass_x_gainError = (float)COMPASS_XY_EXCITATION / compass_x_scaled;
@@ -582,7 +590,12 @@ void HMC5883L::calibration_offset(int select)
         Wire.endTransmission();
         
         
-        getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+        for(i=0 ; i<50 ; i++)
+        {
+            getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+            delay(10);
+        }
+
         // Reading the Negative baised Data
         while(compass_x>-200 | compass_y>-200 | compass_z>-200){   // Making sure the data is with negative baised
             getHeading(&compass_x, &compass_y, &compass_z);
@@ -592,6 +605,9 @@ void HMC5883L::calibration_offset(int select)
         compass_x_scaled=compass_x*mgPerDigit;
         compass_y_scaled=compass_y*mgPerDigit;
         compass_z_scaled=compass_z*mgPerDigit;
+        compass_x_scaled = compass_x * mgPerDigit;
+        compass_y_scaled = compass_y * mgPerDigit;
+        compass_z_scaled = compass_z * mgPerDigit;
         
         
         // Taking the average of the offsets

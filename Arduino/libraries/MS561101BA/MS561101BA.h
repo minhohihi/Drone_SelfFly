@@ -61,7 +61,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MS561101BA_PROM_REG_SIZE        (2)             // size in bytes of a prom registry.
 
 
-#define AVERAGE_ARRY_SIZE              (16)
+#define AVERAGE_ARRY_SIZE               (16)
 
 class MS561101BA
 {
