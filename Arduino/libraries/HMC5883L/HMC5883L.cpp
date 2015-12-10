@@ -309,21 +309,43 @@ void HMC5883L::setMode(uint8_t newMode) {
  * @param z 16-bit signed integer container for Z-axis heading
  * @see HMC5883L_RA_DATAX_H
  */
+void HMC5883L::getRawHeading(int16_t *x, int16_t *y, int16_t *z) {
+    I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+    if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
+    
+    *x = ((((int16_t)buffer[0]) << 8) | buffer[1]);
+    *y = ((((int16_t)buffer[4]) << 8) | buffer[5]);
+    *z = ((((int16_t)buffer[2]) << 8) | buffer[3]);
+}
+
+
+void HMC5883L::getRawHeading(float *x, float *y, float *z) {
+    I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
+    if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
+    
+    *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]);
+    *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]);
+    *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]);
+}
+
+
 void HMC5883L::getHeading(int16_t *x, int16_t *y, int16_t *z) {
     I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
     if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
-    *x = (((int16_t)buffer[0]) << 8) | buffer[1];
-    *y = (((int16_t)buffer[4]) << 8) | buffer[5];
-    *z = (((int16_t)buffer[2]) << 8) | buffer[3];
+
+    *x = (int16_t)(((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET);
+    *y = (int16_t)(((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET);
+    *z = (int16_t)(((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit * COMPASS_Z_GAINERR);
 }
 
 
 void HMC5883L::getHeading(float *x, float *y, float *z) {
     I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
     if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
-    *x = ((float)((((int16_t)buffer[0]) << 8) | buffer[1]) - magoffset[0]) * mgPerDigit;
-    *y = ((float)((((int16_t)buffer[4]) << 8) | buffer[5]) - magoffset[1]) * mgPerDigit;
-    *z = ((float)((((int16_t)buffer[2]) << 8) | buffer[3])) * mgPerDigit;
+
+    *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET;
+    *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET;
+    *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit * COMPASS_Z_GAINERR;
 }
 
 
@@ -331,12 +353,14 @@ void HMC5883L::getScaledHeading(float *x, float *y, float *z)
 {
     I2Cdev::readBytes(devAddr, HMC5883L_RA_DATAX_H, 6, buffer);
     if (mode == HMC5883L_MODE_SINGLE) I2Cdev::writeByte(devAddr, HMC5883L_RA_MODE, HMC5883L_MODE_SINGLE << (HMC5883L_MODEREG_BIT - HMC5883L_MODEREG_LENGTH + 1));
-    //*x = ((((int16_t)buffer[0]) << 8) | buffer[1])*mgPerDigit * maggainerr[0] + magoffset[0];
-    //*y = ((((int16_t)buffer[4]) << 8) | buffer[5])*mgPerDigit * maggainerr[1] + magoffset[1];
-    //*z = ((((int16_t)buffer[2]) << 8) | buffer[3])*mgPerDigit * maggainerr[2] + magoffset[2];
-    *x = ((((int16_t)buffer[0]) << 8) | buffer[1])*mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET;
-    *y = ((((int16_t)buffer[4]) << 8) | buffer[5])*mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET;
-    *z = ((((int16_t)buffer[2]) << 8) | buffer[3])*mgPerDigit * COMPASS_Z_GAINERR + COMPASS_Z_OFFSET;
+
+    *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET;
+    *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET;
+    *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit * COMPASS_Z_GAINERR;
+    
+    *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit;
+    *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit;
+    *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit;
 }
 
 
@@ -508,6 +532,7 @@ void HMC5883L::calibration_offset(int select)
 {
     int             compass_x=0, compass_y=0, compass_z=0;
     float           compass_x_scaled=0, compass_y_scaled=0, compass_z_scaled=0;
+    int             i = 0;
     
     // ***********************************************************
     // offset_calibration() function performs two taskes
@@ -524,8 +549,6 @@ void HMC5883L::calibration_offset(int select)
     // *****************************************************************************************
     if (select == 1 | select == 3)
     {
-        int         i = 0;
-        
         // User input in the function
         // Configuring the Control register for Positive Bais mode
         Serial.print("          Calibrating the Magnetometer (Gain)  ");
@@ -548,7 +571,7 @@ void HMC5883L::calibration_offset(int select)
         
         for(i=0 ; i<50 ; i++)
         {
-            getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+            getRawHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
             delay(10);
         }
     
@@ -556,7 +579,7 @@ void HMC5883L::calibration_offset(int select)
         while(compass_x<200 | compass_y<200 | compass_z<200)
         {
             // Making sure the data is with Positive baised
-            getHeading(&compass_x, &compass_y, &compass_z);
+            getRawHeading(&compass_x, &compass_y, &compass_z);
             delay(10);
             Serial.print(".");
         }
@@ -592,23 +615,19 @@ void HMC5883L::calibration_offset(int select)
         
         for(i=0 ; i<50 ; i++)
         {
-            getHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+            getRawHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
             delay(10);
         }
 
         // Reading the Negative baised Data
         while(compass_x>-200 | compass_y>-200 | compass_z>-200){   // Making sure the data is with negative baised
-            getHeading(&compass_x, &compass_y, &compass_z);
+            getRawHeading(&compass_x, &compass_y, &compass_z);
             Serial.print(".");
         }
         
-        compass_x_scaled=compass_x*mgPerDigit;
-        compass_y_scaled=compass_y*mgPerDigit;
-        compass_z_scaled=compass_z*mgPerDigit;
         compass_x_scaled = compass_x * mgPerDigit;
         compass_y_scaled = compass_y * mgPerDigit;
         compass_z_scaled = compass_z * mgPerDigit;
-        
         
         // Taking the average of the offsets
         maggainerr[0] = (float)((COMPASS_XY_EXCITATION / abs(compass_x_scaled)) + compass_x_gainError) / 2;
@@ -646,11 +665,12 @@ void HMC5883L::calibration_offset(int select)
     if (select == 2 | select == 3)
     {
         Serial.println("          Calibrating the Magnetometer (Offset)  ");
+
         // User input in the function
-        for(byte i=0;i<10;i++)
+        for(i=0 ; i<50 ; i++)
         {
-            // Disregarding first few data
-            getHeading(&compass_x, &compass_y, &compass_z);
+            getRawHeading(&compass_x, &compass_y, &compass_z); // Disregarding the first data
+            delay(10);
         }
         
         float x_max=-4000,y_max=-4000,z_max=-4000;
@@ -661,11 +681,11 @@ void HMC5883L::calibration_offset(int select)
         Serial.println("                Rotate Sensor for 20 Sec. ");
         while(millis()-t <= 20000)
         {
-            getHeading(&compass_x, &compass_y, &compass_z);
+            getRawHeading(&compass_x, &compass_y, &compass_z);
             
-            compass_x_scaled=(float)compass_x * mgPerDigit * maggainerr[0];
-            compass_y_scaled=(float)compass_y * mgPerDigit * maggainerr[1];
-            compass_z_scaled=(float)compass_z * mgPerDigit * maggainerr[2];
+            compass_x_scaled = (float)compass_x * mgPerDigit * maggainerr[0];
+            compass_y_scaled = (float)compass_y * mgPerDigit * maggainerr[1];
+            compass_z_scaled = (float)compass_z * mgPerDigit * maggainerr[2];
             
             x_max = max(x_max, compass_x_scaled);
             y_max = max(y_max, compass_y_scaled);
@@ -680,6 +700,8 @@ void HMC5883L::calibration_offset(int select)
                 last_time = millis() - t;
                 Serial.print(".");
             }
+
+            delay(10);
         }
         
         magoffset[0] = ((x_max - x_min) / 2) - x_max;

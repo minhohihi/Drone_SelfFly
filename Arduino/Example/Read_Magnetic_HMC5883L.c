@@ -8,6 +8,7 @@
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include <Wire.h>
 #endif
+#include <MPU6050_6Axis_MotionApps20.h>
 #include <HMC5883L.h>
 
 /*----------------------------------------------------------------------------------------
@@ -41,6 +42,16 @@
 /*----------------------------------------------------------------------------------------
  Type Definitions
  ----------------------------------------------------------------------------------------*/
+typedef struct _AccelGyroParam_T
+{
+    float               nRawGyro[3];
+    float               nRawAccel[3];
+    float               nRawTemp;
+    float               nBaseGyro[3];
+    float               nBaseAccel[3];
+    float               nFineAngle[3];                          // Filtered Angles
+}AccelGyroParam_T;
+
 typedef struct _MagParam_T
 {
     float               nRawMagData[3];
@@ -53,6 +64,12 @@ typedef struct _MagParam_T
 
 typedef struct _SelfFly_T
 {
+    // For Accelerator & Gyroscope Sensor
+    MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
+    AccelGyroParam_T    nAccelGyroParam;
+    int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
+    int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
+
     // For Magnetometer Sensor
     HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
     MagneticParam_T     nMagParam;
@@ -67,6 +84,7 @@ typedef struct _SelfFly_T
 /*----------------------------------------------------------------------------------------
  Static Function
  ----------------------------------------------------------------------------------------*/
+void _AccelGyro_Initialize();
 void _Mag_Initialize();
 void _Mag_GetData();
 void _Mag_CalculateDirection();
@@ -82,6 +100,8 @@ void _print_MagData();
  Global Variable
  ----------------------------------------------------------------------------------------*/
 SelfFly_T               *pSelfFlyHndl = NULL;                            // SelfFly Main Handle
+float                   _gRawMagData[3];
+
 
 /*----------------------------------------------------------------------------------------
  Function Implementation
@@ -112,6 +132,9 @@ void setup()
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
     
+    // Initialize Gyro_Accel
+    _AccelGyro_Initialize();
+
     // Initialize Magnetic
     _Mag_Initialize();
     
@@ -136,6 +159,33 @@ void loop()
     _print_MagData();
     
     delay(50);
+}
+
+
+void _AccelGyro_Initialize()
+{
+    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+    
+    Serial.println(F(" Initializing MPU..."));
+    pSelfFlyHndl->nAccelGyroHndl.initialize();
+    
+    // Verify Vonnection
+    Serial.print(F("    Testing device connections..."));
+    Serial.println(pSelfFlyHndl->nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    
+    pSelfFlyHndl->nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    pSelfFlyHndl->nAccelGyroHndl.setI2CBypassEnabled(true);
+    pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
+    
+    // supply your own gyro offsets here, scaled for min sensitivity
+    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    
+    Serial.println(F(" MPU Initialized!!!"));
+    
+    return;
 }
 
 
@@ -183,6 +233,7 @@ void _Mag_GetData()
     float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
     
     pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
+    pSelfFlyHndl->nMagHndl.getRawHeading(&(_gRawMagData[X_AXIS]), &(_gRawMagData[Y_AXIS]), &(_gRawMagData[Z_AXIS]));
 }
 
 
@@ -222,11 +273,15 @@ void _print_MagData()
 {
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    Serial.print("       "); Serial.print(pMagParam->nRawMagData[0]);                       // Mx
-    Serial.print("       "); Serial.print(pMagParam->nRawMagData[1]);                       // My
-    Serial.print("       "); Serial.print(pMagParam->nRawMagData[2]);                       // Mz
+    Serial.print("          "); Serial.print(_gRawMagData[0]);                       // Mx
+    Serial.print("          "); Serial.print(_gRawMagData[1]);                       // My
+    Serial.print("          "); Serial.print(_gRawMagData[2]);                       // Mz
+
+    Serial.print("          "); Serial.print(pMagParam->nRawMagData[0]);                       // Mx
+    Serial.print("          "); Serial.print(pMagParam->nRawMagData[1]);                       // My
+    Serial.print("          "); Serial.print(pMagParam->nRawMagData[2]);                       // Mz
     
-    Serial.print("       "); Serial.print(pMagParam->nMagHeadingDeg);                       // Magnetic Head
-    Serial.print("       "); Serial.print(pMagParam->nSmoothHeadingDegrees);       // Smoothed Magnetic Head
-    Serial.println("       ");
+    Serial.print("          "); Serial.print(pMagParam->nMagHeadingDeg);                       // Magnetic Head
+    Serial.print("          "); Serial.print(pMagParam->nSmoothHeadingDegrees);       // Smoothed Magnetic Head
+    Serial.println("          ");
 }
