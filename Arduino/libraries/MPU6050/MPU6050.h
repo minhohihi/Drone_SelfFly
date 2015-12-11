@@ -820,6 +820,9 @@ class MPU6050 {
         // DMP_CFG_2 register
         uint8_t getDMPConfig2();
         void setDMPConfig2(uint8_t config);
+    
+        void getMeanSensor();
+        void doCalibration();
 
         // special methods for MotionApps 2.0 implementation
         #ifdef MPU6050_INCLUDE_DMP_MOTIONAPPS20
@@ -1027,6 +1030,8 @@ class MPU6050 {
     private:
         uint8_t devAddr;
         uint8_t buffer[14];
+        int     nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
+        int     nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
 };
 
 #endif /* _MPU6050_H_ */

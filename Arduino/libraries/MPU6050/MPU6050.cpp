@@ -3211,3 +3211,135 @@ uint8_t MPU6050::getDMPConfig2() {
 void MPU6050::setDMPConfig2(uint8_t config) {
     I2Cdev::writeByte(devAddr, MPU6050_RA_DMP_CFG_2, config);
 }
+
+// Reference
+// http://wired.chillibasket.com/2015/01/calibrating-mpu6050/
+void MPU6050::getMeanSensor()
+{
+    long                i=0;
+    long                nAccelBufX=0, nAccelBufY=0, nAccelBufZ=0;
+    long                nGyroBufX=0, nGyroBufY=0, nGyroBufZ=0;
+    const int           nLoopCnt = 1000;
+    
+    while (i<(nLoopCnt + 101))
+    {
+        // read raw accel/gyro measurements from device
+        // Read Gyro and Accelerate Data
+        Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);
+        Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
+        Wire.endTransmission(false);
+        Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW, 14, true);  // request a total of 14 registers
+        
+        if (i>100 && i<=(nLoopCnt + 100))
+        {
+            //First 100 measures are discarded
+            nAccelBufX += (Wire.read()<<8 | Wire.read());
+            nAccelBufY += (Wire.read()<<8 | Wire.read());
+            nAccelBufZ += (Wire.read()<<8 | Wire.read());
+            Wire.read(); Wire.read();
+            nGyroBufX += (Wire.read()<<8 | Wire.read());
+            nGyroBufY += (Wire.read()<<8 | Wire.read());
+            nGyroBufZ += (Wire.read()<<8 | Wire.read());
+        }
+        
+        if (i==(nLoopCnt + 100))
+        {
+            nCalibMean_AX = nAccelBufX / nLoopCnt;
+            nCalibMean_AY = nAccelBufY / nLoopCnt;
+            nCalibMean_AZ = nAccelBufZ / nLoopCnt;
+            nCalibMean_GX = nGyroBufX / nLoopCnt;
+            nCalibMean_GY = nGyroBufY / nLoopCnt;
+            nCalibMean_GZ = nGyroBufZ / nLoopCnt;
+        }
+        
+        i++;
+        delay(2); //Needed so we don't get repeated measures
+    }
+}
+
+
+void MPU6050::doCalibration()
+{
+    int             nOffset_AX = 0, nOffset_AY = 0, nOffset_AZ = 0;
+    int             nOffset_GX = 0, nOffset_GY = 0, nOffset_GZ = 0;
+    const int       nAccelDeadZone = 8;                             //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+    const int       nGyroDeadZone = 1;                              //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+    int             loopcnt = 0;
+    
+    getMeanSensor();
+    
+    nOffset_AX = -nCalibMean_AX / 8;
+    nOffset_AY = -nCalibMean_AY / 8;
+    nOffset_AZ = (16384 - nCalibMean_AZ) / 8;
+    nOffset_GX = -nCalibMean_GX / 4;
+    nOffset_GY = -nCalibMean_GY / 4;
+    nOffset_GZ = -nCalibMean_GZ / 4;
+    
+    while (1)
+    {
+        int         ready = 0;
+        
+        setXAccelOffset(nOffset_AX);
+        setYAccelOffset(nOffset_AY);
+        setZAccelOffset(nOffset_AZ);
+        setXGyroOffset(nOffset_GX);
+        setYGyroOffset(nOffset_GY);
+        setZGyroOffset(nOffset_GZ);
+        
+        getMeanSensor();
+        
+        if (abs(nCalibMean_AX) <= nAccelDeadZone) ready++;
+        else nOffset_AX -= (nCalibMean_AX / nAccelDeadZone);
+        
+        if (abs(nCalibMean_AY)<=nAccelDeadZone) ready++;
+        else nOffset_AY -= (nCalibMean_AY / nAccelDeadZone);
+        
+        if (abs(16384-nCalibMean_AZ)<=nAccelDeadZone) ready++;
+        else nOffset_AZ += ((16384 - nCalibMean_AZ) / nAccelDeadZone);
+        
+        if (abs(nCalibMean_GX)<=nGyroDeadZone) ready++;
+        else nOffset_GX -= (nCalibMean_GX / (nGyroDeadZone + 1));
+        
+        if (abs(nCalibMean_GY)<=nGyroDeadZone) ready++;
+        else nOffset_GY -= (nCalibMean_GY / (nGyroDeadZone + 1));
+        
+        if (abs(nCalibMean_GZ)<=nGyroDeadZone) ready++;
+        else nOffset_GZ -= (nCalibMean_GZ / (nGyroDeadZone + 1));
+        
+        Serial.print("Loop:");
+        Serial.print(loopcnt);
+        Serial.print("   Offset_Gx: ");
+        Serial.print(nOffset_GX);
+        Serial.print("   Offset_Gy: ");
+        Serial.print(nOffset_GY);
+        Serial.print("   Offset_Gz: ");
+        Serial.print(nOffset_GZ);
+        
+        Serial.print("   Offset_Ax: ");
+        Serial.print(nOffset_AX);
+        Serial.print("   Offset_Ay: ");
+        Serial.print(nOffset_AY);
+        Serial.print("   Offset_Az: ");
+        Serial.println(nOffset_AZ);
+
+        loopcnt++;
+        
+        if(6 == ready)
+            break;
+    }
+    
+    Serial.print("Estimated Offset_Gx: ");
+    Serial.print(nOffset_GX);
+    Serial.print("   Offset_Gy: ");
+    Serial.print(nOffset_GY);
+    Serial.print("   Offset_Gz: ");
+    Serial.print(nOffset_GZ);
+    
+    Serial.print("   Offset_Ax: ");
+    Serial.print(nOffset_AX);
+    Serial.print("   Offset_Ay: ");
+    Serial.print(nOffset_AY);
+    Serial.print("   Offset_Az: ");
+    Serial.println(nOffset_AZ);
+
+}

@@ -103,6 +103,15 @@
 #define SAMPLEFREQ                          (133.0f)                        // sample frequency in Hz
 #define BETADEF                             (1.1f)
 
+// AccelGyro Offset Value
+#define MPU6050_GYRO_OFFSET_X               (65)
+#define MPU6050_GYRO_OFFSET_Y               (-42)
+#define MPU6050_GYRO_OFFSET_Z               (-3)
+#define MPU6050_ACCEL_OFFSET_X              (-73)
+#define MPU6050_ACCEL_OFFSET_Y              (-737)
+#define MPU6050_ACCEL_OFFSET_Z              (0)
+
+
 // Sonar sensor
 #define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
 
@@ -135,16 +144,16 @@
  ----------------------------------------------------------------------------------------*/
 typedef struct _AxisInt16_T
 {
-    int16_t            XAxis;
-    int16_t            YAxis;
-    int16_t            ZAxis;
+    int16_t             XAxis;
+    int16_t             YAxis;
+    int16_t             ZAxis;
 }AxisInt16_T;
 
 typedef struct _AxisFloat_T
 {
-    float              XAxis;
-    float              YAxis;
-    float              ZAxis;
+    float               XAxis;
+    float               YAxis;
+    float               ZAxis;
 }AxisFloat_T;
 
 typedef struct _AxisErrRate_T
@@ -171,7 +180,7 @@ typedef struct _AccelGyroParam_T
 
 typedef struct _MagParam_T
 {
-    float               nRawMagData[3];
+    float               nRawMag[3];
     float               nMagHeadingRad;
     float               nMagHeadingDeg;
     float               nSmoothHeadingDegrees;
@@ -280,8 +289,6 @@ void _AccelGyro_GetMeanSensor();
 void _AccelGyro_CalculateAngle();
 #endif
 //void _AccelGyro_Calibrate();
-void _AccelGyro_GetMeanSensor();
-void _AccelGyro_Calibration();
 void _Mag_Initialize();
 void _Mag_GetData();
 void _Mag_CalculateDirection();
@@ -294,8 +301,7 @@ void _GetSensorRawData();
 void _Get_RollPitchYaw();
 void _Get_Quaternion();
 void _Get_RollPitchYawRad_By_Q();
-void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz);
-//void _AHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az);
+void _AHRSupdate();
 inline void _CalculatePID();
 inline void _CalculateThrottleVal();
 inline void _UpdateESCs();
@@ -319,6 +325,7 @@ void _print_BarometerData();
 void _print_SonarData();
 #endif
 
+
 /*----------------------------------------------------------------------------------------
  Static Variable
  ----------------------------------------------------------------------------------------*/
@@ -328,6 +335,7 @@ void _print_SonarData();
  Global Variable
  ----------------------------------------------------------------------------------------*/
 SelfFly_T               *pSelfFlyHndl = NULL;                            // SelfFly Main Handle
+
 
 /*----------------------------------------------------------------------------------------
  Function Implementation
@@ -394,10 +402,6 @@ void setup()
 
 void loop()
 {
-    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
-    
     #if __PROFILE__
     float                   nStartTime0 = 0.0f, nEndTime = 0.0f;
 
@@ -552,13 +556,20 @@ void _AccelGyro_Initialize()
     pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
     
     // Calibrate GyroAccel
-    _AccelGyro_Calibration();
+    //pSelfFlyHndl->nAccelGyroHndl.doCalibration();
+    pSelfFlyHndl->nAccelGyroHndl.setXGyroOffset(MPU6050_GYRO_OFFSET_X);
+    pSelfFlyHndl->nAccelGyroHndl.setYGyroOffset(MPU6050_GYRO_OFFSET_Y);
+    pSelfFlyHndl->nAccelGyroHndl.setZGyroOffset(MPU6050_GYRO_OFFSET_Z);
+    pSelfFlyHndl->nAccelGyroHndl.setXAccelOffset(MPU6050_ACCEL_OFFSET_X);
+    pSelfFlyHndl->nAccelGyroHndl.setYAccelOffset(MPU6050_ACCEL_OFFSET_Y);
+    pSelfFlyHndl->nAccelGyroHndl.setZAccelOffset(MPU6050_ACCEL_OFFSET_Z);
     
     // supply your own gyro offsets here, scaled for min sensitivity
     pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
     pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
     pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
     pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    
     
     Serialprintln(F(" MPU Initialized!!!"));
     
@@ -674,105 +685,6 @@ void _AccelGyro_CalculateAngle()
 //}
 
 
-void _AccelGyro_GetMeanSensor()
-{
-    long                i=0;
-    long                nAccelBufX=0, nAccelBufY=0, nAccelBufZ=0;
-    long                nGyroBufX=0, nGyroBufY=0, nGyroBufZ=0;
-    const int           nLoopCnt = 1000;
-    
-    while (i<(nLoopCnt + 101))
-    {
-        // read raw accel/gyro measurements from device
-        // Read Gyro and Accelerate Data
-        Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);
-        Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
-        Wire.endTransmission(false);
-        Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW, 14, true);  // request a total of 14 registers
-        
-        if (i>100 && i<=(nLoopCnt + 100))
-        {
-            //First 100 measures are discarded
-            nAccelBufX += (Wire.read()<<8 | Wire.read());
-            nAccelBufY += (Wire.read()<<8 | Wire.read());
-            nAccelBufZ += (Wire.read()<<8 | Wire.read());
-            Wire.read(); Wire.read();
-            nGyroBufX += (Wire.read()<<8 | Wire.read());
-            nGyroBufY += (Wire.read()<<8 | Wire.read());
-            nGyroBufZ += (Wire.read()<<8 | Wire.read());
-        }
-        
-        if (i==(nLoopCnt + 100))
-        {
-            pSelfFlyHndl->nCalibMean_AX = nAccelBufX / nLoopCnt;
-            pSelfFlyHndl->nCalibMean_AY = nAccelBufY / nLoopCnt;
-            pSelfFlyHndl->nCalibMean_AZ = nAccelBufZ / nLoopCnt;
-            pSelfFlyHndl->nCalibMean_GX = nGyroBufX / nLoopCnt;
-            pSelfFlyHndl->nCalibMean_GY = nGyroBufY / nLoopCnt;
-            pSelfFlyHndl->nCalibMean_GZ = nGyroBufZ / nLoopCnt;
-        }
-        
-        i++;
-        delay(2); //Needed so we don't get repeated measures
-    }
-}
-
-
-// Reference
-// http://wired.chillibasket.com/2015/01/calibrating-mpu6050/
-void _AccelGyro_Calibration()
-{
-    int             nOffset_AX = 0, nOffset_AY = 0, nOffset_AZ;
-    int             nOffset_GX = 0, nOffset_GY = 0, nOffset_GZ = 0;
-    const int       nAccelDeadZone = 8;     //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-    const int       nGyroDeadZone = 1;     //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
-    
-    _AccelGyro_GetMeanSensor();
-    
-    nOffset_AX = -pSelfFlyHndl->nCalibMean_AX / 8;
-    nOffset_AY = -pSelfFlyHndl->nCalibMean_AY / 8;
-    nOffset_AZ = (16384 - pSelfFlyHndl->nCalibMean_AZ) / 8;
-    nOffset_GX = -pSelfFlyHndl->nCalibMean_GX / 4;
-    nOffset_GY = -pSelfFlyHndl->nCalibMean_GY / 4;
-    nOffset_GZ = -pSelfFlyHndl->nCalibMean_GZ / 4;
-    
-    while (1)
-    {
-        int         ready = 0;
-        
-        pSelfFlyHndl->nAccelGyroHndl.setXAccelOffset(nOffset_AX);
-        pSelfFlyHndl->nAccelGyroHndl.setYAccelOffset(nOffset_AY);
-        pSelfFlyHndl->nAccelGyroHndl.setZAccelOffset(nOffset_AZ);
-        pSelfFlyHndl->nAccelGyroHndl.setXGyroOffset(nOffset_GX);
-        pSelfFlyHndl->nAccelGyroHndl.setYGyroOffset(nOffset_GY);
-        pSelfFlyHndl->nAccelGyroHndl.setZGyroOffset(nOffset_GZ);
-        
-        _AccelGyro_GetMeanSensor();
-        Serialprintln("...");
-        
-        if (abs(pSelfFlyHndl->nCalibMean_AX) <= nAccelDeadZone) ready++;
-        else nOffset_AX -= (pSelfFlyHndl->nCalibMean_AX / nAccelDeadZone);
-        
-        if (abs(pSelfFlyHndl->nCalibMean_AY)<=nAccelDeadZone) ready++;
-        else nOffset_AY -= (pSelfFlyHndl->nCalibMean_AY / nAccelDeadZone);
-        
-        if (abs(16384-pSelfFlyHndl->nCalibMean_AZ)<=nAccelDeadZone) ready++;
-        else nOffset_AZ += ((16384 - pSelfFlyHndl->nCalibMean_AZ) / nAccelDeadZone);
-        
-        if (abs(pSelfFlyHndl->nCalibMean_GX)<=nGyroDeadZone) ready++;
-        else nOffset_GX -= (pSelfFlyHndl->nCalibMean_GX / (nGyroDeadZone + 1));
-        
-        if (abs(pSelfFlyHndl->nCalibMean_GY)<=nGyroDeadZone) ready++;
-        else nOffset_GY -= (pSelfFlyHndl->nCalibMean_GY / (nGyroDeadZone + 1));
-        
-        if (abs(pSelfFlyHndl->nCalibMean_GZ)<=nGyroDeadZone) ready++;
-        else nOffset_GZ -= (pSelfFlyHndl->nCalibMean_GZ / (nGyroDeadZone + 1));
-        
-        if(6 == ready)
-            break;
-    }
-}
-
 
 void _Mag_Initialize()
 {
@@ -816,9 +728,9 @@ void _Mag_Initialize()
 
 void _Mag_GetData()
 {
-    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
     
-    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
+    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMag[X_AXIS]), &(pRawMag[Y_AXIS]), &(pRawMag[Z_AXIS]));
 }
 
 
@@ -827,7 +739,7 @@ void _Mag_CalculateDirection()
     int                     i = 0;
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMagData[Y_AXIS], pMagParam->nRawMagData[X_AXIS]);
+    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMag[Y_AXIS], pMagParam->nRawMag[X_AXIS]);
     pMagParam->nMagHeadingRad -= pMagParam->nDeclinationAngle;      // If East, then Change Operation to PLUS
     
     if(pMagParam->nMagHeadingRad < 0)
@@ -990,14 +902,12 @@ void _Get_Quaternion()
 {
     float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
-    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
     
-    _AHRSupdate(pRawGyro[X_AXIS]/GYRO_FS*DEG_TO_RAD_SCALE, pRawGyro[Y_AXIS]/GYRO_FS*DEG_TO_RAD_SCALE, pRawGyro[Z_AXIS]/GYRO_FS*DEG_TO_RAD_SCALE,
-                pRawAccel[X_AXIS], pRawAccel[Y_AXIS], pRawAccel[Z_AXIS],
-                pRawMagData[X_AXIS], pRawMagData[Y_AXIS], pRawMagData[Z_AXIS]);
+    _AHRSupdate();
 }
 
 
@@ -1024,7 +934,7 @@ void _Get_RollPitchYawRad_By_Q()
 
 // Reference Site
 // http://www.x-io.co.uk/open-source-imu-and-ahrs-algorithms/
-void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
+void _AHRSupdate()
 {
     float                   recipNorm;
     float                   s0, s1, s2, s3;
@@ -1036,39 +946,36 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     float                   q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
     const float             nDiffTime = pSelfFlyHndl->nDiffTime;
     volatile float          *pQ = &(pSelfFlyHndl->nQuaternion[0]);
-    
-    // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
-    //if((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
-    //    _AHRSupdateIMU(gx, gy, gz, ax, ay, az);
-    //    return;
-    //}
+    float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
+    float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
+    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
     
     // Rate of change of quaternion from gyroscope
-    qDot1 = 0.5f * (-pQ[1] * gx - pQ[2] * gy - pQ[3] * gz);
-    qDot2 = 0.5f * ( pQ[0] * gx + pQ[2] * gz - pQ[3] * gy);
-    qDot3 = 0.5f * ( pQ[0] * gy - pQ[1] * gz + pQ[3] * gx);
-    qDot4 = 0.5f * ( pQ[0] * gz + pQ[1] * gy - pQ[2] * gx);
+    qDot1 = 0.5f * (-pQ[1] * pRawGyro[X_AXIS] - pQ[2] * pRawGyro[Y_AXIS] - pQ[3] * pRawGyro[Z_AXIS]);
+    qDot2 = 0.5f * ( pQ[0] * pRawGyro[X_AXIS] + pQ[2] * pRawGyro[Z_AXIS] - pQ[3] * pRawGyro[Y_AXIS]);
+    qDot3 = 0.5f * ( pQ[0] * pRawGyro[Y_AXIS] - pQ[1] * pRawGyro[Z_AXIS] + pQ[3] * pRawGyro[X_AXIS]);
+    qDot4 = 0.5f * ( pQ[0] * pRawGyro[Z_AXIS] + pQ[1] * pRawGyro[Y_AXIS] - pQ[2] * pRawGyro[X_AXIS]);
     
     // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-    if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f)))
+    if(!((pRawAccel[X_AXIS] == 0.0f) && (pRawAccel[Y_AXIS] == 0.0f) && (pRawAccel[Z_AXIS] == 0.0f)))
     {
         // Normalise accelerometer measurement
-        recipNorm = _InvSqrt(ax * ax + ay * ay + az * az);
-        ax *= recipNorm;
-        ay *= recipNorm;
-        az *= recipNorm;
+        recipNorm = _InvSqrt(pRawAccel[X_AXIS] * pRawAccel[X_AXIS] + pRawAccel[Y_AXIS] * pRawAccel[Y_AXIS] + pRawAccel[Z_AXIS] * pRawAccel[Z_AXIS]);
+        pRawAccel[X_AXIS] *= recipNorm;
+        pRawAccel[Y_AXIS] *= recipNorm;
+        pRawAccel[Z_AXIS] *= recipNorm;
         
         // Normalise magnetometer measurement
-        recipNorm = _InvSqrt(mx * mx + my * my + mz * mz);
-        mx *= recipNorm;
-        my *= recipNorm;
-        mz *= recipNorm;
+        recipNorm = _InvSqrt(pRawMag[X_AXIS] * pRawMag[X_AXIS] + pRawMag[Y_AXIS] * pRawMag[Y_AXIS] + pRawMag[Z_AXIS] * pRawMag[Z_AXIS]);
+        pRawMag[X_AXIS] *= recipNorm;
+        pRawMag[Y_AXIS] *= recipNorm;
+        pRawMag[Z_AXIS] *= recipNorm;
         
         // Auxiliary variables to avoid repeated arithmetic
-        _2q0mx = 2.0f * pQ[0] * mx;
-        _2q0my = 2.0f * pQ[0] * my;
-        _2q0mz = 2.0f * pQ[0] * mz;
-        _2q1mx = 2.0f * pQ[1] * mx;
+        _2q0mx = 2.0f * pQ[0] * pRawMag[X_AXIS];
+        _2q0my = 2.0f * pQ[0] * pRawMag[Y_AXIS];
+        _2q0mz = 2.0f * pQ[0] * pRawMag[Z_AXIS];
+        _2q1mx = 2.0f * pQ[1] * pRawMag[X_AXIS];
         _2q0 = 2.0f * pQ[0];
         _2q1 = 2.0f * pQ[1];
         _2q2 = 2.0f * pQ[2];
@@ -1087,35 +994,43 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
         q3q3 = pQ[3] * pQ[3];
         
         // Reference direction of Earth's magnetic field
-        hx = mx * q0q0 - _2q0my * pQ[3] + _2q0mz * pQ[2] + mx * q1q1 + _2q1 * my * pQ[2] + _2q1 * mz * pQ[3] - mx * q2q2 - mx * q3q3;
-        hy = _2q0mx * pQ[3] + my * q0q0 - _2q0mz * pQ[1] + _2q1mx * pQ[2] - my * q1q1 + my * q2q2 + _2q2 * mz * pQ[3] - my * q3q3;
+        hx = pRawMag[X_AXIS] * q0q0 - _2q0my * pQ[3] + _2q0mz * pQ[2] + pRawMag[X_AXIS] * q1q1
+                    + _2q1 * pRawMag[Y_AXIS] * pQ[2] + _2q1 * pRawMag[Z_AXIS] * pQ[3]
+                    - pRawMag[X_AXIS] * q2q2 - pRawMag[X_AXIS] * q3q3;
+        hy = _2q0mx * pQ[3] + pRawMag[Y_AXIS] * q0q0 - _2q0mz * pQ[1] + _2q1mx * pQ[2]
+                    - pRawMag[Y_AXIS] * q1q1 + pRawMag[Y_AXIS] * q2q2 + _2q2 * pRawMag[Z_AXIS] * pQ[3]
+                    - pRawMag[Y_AXIS] * q3q3;
+        
         _2bx = sqrt(hx * hx + hy * hy);
-        _2bz = -_2q0mx * pQ[2] + _2q0my * pQ[1] + mz * q0q0 + _2q1mx * pQ[3] - mz * q1q1 + _2q2 * my * pQ[3] - mz * q2q2 + mz * q3q3;
+        _2bz = -_2q0mx * pQ[2] + _2q0my * pQ[1] + pRawMag[Z_AXIS] * q0q0 + _2q1mx * pQ[3]
+                    - pRawMag[Z_AXIS] * q1q1 + _2q2 * pRawMag[Y_AXIS] * pQ[3]
+                    - pRawMag[Z_AXIS] * q2q2 + pRawMag[Z_AXIS] * q3q3;
+        
         _4bx = 2.0f * _2bx;
         _4bz = 2.0f * _2bz;
         
         // Gradient decent algorithm corrective step
-        s0 = -_2q2 * (2.0f * q1q3 - _2q0q2 - ax) + _2q1 * (2.0f * q0q1 + _2q2q3 - ay)
-                    - _2bz * pQ[2] * (_2bx * (0.5f - q2q2 - q3q3) + _2bz * (q1q3 - q0q2) - mx)
-                    + (-_2bx * pQ[3] + _2bz * pQ[1]) * (_2bx * (q1q2 - q0q3) + _2bz * (q0q1 + q2q3) - my)
-                    + _2bx * pQ[2] * (_2bx * (q0q2 + q1q3) + _2bz * (0.5f - q1q1 - q2q2) - mz);
+        s0 = -_2q2 * (2.0f * q1q3 - _2q0q2 - pRawAccel[X_AXIS]) + _2q1 * (2.0f * q0q1 + _2q2q3 - pRawAccel[Y_AXIS])
+                    - _2bz * pQ[2] * (_2bx * (0.5f - q2q2 - q3q3) + _2bz * (q1q3 - q0q2) - pRawMag[X_AXIS])
+                    + (-_2bx * pQ[3] + _2bz * pQ[1]) * (_2bx * (q1q2 - q0q3) + _2bz * (q0q1 + q2q3) - pRawMag[Y_AXIS])
+                    + _2bx * pQ[2] * (_2bx * (q0q2 + q1q3) + _2bz * (0.5f - q1q1 - q2q2) - pRawMag[Z_AXIS]);
         
-        s1 = _2q3 * (2.0f * q1q3 - _2q0q2 - ax) + _2q0 * (2.0f * q0q1 + _2q2q3 - ay)
-                    - 4.0f * pQ[1] * (1 - 2.0f * q1q1 - 2.0f * q2q2 - az) + _2bz * pQ[3] * (_2bx * (0.5f - q2q2 - q3q3)
-                    + _2bz * (q1q3 - q0q2) - mx) + (_2bx * pQ[2] + _2bz * pQ[0]) * (_2bx * (q1q2 - q0q3)
-                    + _2bz * (q0q1 + q2q3) - my) + (_2bx * pQ[3] - _4bz * pQ[1]) * (_2bx * (q0q2 + q1q3)
-                    + _2bz * (0.5f - q1q1 - q2q2) - mz);
+        s1 = _2q3 * (2.0f * q1q3 - _2q0q2 - pRawAccel[X_AXIS]) + _2q0 * (2.0f * q0q1 + _2q2q3 - pRawAccel[Y_AXIS])
+                    - 4.0f * pQ[1] * (1 - 2.0f * q1q1 - 2.0f * q2q2 - pRawAccel[Z_AXIS]) + _2bz * pQ[3] * (_2bx * (0.5f - q2q2 - q3q3)
+                    + _2bz * (q1q3 - q0q2) - pRawMag[X_AXIS]) + (_2bx * pQ[2] + _2bz * pQ[0]) * (_2bx * (q1q2 - q0q3)
+                    + _2bz * (q0q1 + q2q3) - pRawMag[Y_AXIS]) + (_2bx * pQ[3] - _4bz * pQ[1]) * (_2bx * (q0q2 + q1q3)
+                    + _2bz * (0.5f - q1q1 - q2q2) - pRawMag[Z_AXIS]);
         
-        s2 = -_2q0 * (2.0f * q1q3 - _2q0q2 - ax) + _2q3 * (2.0f * q0q1 + _2q2q3 - ay)
-                    - 4.0f * pQ[2] * (1 - 2.0f * q1q1 - 2.0f * q2q2 - az) + (-_4bx * pQ[2] - _2bz * pQ[0]) * (_2bx * (0.5f - q2q2 - q3q3)
-                    + _2bz * (q1q3 - q0q2) - mx) + (_2bx * pQ[1] + _2bz * pQ[3]) * (_2bx * (q1q2 - q0q3)
-                    + _2bz * (q0q1 + q2q3) - my) + (_2bx * pQ[0] - _4bz * pQ[2]) * (_2bx * (q0q2 + q1q3)
-                    + _2bz * (0.5f - q1q1 - q2q2) - mz);
+        s2 = -_2q0 * (2.0f * q1q3 - _2q0q2 - pRawAccel[X_AXIS]) + _2q3 * (2.0f * q0q1 + _2q2q3 - pRawAccel[Y_AXIS])
+                    - 4.0f * pQ[2] * (1 - 2.0f * q1q1 - 2.0f * q2q2 - pRawAccel[Z_AXIS]) + (-_4bx * pQ[2] - _2bz * pQ[0]) * (_2bx * (0.5f - q2q2 - q3q3)
+                    + _2bz * (q1q3 - q0q2) - pRawMag[X_AXIS]) + (_2bx * pQ[1] + _2bz * pQ[3]) * (_2bx * (q1q2 - q0q3)
+                    + _2bz * (q0q1 + q2q3) - pRawMag[Y_AXIS]) + (_2bx * pQ[0] - _4bz * pQ[2]) * (_2bx * (q0q2 + q1q3)
+                    + _2bz * (0.5f - q1q1 - q2q2) - pRawMag[Z_AXIS]);
         
-        s3 = _2q1 * (2.0f * q1q3 - _2q0q2 - ax) + _2q2 * (2.0f * q0q1 + _2q2q3 - ay)
-                    + (-_4bx * pQ[3] + _2bz * pQ[1]) * (_2bx * (0.5f - q2q2 - q3q3) + _2bz * (q1q3 - q0q2) - mx)
-                    + (-_2bx * pQ[0] + _2bz * pQ[2]) * (_2bx * (q1q2 - q0q3) + _2bz * (q0q1 + q2q3) - my)
-                    + _2bx * pQ[1] * (_2bx * (q0q2 + q1q3) + _2bz * (0.5f - q1q1 - q2q2) - mz);
+        s3 = _2q1 * (2.0f * q1q3 - _2q0q2 - pRawAccel[X_AXIS]) + _2q2 * (2.0f * q0q1 + _2q2q3 - pRawAccel[Y_AXIS])
+                    + (-_4bx * pQ[3] + _2bz * pQ[1]) * (_2bx * (0.5f - q2q2 - q3q3) + _2bz * (q1q3 - q0q2) - pRawMag[X_AXIS])
+                    + (-_2bx * pQ[0] + _2bz * pQ[2]) * (_2bx * (q1q2 - q0q3) + _2bz * (q0q1 + q2q3) - pRawMag[Y_AXIS])
+                    + _2bx * pQ[1] * (_2bx * (q0q2 + q1q3) + _2bz * (0.5f - q1q1 - q2q2) - pRawMag[Z_AXIS]);
         
         recipNorm = _InvSqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
         s0 *= recipNorm;
@@ -1143,78 +1058,6 @@ void _AHRSupdate(float gx, float gy, float gz, float ax, float ay, float az, flo
     pQ[2] *= recipNorm;
     pQ[3] *= recipNorm;
 }
-
-//---------------------------------------------------------------------------------------------------
-// IMU algorithm update
-
-//void _AHRSupdateIMU(float gx, float gy, float gz, float ax, float ay, float az)
-//{
-//    float recipNorm;
-//    float s0, s1, s2, s3;
-//    float qDot1, qDot2, qDot3, qDot4;
-//    float _2q0, _2q1, _2q2, _2q3, _4q0, _4q1, _4q2 ,_8q1, _8q2, q0q0, q1q1, q2q2, q3q3;
-//    
-//    // Rate of change of quaternion from gyroscope
-//    qDot1 = 0.5f * (-q1 * gx - q2 * gy - q3 * gz);
-//    qDot2 = 0.5f * (q0 * gx + q2 * gz - q3 * gy);
-//    qDot3 = 0.5f * (q0 * gy - q1 * gz + q3 * gx);
-//    qDot4 = 0.5f * (q0 * gz + q1 * gy - q2 * gx);
-//    
-//    // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-//    if(!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
-//        
-//        // Normalise accelerometer measurement
-//        recipNorm = _InvSqrt(ax * ax + ay * ay + az * az);
-//        ax *= recipNorm;
-//        ay *= recipNorm;
-//        az *= recipNorm;
-//        
-//        // Auxiliary variables to avoid repeated arithmetic
-//        _2q0 = 2.0f * q0;
-//        _2q1 = 2.0f * q1;
-//        _2q2 = 2.0f * q2;
-//        _2q3 = 2.0f * q3;
-//        _4q0 = 4.0f * q0;
-//        _4q1 = 4.0f * q1;
-//        _4q2 = 4.0f * q2;
-//        _8q1 = 8.0f * q1;
-//        _8q2 = 8.0f * q2;
-//        q0q0 = q0 * q0;
-//        q1q1 = q1 * q1;
-//        q2q2 = q2 * q2;
-//        q3q3 = q3 * q3;
-//        
-//        // Gradient decent algorithm corrective step
-//        s0 = _4q0 * q2q2 + _2q2 * ax + _4q0 * q1q1 - _2q1 * ay;
-//        s1 = _4q1 * q3q3 - _2q3 * ax + 4.0f * q0q0 * q1 - _2q0 * ay - _4q1 + _8q1 * q1q1 + _8q1 * q2q2 + _4q1 * az;
-//        s2 = 4.0f * q0q0 * q2 + _2q0 * ax + _4q2 * q3q3 - _2q3 * ay - _4q2 + _8q2 * q1q1 + _8q2 * q2q2 + _4q2 * az;
-//        s3 = 4.0f * q1q1 * q3 - _2q1 * ax + 4.0f * q2q2 * q3 - _2q2 * ay;
-//        recipNorm = _InvSqrt(s0 * s0 + s1 * s1 + s2 * s2 + s3 * s3); // normalise step magnitude
-//        s0 *= recipNorm;
-//        s1 *= recipNorm;
-//        s2 *= recipNorm;
-//        s3 *= recipNorm;
-//        
-//        // Apply feedback step
-//        qDot1 -= beta * s0;
-//        qDot2 -= beta * s1;
-//        qDot3 -= beta * s2;
-//        qDot4 -= beta * s3;
-//    }
-//    
-//    // Integrate rate of change of quaternion to yield quaternion
-//    q0 += qDot1 * (1.0f / sampleFreq);
-//    q1 += qDot2 * (1.0f / sampleFreq);
-//    q2 += qDot3 * (1.0f / sampleFreq);
-//    q3 += qDot4 * (1.0f / sampleFreq);
-//    
-//    // Normalise quaternion
-//    recipNorm = _InvSqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
-//    q0 *= recipNorm;
-//    q1 *= recipNorm;
-//    q2 *= recipNorm;
-//    q3 *= recipNorm;
-//}
 
 
 inline void _CalculatePID()
@@ -1478,20 +1321,11 @@ void _print_Gyro_Signals()
 {
     float                   *pFineAngle = &(pSelfFlyHndl->nAccelGyroParam.nFineAngle[0]);
     
-//    Serialprint("   //    Roll Gyro : ");
-//    Serialprint(pFineAngle[0]);
-//    Serialprint("   Pitch Gyro : ");
-//    Serialprint(pFineAngle[1]);
-//    Serialprint("   Yaw Gyro : ");
-//    Serialprint(pFineAngle[2]);
-//    Serialprint("   Temp : ");
-//    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
-    
     Serialprint("   Gx: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[0]);
     Serialprint("   Gy: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[1]);
-    Serialprint("   Gz: ");
+    Serialprint("   pRawGyro[Z_AXIS]: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[2]);
 
     Serialprint("   Ax: ");
@@ -1500,6 +1334,9 @@ void _print_Gyro_Signals()
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[1]);
     Serialprint("   Az: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[2]);
+
+    Serialprint("   Temp : ");
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
 }
 
 
@@ -1534,12 +1371,11 @@ void _print_MagData()
 {
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-//    Serialprint("   //    Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
-//    Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
-    
-    Serialprint("   //   Mx:"); Serialprint(pMagParam->nRawMagData[0]);
-    Serialprint("   My:"); Serialprint(pMagParam->nRawMagData[1]);
-    Serialprint("   Mz:"); Serialprint(pMagParam->nRawMagData[2]);
+    Serialprint("   //   Mx:"); Serialprint(pMagParam->nRawMag[0]);
+    Serialprint("   pRawMag[Y_AXIS]:"); Serialprint(pMagParam->nRawMag[1]);
+    Serialprint("   Mz:"); Serialprint(pMagParam->nRawMag[2]);
+    Serialprint("   Magnetic HEAD:"); Serialprint(pMagParam->nMagHeadingDeg);
+    Serialprint("   SmoothHEAD:"); Serialprint(pMagParam->nSmoothHeadingDegrees);
 }
 
 void _print_BarometerData()
