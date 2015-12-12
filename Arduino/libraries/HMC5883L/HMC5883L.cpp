@@ -357,10 +357,6 @@ void HMC5883L::getScaledHeading(float *x, float *y, float *z)
     *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit * COMPASS_X_GAINERR + COMPASS_X_OFFSET;
     *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit * COMPASS_Y_GAINERR + COMPASS_Y_OFFSET;
     *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit * COMPASS_Z_GAINERR;
-    
-    *x = (float)((((int16_t)buffer[0]) << 8) | buffer[1]) * mgPerDigit;
-    *y = (float)((((int16_t)buffer[4]) << 8) | buffer[5]) * mgPerDigit;
-    *z = (float)((((int16_t)buffer[2]) << 8) | buffer[3]) * mgPerDigit;
 }
 
 

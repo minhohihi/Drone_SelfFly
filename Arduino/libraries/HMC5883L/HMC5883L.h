@@ -105,12 +105,12 @@ THE SOFTWARE.
 #define COMPASS_RAD2DEGREE          57.3
 
 
-#define COMPASS_X_OFFSET            (27.25)             // Manually calculated offset in X direction
-#define COMPASS_Y_OFFSET            (71.57)             // Manually calculated offset in Y direction
-#define COMPASS_Z_OFFSET            (-268.65)           // Manually calculated offset in Y direction
+#define COMPASS_X_OFFSET            (5.00)             // Manually calculated offset in X direction
+#define COMPASS_Y_OFFSET            (80.34)             // Manually calculated offset in Y direction
+#define COMPASS_Z_OFFSET            (-272.16)           // Manually calculated offset in Y direction
 #define COMPASS_X_GAINERR           (0.99)              // Stored Gain offset at room temperature
 #define COMPASS_Y_GAINERR           (1.05)              // Stored Gain offset at room temperature
-#define COMPASS_Z_GAINERR           (0.98)              // Stored Gain offset at room temperature
+#define COMPASS_Z_GAINERR           (0.99)              // Stored Gain offset at room temperature
 
 
 
