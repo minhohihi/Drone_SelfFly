@@ -253,10 +253,10 @@ void _Mag_CalculateDirection()
     
     pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
     
-    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-    else if(pMagParam->nMagHeadingDeg >= 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+    //if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
+    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
+    //else if(pMagParam->nMagHeadingDeg >= 240)
+    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
     
     // Smooth angles rotation for +/- 3deg
     pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);

@@ -125,7 +125,7 @@ void setup()
     Fastwire::setup(400, true);
     #endif
     
-    Serial.begin(115200);
+    Serial.begin(9600);
     Serial.flush();
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
@@ -252,10 +252,10 @@ void _Mag_CalculateDirection()
     
     pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
     
-    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-    else if(pMagParam->nMagHeadingDeg >= 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+    //if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
+    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
+    //else if(pMagParam->nMagHeadingDeg >= 240)
+    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
     
     // Smooth angles rotation for +/- 3deg
     pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);
@@ -272,16 +272,12 @@ void _print_MagData()
 {
     MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
     
-    Serial.print("          "); Serial.print(_gRawMagData[0]);                       // Mx
-    Serial.print("          "); Serial.print(_gRawMagData[1]);                       // My
-    Serial.print("          "); Serial.print(_gRawMagData[2]);                       // Mz
-
-    Serial.print("          "); Serial.print(pMagParam->nRawMagData[0]);                       // Mx
-    Serial.print("          "); Serial.print(pMagParam->nRawMagData[1]);                       // My
-    Serial.print("          "); Serial.print(pMagParam->nRawMagData[2]);                       // Mz
-    
-    Serial.print("          "); Serial.print(pMagParam->nMagHeadingDeg);                       // Magnetic Head
-    Serial.print("          "); Serial.print(pMagParam->nSmoothHeadingDegrees);       // Smoothed Magnetic Head
-    Serial.println("          ");
+    Serial.print(pMagParam->nRawMagData[0]);                       // Mx
+    Serial.print(":"); Serial.print((int)pMagParam->nRawMagData[1]);                       // My
+    Serial.print(":"); Serial.print((int)pMagParam->nRawMagData[2]);                       // Mz    
+    Serial.print(":"); Serial.print((int)pMagParam->nMagHeadingDeg);                       // Mx
+    Serial.print(":"); Serial.print((int)pMagParam->nMagHeadingDeg);                       // My
+    Serial.print(":"); Serial.print((int)pMagParam->nSmoothHeadingDegrees);                       // Mz    
+    Serial.println("");
 }
 
