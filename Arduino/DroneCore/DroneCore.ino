@@ -19,6 +19,7 @@
  ----------------------------------------------------------------------------------------*/
 #define __DEBUG__                           (0)
 #if (__DEBUG__)
+    #define __PRINT_DEBUG__                 (1)
     #define __PROFILE__                     (1)
 #else
     #define __PROFILE__                     (0)
@@ -315,7 +316,7 @@ int _Clip3Int(const int nValue, const int MIN, const int MAX);
 float _InvSqrt(float nNumber);
 inline void _AcquireLock();
 inline void _ReleaseLock();
-#if __DEBUG__
+#if __PRINT_DEBUG__
 void _print_RC_Signals();
 void _print_Gyro_Signals();
 void _print_Throttle_Signals();
@@ -409,14 +410,14 @@ void loop()
     #endif
 
     // Check Drone Status
-    _Check_Drone_Status();
-    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
-        return;
+    //_Check_Drone_Status();
+    //if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
+    //    return;
         
     #if __DEBUG__
     pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = 1500.0f;
     pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = 1500.0f;
-    pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = 1100.0f;
+    pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = 1200.0f;
     pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = 1500.0f;
     pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = 1000.0f;
     #endif
@@ -441,7 +442,7 @@ void loop()
     
     //delay(50);
     
-    #if __DEBUG__
+    #if __PRINT_DEBUG__
     //_print_Gyro_Signals();
     //_print_MagData();
     //_print_BarometerData();
@@ -1284,7 +1285,7 @@ inline void _ReleaseLock()
 }
 
 
-#if __DEBUG__
+#if __PRINT_DEBUG__
 void _print_RC_Signals()
 {
     volatile float          *pRCCh = &(pSelfFlyHndl->nRCCh[0]);
