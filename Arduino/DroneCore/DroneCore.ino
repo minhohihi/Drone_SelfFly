@@ -949,6 +949,10 @@ void _AHRSupdate()
     float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
     float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
+
+    pRawGyro[X_AXIS] = pRawGyro[X_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    pRawGyro[Y_AXIS] = pRawGyro[Y_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
+    pRawGyro[Z_AXIS] = pRawGyro[Z_AXIS] / GYRO_FS * DEG_TO_RAD_SCALE;
     
     // Rate of change of quaternion from gyroscope
     qDot1 = 0.5f * (-pQ[1] * pRawGyro[X_AXIS] - pQ[2] * pRawGyro[Y_AXIS] - pQ[3] * pRawGyro[Z_AXIS]);
@@ -1325,7 +1329,7 @@ void _print_Gyro_Signals()
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[0]);
     Serialprint("   Gy: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[1]);
-    Serialprint("   pRawGyro[Z_AXIS]: ");
+    Serialprint("   Gz: ");
     Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[2]);
 
     Serialprint("   Ax: ");
