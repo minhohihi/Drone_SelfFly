@@ -17,10 +17,10 @@
 /*----------------------------------------------------------------------------------------
  Constant Definitions
  ----------------------------------------------------------------------------------------*/
-#define __DEBUG__                           (0)
+#define __DEBUG__                           (1)
 #if (__DEBUG__)
     #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (1)
+    #define __PROFILE__                     (0)
 #else
     #define __PROFILE__                     (0)
 #endif
@@ -271,6 +271,9 @@ typedef struct _SelfFly_T
     
     // For Status of Drone
     DroneStatus         nDroneStatus;
+
+    // For Battery Status
+    float               nCurrBatteryVolt;
     
     // For RC Interrupt
     bool                nInterruptLockFlag;                     // Interrupt lock
@@ -368,6 +371,8 @@ void setup()
     
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
     #endif
+
+    pinMode(PIN_CHECK_POWER_STAT, INPUT);
     
     // Initialize RemoteController
     _RC_Initialize();
@@ -421,6 +426,9 @@ void loop()
     pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = 1500.0f;
     pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = 1000.0f;
     #endif
+
+    pSelfFlyHndl->nCurrBatteryVolt = 5.0 * (float)analogRead(PIN_CHECK_POWER_STAT) / 1024.0;
+    Serial.println(pSelfFlyHndl->nCurrBatteryVolt);
     
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
