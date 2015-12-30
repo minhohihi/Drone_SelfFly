@@ -272,6 +272,9 @@ typedef struct _SelfFly_T
     // For Status of Drone
     DroneStatus         nDroneStatus;
     
+    // For Battery Status
+    float               nCurrBatteryVolt;
+
     // For RC Interrupt
     bool                nInterruptLockFlag;                     // Interrupt lock
 }SelfFly_T;
@@ -299,6 +302,7 @@ void _Barometer_CalculateData();
 void _Sonar_Initialize();
 void _Sonar_GetData();
 void _GetSensorRawData();
+void _Check_BatteryVolt();
 void _Get_RollPitchYaw();
 void _Get_Quaternion();
 void _Get_RollPitchYawRad_By_Q();
@@ -394,6 +398,8 @@ void setup()
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
     pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
+    pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
+
     
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -414,13 +420,8 @@ void loop()
     //if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
     //    return;
         
-    #if __DEBUG__
-    pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = 1500.0f;
-    pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = 1500.0f;
-    pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = 1100.0f;
-    pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = 1500.0f;
-    pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = 1000.0f;
-    #endif
+    // Check Battery Voltage Status
+    _Check_BatteryVolt();
     
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
@@ -468,7 +469,7 @@ void _Check_Drone_Status()
         do
         {
             // Should be Set Lowest Throttle & Highest Right Yaw for About 2 Sec. to Start Drone
-            if((100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE]) &&
+            if((1100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE]) &&
                (1800 < pSelfFlyHndl->nRCCh[CH_TYPE_YAW]))
                 nLoopCnt++;
             else
@@ -487,7 +488,7 @@ void _Check_Drone_Status()
         {
             static int      nLoopCnt = 0;
             
-            if(100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE])
+            if(1100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE])
                 nLoopCnt++;
             else
             {
@@ -500,7 +501,7 @@ void _Check_Drone_Status()
         }
         else
         {
-            if(100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE])
+            if(1100 >= pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE])
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
         }
     }
@@ -530,9 +531,6 @@ void _ESC_Initialize()
 
 void _RC_Initialize()
 {
-    pinMode(PIN_CHECK_POWER_STAT, OUTPUT);
-    digitalWrite(PIN_CHECK_POWER_STAT, HIGH);
-    
     PCintPort::attachInterrupt(PIN_RC_CH0, _nRCInterrupt_CB0, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH1, _nRCInterrupt_CB1, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH2, _nRCInterrupt_CB2, CHANGE);
@@ -884,6 +882,14 @@ void _GetSensorRawData()
 }
 
 
+void _Check_BatteryVolt()
+{
+    pSelfFlyHndl->nCurrBatteryVolt = (0.92 * pSelfFlyHndl->nCurrBatteryVolt) + (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+    
+    Serialprintln(pSelfFlyHndl->nCurrBatteryVolt);
+}
+
+
 void _Get_RollPitchYaw()
 {
     volatile float          *pFineG = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
@@ -1183,46 +1189,61 @@ inline void _UpdateESCs()
 
 inline void _nRCInterrupt_CB0()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = micros() - pSelfFlyHndl->nRCPrevChangeTime[0];
+    const unsigned long     nCurrTime = micros();
     
-    pSelfFlyHndl->nRCPrevChangeTime[0] = micros();
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    if(PIND & B01000000)
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
+    else
+        pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL];
 }
 
 
 inline void _nRCInterrupt_CB1()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = micros() - pSelfFlyHndl->nRCPrevChangeTime[1];
+    const unsigned long     nCurrTime = micros();
     
-    pSelfFlyHndl->nRCPrevChangeTime[1] = micros();
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    if(PIND & B00100000)
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
+    else
+        pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH];
 }
 
 
 inline void _nRCInterrupt_CB2()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = micros() - pSelfFlyHndl->nRCPrevChangeTime[2];
+    const unsigned long     nCurrTime = micros();
     
-    pSelfFlyHndl->nRCPrevChangeTime[2] = micros();
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    if(PIND & B00010000)
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
+    else
+        pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE];
 }
 
 
 inline void _nRCInterrupt_CB3()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = micros() - pSelfFlyHndl->nRCPrevChangeTime[3];
+    const unsigned long     nCurrTime = micros();
     
-    pSelfFlyHndl->nRCPrevChangeTime[3] = micros();
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    if(PIND & B00001000)
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
+    else
+        pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW];
 }
 
 
 inline void _nRCInterrupt_CB4()
 {
-    if(!(pSelfFlyHndl->nInterruptLockFlag))
-        pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = micros() - pSelfFlyHndl->nRCPrevChangeTime[4];
+    const unsigned long     nCurrTime = micros();
     
-    pSelfFlyHndl->nRCPrevChangeTime[4] = micros();
+    //if(!(pSelfFlyHndl->nInterruptLockFlag))
+    if(PIND & B00000100)
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
+    else
+        pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
 }
 
 
