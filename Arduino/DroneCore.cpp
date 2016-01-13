@@ -4,7 +4,7 @@
  ----------------------------------------------------------------------------------------*/
 #include <Servo.h>
 #include <I2Cdev.h>
-#include <PinChangeInt.h>
+//#include <PinChangeInt.h>
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include <Wire.h>
 #endif
@@ -23,6 +23,7 @@
     #define __PROFILE__                     (0)
     #define SERIAL_BAUDRATE                 (115200)
 #else
+    #define __PRINT_DEBUG__                 (1)
     #define __PROFILE__                     (0)
 #endif
 
@@ -410,9 +411,9 @@ void loop()
     #endif
 
     // Check Drone Status
-    _Check_Drone_Status();
-    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
-        return;
+    //_Check_Drone_Status();
+    //if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
+    //    return;
 
     // Check Battery Voltage Status
     _Check_BatteryVolt();
@@ -531,11 +532,20 @@ void _ESC_Initialize()
 
 void _RC_Initialize()
 {
+    #if 0
     PCintPort::attachInterrupt(PIN_RC_CH0, _nRCInterrupt_CB0, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH1, _nRCInterrupt_CB1, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH2, _nRCInterrupt_CB2, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH3, _nRCInterrupt_CB3, CHANGE);
     PCintPort::attachInterrupt(PIN_RC_CH4, _nRCInterrupt_CB4, CHANGE);
+    #else
+    PCICR |= (1 << PCIE2);
+    PCMSK2 |= (1 << PCINT18);
+    PCMSK2 |= (1 << PCINT19);
+    PCMSK2 |= (1 << PCINT20);
+    PCMSK2 |= (1 << PCINT21);
+    PCMSK2 |= (1 << PCINT22);
+    #endif
 }
 
 
@@ -1178,6 +1188,7 @@ inline void _UpdateESCs()
 }
 
 
+#if 0
 inline void _nRCInterrupt_CB0()
 {
     const unsigned long     nCurrTime = micros();
@@ -1231,6 +1242,68 @@ inline void _nRCInterrupt_CB4()
     else
         pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
 }
+#else
+ISR(PCINT2_vect)
+{
+    const unsigned long     nCurrTime = micros();
+
+    if(PIND & B01000000)
+    {
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
+    }
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
+    {
+        pSelfFlyHndl->nRCCh[CH_TYPE_ROLL] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
+    }
+
+
+    if(PIND & B00100000)
+    {
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
+    }
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
+    {
+        pSelfFlyHndl->nRCCh[CH_TYPE_PITCH] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = 0;
+    }
+
+    if(PIND & B00010000)
+    {
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
+    }
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE])
+    {
+        pSelfFlyHndl->nRCCh[CH_TYPE_THROTTLE] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
+    }
+
+    if(PIND & B00001000)
+    {
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
+    }
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
+    {
+        pSelfFlyHndl->nRCCh[CH_TYPE_YAW] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = 0;
+    }
+
+    if(PIND & B00000100)
+    {
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
+    }
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
+    {
+        pSelfFlyHndl->nRCCh[CH_TYPE_TAKE_LAND] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = 0;
+    }
+}
+#endif
 
 
 float _Clip3Float(const float nValue, const int MIN, const int MAX)
@@ -1397,5 +1470,4 @@ void _print_SonarData()
     Serialprintln("cm   ");
 }
 #endif
-
 
