@@ -1,8 +1,8 @@
 
 #define __DEBUG__                           (0)
 #if (__DEBUG__)
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (0)
+    #define __PRINT_DEBUG__                 (0)
+    #define __PROFILE__                     (1)
     #define SERIAL_BAUDRATE                 (115200)
 #else
     #define __PRINT_DEBUG__                 (1)
@@ -410,9 +410,9 @@ void loop()
     #endif
 
     // Check Drone Status
-    _Check_Drone_Status();
-    if(DRONESTATUS_STOP == nSelfFlyHndl.nDroneStatus)
-        return;
+    //_Check_Drone_Status();
+    //if(DRONESTATUS_STOP == nSelfFlyHndl.nDroneStatus)
+    //    return;
 
     // Check Battery Voltage Status
     _Check_BatteryVolt();
@@ -432,7 +432,7 @@ void loop()
     // Update BLDCs
     _UpdateESCs();
 
-    //delay(50);
+    //delay(4);
 
     #if __PRINT_DEBUG__
     //_print_Gyro_Signals();
@@ -1122,7 +1122,7 @@ inline void _UpdateESCs()
         while(PORTB & B00011110)
         {
             const unsigned long     nCurrTime = micros();
-            
+
             if(pThrottle[0] <= nCurrTime)
                 PORTB &= B11111101;
             
@@ -1209,7 +1209,6 @@ ISR(PCINT2_vect)
         nSelfFlyHndl.nRCCh[CH_TYPE_ROLL] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL];
         nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
     }
-
 
     if(PIND & B00100000)
     {
