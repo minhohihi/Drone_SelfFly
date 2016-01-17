@@ -9,17 +9,11 @@
     #define __PROFILE__                     (0)
 #endif
 
-#define USE_DIRECTACCESS_REG                (1)
-
 
 /*----------------------------------------------------------------------------------------
  File Inclusions
  ----------------------------------------------------------------------------------------*/
 #include <I2Cdev.h>
-#if !USE_DIRECTACCESS_REG
-#include <Servo.h>
-#include <PinChangeInt.h>
-#endif
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include <Wire.h>
 #endif
@@ -72,16 +66,16 @@
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
-#define RC_CH0_HIGH                         (1900)
-#define RC_CH0_LOW                          (1050)
-#define RC_CH1_HIGH                         (1900)
-#define RC_CH1_LOW                          (1050)
-#define RC_CH2_HIGH                         (1900)
-#define RC_CH2_LOW                          (1050)
-#define RC_CH3_HIGH                         (1900)
-#define RC_CH3_LOW                          (1050)
-#define RC_CH4_HIGH                         (1900)
-#define RC_CH4_LOW                          (1050)
+#define RC_CH0_HIGH                         (1884)
+#define RC_CH0_LOW                          (1055)
+#define RC_CH1_HIGH                         (1884)
+#define RC_CH1_LOW                          (1055)
+#define RC_CH2_HIGH                         (1884)
+#define RC_CH2_LOW                          (1055)
+#define RC_CH3_HIGH                         (1884)
+#define RC_CH3_LOW                          (1055)
+#define RC_CH4_HIGH                         (1884)
+#define RC_CH4_LOW                          (1055)
 
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)                         // angle control
@@ -105,8 +99,8 @@
 #define PITCH_ANG_MAX                       (30)
 #define ROLL_ANG_MIN                        (-30)
 #define ROLL_ANG_MAX                        (30)
-#define YAW_RATE_MIN                        (-20)
-#define YAW_RATE_MAX                        (20)
+#define YAW_RATE_MIN                        (-30)
+#define YAW_RATE_MAX                        (30)
 
 // Offset values
 #define PITCH_ANG_OFFSET                    (-4)
@@ -127,7 +121,7 @@
 // Sonar sensor
 #define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
 
-#define ROUNDING_BASE                       (50)
+#define ROUNDING_BASE                       (10)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
 
 #define RAD_TO_DEG_SCALE                    (57.2958f)                      // = 180 / PI
@@ -169,20 +163,6 @@ typedef enum _DroneStatus
     DRONESTATUS_READY,
     DRONESTATUS_START,
 }DroneStatus;
-
-typedef struct _AxisInt16_T
-{
-    int16_t             XAxis;
-    int16_t             YAxis;
-    int16_t             ZAxis;
-}AxisInt16_T;
-
-typedef struct _AxisFloat_T
-{
-    float               XAxis;
-    float               YAxis;
-    float               ZAxis;
-}AxisFloat_T;
 
 typedef struct _AxisErrRate_T
 {
@@ -241,8 +221,8 @@ typedef struct _SelfFly_T
     // For Accelerator & Gyroscope Sensor
     MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
     AccelGyroParam_T    nAccelGyroParam;
-    int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
-    int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
+    //int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
+    //int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
 
     // For Magnetometer Sensor
     HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
@@ -261,13 +241,12 @@ typedef struct _SelfFly_T
     AxisErrRate_T       nYaw;
 
     // For Motor Control
-    #if !USE_DIRECTACCESS_REG
-    Servo               *pESC[MAX_CH_ESC];
-    #endif
-    float               nRCCh[MAX_CH_RC];                       // RC channel inputs
+    long                nCapturedRCVal[MAX_CH_RC];              // RC channel inputs
+    long                nUsingRCVal[MAX_CH_RC];                 // RC channel inputs
     unsigned long       nRCPrevChangeTime[MAX_CH_RC];
     unsigned long       nThrottle[MAX_CH_ESC];
-
+    volatile bool       nLock;
+    
     // For Estimated Status of Drone
     float               nFineRPY[3];
     float               nFineGyro[3];
@@ -313,18 +292,12 @@ void _AHRSupdate();
 inline void _CalculatePID();
 inline void _CalculateThrottleVal();
 inline void _UpdateESCs();
-#if !USE_DIRECTACCESS_REG
-inline void _nRCInterrupt_CB0();
-inline void _nRCInterrupt_CB1();
-inline void _nRCInterrupt_CB2();
-inline void _nRCInterrupt_CB3();
-inline void _nRCInterrupt_CB4();
-#endif
 float _Clip3Float(const float nValue, const int MIN, const int MAX);
 int _Clip3Int(const int nValue, const int MIN, const int MAX);
 float _InvSqrt(float nNumber);
 #if __PRINT_DEBUG__
-void _print_RC_Signals();
+void _print_CaturedRC_Signals();
+void _print_UsingRC_Signals();
 void _print_Gyro_Signals();
 void _print_Throttle_Signals();
 void _print_RPY_Signals();
@@ -342,7 +315,7 @@ void _print_SonarData();
 /*----------------------------------------------------------------------------------------
  Global Variable
  ----------------------------------------------------------------------------------------*/
-SelfFly_T               nSelfFlyHndl = {0, };                           // SelfFly Main Handle
+SelfFly_T                   *pSelfFlyHndl = NULL;                           // SelfFly Main Handle
 
 
 /*----------------------------------------------------------------------------------------
@@ -357,6 +330,10 @@ void setup()
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
 
+    pSelfFlyHndl = (SelfFly_T *) malloc(sizeof(SelfFly_T));
+    
+    memset(pSelfFlyHndl, 0, sizeof(SelfFly_T));
+    
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
@@ -388,12 +365,12 @@ void setup()
     _Barometer_Initialize();
 
     // Initialize Sonar Sensor
-    _Sonar_Initialize();
+    //_Sonar_Initialize();
 
-    nSelfFlyHndl.nQuaternion[0] = 1.0f;
-    nSelfFlyHndl.nBeta = BETADEF;
-    nSelfFlyHndl.nDroneStatus = DRONESTATUS_STOP;
-    nSelfFlyHndl.nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
+    pSelfFlyHndl->nQuaternion[0] = 1.0f;
+    pSelfFlyHndl->nBeta = BETADEF;
+    pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
+    pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
 
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -410,9 +387,9 @@ void loop()
     #endif
 
     // Check Drone Status
-    _Check_Drone_Status();
-    if(DRONESTATUS_STOP == nSelfFlyHndl.nDroneStatus)
-        return;
+    //_Check_Drone_Status();
+    //if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
+    //    return;
 
     // Check Battery Voltage Status
     _Check_BatteryVolt();
@@ -429,21 +406,21 @@ void loop()
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    // Update BLDCs
-    _UpdateESCs();
-
-    //delay(50);
-
     #if __PRINT_DEBUG__
     //_print_Gyro_Signals();
     //_print_MagData();
     //_print_BarometerData();
     //_print_RPY_Signals();
-    //_print_RC_Signals();
+    //_print_CaturedRC_Signals();
+    //_print_UsingRC_Signals();
     //_print_Throttle_Signals();
     //_print_SonarData();
+    //Serialprintln(" ");
     #endif
-
+    
+    // Update BLDCs
+    _UpdateESCs();
+    
     #if __PROFILE__
     nEndTime = micros();
     Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
@@ -453,15 +430,15 @@ void loop()
 
 void _Check_Drone_Status()
 {
-    if(DRONESTATUS_STOP == nSelfFlyHndl.nDroneStatus)
+    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
     {
         int                 nLoopCnt = 0;
 
         do
         {
             // Should be Set Lowest Throttle & Highest Right Yaw for About 2 Sec. to Start Drone
-            if((1100 >= nSelfFlyHndl.nRCCh[CH_TYPE_THROTTLE]) &&
-               (1800 < nSelfFlyHndl.nRCCh[CH_TYPE_YAW]))
+            if((1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE]) &&
+               (1800 < pSelfFlyHndl->nCapturedRCVal[CH_TYPE_YAW]))
                 nLoopCnt++;
             else
                 nLoopCnt = 0;
@@ -469,36 +446,36 @@ void _Check_Drone_Status()
             delay(50);
         }while(nLoopCnt < 40);
 
-        nSelfFlyHndl.nDroneStatus = DRONESTATUS_READY;
+        pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
 
         return;
     }
-    else if(DRONESTATUS_STOP < nSelfFlyHndl.nDroneStatus)
+    else if(DRONESTATUS_STOP < pSelfFlyHndl->nDroneStatus)
     {
         static int      nLoopCnt = 0;
 
-        if(DRONESTATUS_READY == nSelfFlyHndl.nDroneStatus)
+        if(DRONESTATUS_READY == pSelfFlyHndl->nDroneStatus)
         {
-            if(1100 >= nSelfFlyHndl.nRCCh[CH_TYPE_THROTTLE])
+            if(1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
                 nLoopCnt++;
             else
             {
                 nLoopCnt = 0;
-                nSelfFlyHndl.nDroneStatus = DRONESTATUS_START;
+                pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
             }
 
             if(nLoopCnt > DRONE_STOP_TIME_TH)
             {
                 nLoopCnt = 0;
-                nSelfFlyHndl.nDroneStatus = DRONESTATUS_STOP;
+                pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
             }
         }
         else
         {
-            if(1100 >= nSelfFlyHndl.nRCCh[CH_TYPE_THROTTLE])
+            if(1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
             {
                 nLoopCnt = 0;
-                nSelfFlyHndl.nDroneStatus = DRONESTATUS_READY;
+                pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
             }
         }
     }
@@ -507,24 +484,6 @@ void _Check_Drone_Status()
 
 void _ESC_Initialize()
 {
-    int                     i = 0;
-
-    #if !USE_DIRECTACCESS_REG
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        nSelfFlyHndl.pESC[i] = new Servo;
-
-    nSelfFlyHndl.pESC[0]->attach(PIN_ESC_CH0, ESC_MIN, ESC_MAX);
-    nSelfFlyHndl.pESC[1]->attach(PIN_ESC_CH1, ESC_MIN, ESC_MAX);
-    nSelfFlyHndl.pESC[2]->attach(PIN_ESC_CH2, ESC_MIN, ESC_MAX);
-    nSelfFlyHndl.pESC[3]->attach(PIN_ESC_CH3, ESC_MIN, ESC_MAX);
-
-    delay(300);
-
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        nSelfFlyHndl.pESC[i]->writeMicroseconds(0);
-
-    delay(ESC_ARM_DELAY);
-    #else
     // Set Digital Port 8, 9, 10, and 11 as Output
     DDRB |= B00011110;
     
@@ -532,58 +491,49 @@ void _ESC_Initialize()
     
     // Set Value of Digital Port 8, 9, 10, and 11 as Low to Initialize ESCs
     PORTB |= B00000000;
-    #endif
 }
 
 
 void _RC_Initialize()
 {
-    #if !USE_DIRECTACCESS_REG
-    PCintPort::attachInterrupt(PIN_RC_CH0, _nRCInterrupt_CB0, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH1, _nRCInterrupt_CB1, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH2, _nRCInterrupt_CB2, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH3, _nRCInterrupt_CB3, CHANGE);
-    PCintPort::attachInterrupt(PIN_RC_CH4, _nRCInterrupt_CB4, CHANGE);
-    #else
     PCICR |= (1 << PCIE2);
     PCMSK2 |= (1 << PCINT18);
     PCMSK2 |= (1 << PCINT19);
     PCMSK2 |= (1 << PCINT20);
     PCMSK2 |= (1 << PCINT21);
     PCMSK2 |= (1 << PCINT22);
-    #endif
 }
 
 
 void _AccelGyro_Initialize()
 {
-    nSelfFlyHndl.nAccelGyroHndl = MPU6050();
+    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
 
     Serialprintln(F(" Initializing MPU..."));
-    nSelfFlyHndl.nAccelGyroHndl.initialize();
+    pSelfFlyHndl->nAccelGyroHndl.initialize();
 
     // Verify Vonnection
     Serialprint(F("    Testing device connections..."));
-    Serialprintln(nSelfFlyHndl.nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    Serialprintln(pSelfFlyHndl->nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
 
-    nSelfFlyHndl.nAccelGyroHndl.setI2CMasterModeEnabled(false);
-    nSelfFlyHndl.nAccelGyroHndl.setI2CBypassEnabled(true);
-    nSelfFlyHndl.nAccelGyroHndl.setSleepEnabled(false);
+    pSelfFlyHndl->nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    pSelfFlyHndl->nAccelGyroHndl.setI2CBypassEnabled(true);
+    pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
 
     // Calibrate GyroAccel
-    //nSelfFlyHndl.nAccelGyroHndl.doCalibration();
-    nSelfFlyHndl.nAccelGyroHndl.setXGyroOffset(MPU6050_GYRO_OFFSET_X);
-    nSelfFlyHndl.nAccelGyroHndl.setYGyroOffset(MPU6050_GYRO_OFFSET_Y);
-    nSelfFlyHndl.nAccelGyroHndl.setZGyroOffset(MPU6050_GYRO_OFFSET_Z);
-    nSelfFlyHndl.nAccelGyroHndl.setXAccelOffset(MPU6050_ACCEL_OFFSET_X);
-    nSelfFlyHndl.nAccelGyroHndl.setYAccelOffset(MPU6050_ACCEL_OFFSET_Y);
-    nSelfFlyHndl.nAccelGyroHndl.setZAccelOffset(MPU6050_ACCEL_OFFSET_Z);
+    //pSelfFlyHndl->nAccelGyroHndl.doCalibration();
+    pSelfFlyHndl->nAccelGyroHndl.setXGyroOffset(MPU6050_GYRO_OFFSET_X);
+    pSelfFlyHndl->nAccelGyroHndl.setYGyroOffset(MPU6050_GYRO_OFFSET_Y);
+    pSelfFlyHndl->nAccelGyroHndl.setZGyroOffset(MPU6050_GYRO_OFFSET_Z);
+    pSelfFlyHndl->nAccelGyroHndl.setXAccelOffset(MPU6050_ACCEL_OFFSET_X);
+    pSelfFlyHndl->nAccelGyroHndl.setYAccelOffset(MPU6050_ACCEL_OFFSET_Y);
+    //pSelfFlyHndl->nAccelGyroHndl.setZAccelOffset(MPU6050_ACCEL_OFFSET_Z);
 
     // supply your own gyro offsets here, scaled for min sensitivity
-    nSelfFlyHndl.nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    nSelfFlyHndl.nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
-    nSelfFlyHndl.nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
-    nSelfFlyHndl.nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
+    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
 
     Serialprintln(F(" MPU Initialized!!!"));
 
@@ -593,7 +543,7 @@ void _AccelGyro_Initialize()
 
 void _AccelGyro_GetData()
 {
-    AccelGyroParam_T        *pAccelGyroParam = &(nSelfFlyHndl.nAccelGyroParam);
+    AccelGyroParam_T        *pAccelGyroParam = &(pSelfFlyHndl->nAccelGyroParam);
     float                   *pRawGyro = &(pAccelGyroParam->nRawGyro[X_AXIS]);
     float                   *pRawAccel = &(pAccelGyroParam->nRawAccel[X_AXIS]);
 
@@ -617,8 +567,8 @@ void _Mag_Initialize()
 {
     HMC5883L            *pMagHndl = NULL;
     
-    nSelfFlyHndl.nMagHndl = HMC5883L();
-    pMagHndl = &(nSelfFlyHndl.nMagHndl);
+    pSelfFlyHndl->nMagHndl = HMC5883L();
+    pMagHndl = &(pSelfFlyHndl->nMagHndl);
     
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -647,7 +597,7 @@ void _Mag_Initialize()
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
-    nSelfFlyHndl.nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
+    pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
 
     Serialprintln(F(" Done"));
 
@@ -658,19 +608,19 @@ void _Mag_Initialize()
 
 void _Mag_GetData()
 {
-    float                   *pRawMag = &(nSelfFlyHndl.nMagParam.nRawMag[X_AXIS]);
+    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
 
-    nSelfFlyHndl.nMagHndl.getScaledHeading(&(pRawMag[X_AXIS]), &(pRawMag[Y_AXIS]), &(pRawMag[Z_AXIS]));
+    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMag[X_AXIS]), &(pRawMag[Y_AXIS]), &(pRawMag[Z_AXIS]));
 
     // Calculate Heading
-    _Mag_CalculateDirection();
+    //_Mag_CalculateDirection();
 }
 
 
 void _Mag_CalculateDirection()
 {
     int                     i = 0;
-    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
 
     pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMag[Y_AXIS], pMagParam->nRawMag[X_AXIS]);
     pMagParam->nMagHeadingRad -= pMagParam->nDeclinationAngle;      // If East, then Change Operation to PLUS
@@ -702,8 +652,8 @@ void _Mag_CalculateDirection()
 void _Barometer_Initialize()
 {
     int                     i = 0;
-    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
-    MS561101BA              *pBaroHndl = &(nSelfFlyHndl.nBaroHndl);
+    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    MS561101BA              *pBaroHndl = &(pSelfFlyHndl->nBaroHndl);
 
     Serialprint(F(" Initializing Barometer Sensor (MS5611)..."));
 
@@ -728,8 +678,8 @@ void _Barometer_Initialize()
 
 void _Barometer_GetData()
 {
-    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
-    MS561101BA              *pBaroHndl = &(nSelfFlyHndl.nBaroHndl);
+    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    MS561101BA              *pBaroHndl = &(pSelfFlyHndl->nBaroHndl);
 
     pBaroParam->nRawTemp = pBaroHndl->getTemperature(MS561101BA_OSR_512);
     pBaroParam->nRawPressure = pBaroHndl->getPressure(MS561101BA_OSR_512);
@@ -745,8 +695,8 @@ void _Barometer_GetData()
 
 void _Barometer_CalculateData()
 {
-    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
-    MS561101BA              *pBaroHndl = &(nSelfFlyHndl.nBaroHndl);
+    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    MS561101BA              *pBaroHndl = &(pSelfFlyHndl->nBaroHndl);
 
     // Get Average Pressure & Temperature
     pBaroParam->nAvgTemp = pBaroHndl->getAvgTemp();
@@ -762,7 +712,7 @@ void _Barometer_CalculateData()
     pBaroParam->nAvgAbsoluteAltitude = pBaroHndl->getAvgAltitude();
 
     // Get Vertical Speed
-    pBaroParam->nVerticalSpeed = abs(pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nPrevAvgAbsoluteAltitude) / (nSelfFlyHndl.nDiffTime);
+    pBaroParam->nVerticalSpeed = abs(pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nPrevAvgAbsoluteAltitude) / (pSelfFlyHndl->nDiffTime);
     pBaroParam->nRelativeAltitude = pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nRefAbsoluteAltitude;
 
     pBaroParam->nPrevAvgAbsoluteAltitude = pBaroParam->nAvgAbsoluteAltitude;
@@ -793,20 +743,20 @@ void _Sonar_GetData()
     digitalWrite(PIN_SONAR_TRIG, LOW);
 
     // Get Raw Distance Value
-    nSelfFlyHndl.SonicParam.nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
+    pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
 
     // Calculate Distance From Ground
-    nSelfFlyHndl.SonicParam.nDistFromGnd = nSelfFlyHndl.SonicParam.nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
+    pSelfFlyHndl->SonicParam.nDistFromGnd = pSelfFlyHndl->SonicParam.nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
 }
 
 
 void _GetSensorRawData()
 {
-    nSelfFlyHndl.nPrevSensorCapTime = nSelfFlyHndl.nCurrSensorCapTime;
-    nSelfFlyHndl.nCurrSensorCapTime = micros();
+    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
+    pSelfFlyHndl->nCurrSensorCapTime = micros();
 
-    nSelfFlyHndl.nDiffTime = (nSelfFlyHndl.nCurrSensorCapTime - nSelfFlyHndl.nPrevSensorCapTime) / 1000000.0;
-    nSelfFlyHndl.nSampleFreq = 1000000.0 / ((nSelfFlyHndl.nCurrSensorCapTime - nSelfFlyHndl.nPrevSensorCapTime));
+    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
+    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
 
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
@@ -818,27 +768,26 @@ void _GetSensorRawData()
     _Barometer_GetData();
 
     // Get Sonar Raw Data
-    _Sonar_GetData();
+    //_Sonar_GetData();
 }
 
 
 void _Check_BatteryVolt()
 {
-    nSelfFlyHndl.nCurrBatteryVolt = (0.92 * nSelfFlyHndl.nCurrBatteryVolt) + (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+    pSelfFlyHndl->nCurrBatteryVolt = (0.92 * pSelfFlyHndl->nCurrBatteryVolt) + (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
 
-    //Serialprintln(nSelfFlyHndl.nCurrBatteryVolt);
+    //Serialprintln(pSelfFlyHndl->nCurrBatteryVolt);
 }
-
 
 void _Get_RollPitchYaw()
 {
-    float           *pEstGravity = &(nSelfFlyHndl.nEstGravity[X_AXIS]);
-    float           *pQ = &(nSelfFlyHndl.nQuaternion[0]);
-    float           *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
-
+    float           *pEstGravity = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
+    float           *pQ = &(pSelfFlyHndl->nQuaternion[0]);
+    float           *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    
     // Calculate Roll & Pitch & Yaw
     _AHRSupdate();
-    
+
     {
         const float nSquareQ0 = pQ[0] * pQ[0];
         const float nSquareQ1 = pQ[1] * pQ[1];
@@ -854,7 +803,7 @@ void _Get_RollPitchYaw()
         pFineRPY[1] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (nSquareGravZ)));
         pFineRPY[2] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * nSquareQ0) + (2 * nSquareQ1) - 1);
     }
-
+    
     // Convert Radian to Degree
     pFineRPY[0] *= RAD_TO_DEG_SCALE;
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
@@ -874,11 +823,11 @@ void _AHRSupdate()
     float                   _2bx, _2bz, _4bx, _4bz;
     float                   _2q0, _2q1, _2q2, _2q3, _2q0q2, _2q2q3;
     float                   q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
-    const float             nDiffTime = nSelfFlyHndl.nDiffTime;
-    float                   *pQ = &(nSelfFlyHndl.nQuaternion[0]);
-    float                   *pRawGyro = &(nSelfFlyHndl.nAccelGyroParam.nRawGyro[X_AXIS]);
-    float                   *pRawAccel = &(nSelfFlyHndl.nAccelGyroParam.nRawAccel[X_AXIS]);
-    float                   *pRawMag = &(nSelfFlyHndl.nMagParam.nRawMag[X_AXIS]);
+    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
+    float                   *pQ = &(pSelfFlyHndl->nQuaternion[0]);
+    float                   *pRawGyro = &(pSelfFlyHndl->nAccelGyroParam.nRawGyro[X_AXIS]);
+    float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
+    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
     const float             nGyroOffset = DEG_TO_RAD_SCALE / GYRO_FS;
     
     pRawGyro[X_AXIS] = pRawGyro[X_AXIS] * nGyroOffset;
@@ -974,10 +923,10 @@ void _AHRSupdate()
         s3 *= recipNorm;
 
         // Apply feedback step
-        qDot1 -= nSelfFlyHndl.nBeta * s0;
-        qDot2 -= nSelfFlyHndl.nBeta * s1;
-        qDot3 -= nSelfFlyHndl.nBeta * s2;
-        qDot4 -= nSelfFlyHndl.nBeta * s3;
+        qDot1 -= pSelfFlyHndl->nBeta * s0;
+        qDot2 -= pSelfFlyHndl->nBeta * s1;
+        qDot3 -= pSelfFlyHndl->nBeta * s2;
+        qDot4 -= pSelfFlyHndl->nBeta * s3;
     }
 
     // Integrate rate of change of quaternion to yield quaternion
@@ -997,36 +946,40 @@ void _AHRSupdate()
 
 inline void _CalculatePID()
 {
-    static float            nRCPrevCh[5] = {0, };              // Filter variables
+    static long             nPrevRCVal[5] = {0, };              // Filter variables
     static float            nPrevFineRPY[3];
-    AxisErrRate_T           *pPitch = &(nSelfFlyHndl.nPitch);
-    AxisErrRate_T           *pRoll = &(nSelfFlyHndl.nRoll);
-    AxisErrRate_T           *pYaw = &(nSelfFlyHndl.nYaw);
-    float                   *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
-    float                   *pFineGyro = &(nSelfFlyHndl.nFineGyro[0]);
-    float                   *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
-    const float             nDiffTime = nSelfFlyHndl.nDiffTime;
+    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
+    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
+    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
+    long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
+    float                   *pFineGyro = &(pSelfFlyHndl->nFineGyro[0]);
+    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    const float             nDiffTime = pSelfFlyHndl->nDiffTime;
 
-    pRCCh[CH_TYPE_ROLL] = floor(pRCCh[CH_TYPE_ROLL] / ROUNDING_BASE) * ROUNDING_BASE;
-    pRCCh[CH_TYPE_PITCH] = floor(pRCCh[CH_TYPE_PITCH] / ROUNDING_BASE) * ROUNDING_BASE;
-    pRCCh[CH_TYPE_YAW] = floor(pRCCh[CH_TYPE_YAW] / ROUNDING_BASE) * ROUNDING_BASE;
-
-    pRCCh[CH_TYPE_ROLL] = map(pRCCh[CH_TYPE_ROLL], RC_CH0_LOW, RC_CH0_HIGH, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
-    pRCCh[CH_TYPE_PITCH] = map(pRCCh[CH_TYPE_PITCH], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
-    pRCCh[CH_TYPE_YAW] = map(pRCCh[CH_TYPE_YAW], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
-
-    if((pRCCh[CH_TYPE_ROLL] < ROLL_ANG_MIN) || (pRCCh[CH_TYPE_ROLL] > ROLL_ANG_MAX))
-        pRCCh[CH_TYPE_ROLL] = nRCPrevCh[CH_TYPE_ROLL];
+    pSelfFlyHndl->nLock = true;
+    memcpy(pUsingRCVal, &(pSelfFlyHndl->nCapturedRCVal[0]), MAX_CH_RC * sizeof(long));
+    pSelfFlyHndl->nLock = false;
     
-    if((pRCCh[CH_TYPE_PITCH] < PITCH_ANG_MIN) || (pRCCh[CH_TYPE_PITCH] > PITCH_ANG_MAX))
-        pRCCh[CH_TYPE_PITCH] = nRCPrevCh[CH_TYPE_PITCH];
-    
-    if((pRCCh[CH_TYPE_YAW] < YAW_RATE_MIN) || (pRCCh[CH_TYPE_YAW] > YAW_RATE_MAX))
-        pRCCh[CH_TYPE_YAW] = nRCPrevCh[CH_TYPE_YAW];
+    pUsingRCVal[CH_TYPE_ROLL] = floor(pUsingRCVal[CH_TYPE_ROLL] / ROUNDING_BASE) * ROUNDING_BASE;
+    pUsingRCVal[CH_TYPE_PITCH] = floor(pUsingRCVal[CH_TYPE_PITCH] / ROUNDING_BASE) * ROUNDING_BASE;
+    pUsingRCVal[CH_TYPE_YAW] = floor(pUsingRCVal[CH_TYPE_YAW] / ROUNDING_BASE) * ROUNDING_BASE;
 
-    nRCPrevCh[CH_TYPE_ROLL] = pRCCh[CH_TYPE_ROLL];
-    nRCPrevCh[CH_TYPE_PITCH] = pRCCh[CH_TYPE_PITCH];
-    nRCPrevCh[CH_TYPE_YAW] = pRCCh[CH_TYPE_YAW];
+    pUsingRCVal[CH_TYPE_ROLL] = map(pUsingRCVal[CH_TYPE_ROLL], RC_CH0_LOW, RC_CH0_HIGH, ROLL_ANG_MIN, ROLL_ANG_MAX) - 1;
+    pUsingRCVal[CH_TYPE_PITCH] = map(pUsingRCVal[CH_TYPE_PITCH], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
+    pUsingRCVal[CH_TYPE_YAW] = map(pUsingRCVal[CH_TYPE_YAW], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
+
+    //if((pUsingRCVal[CH_TYPE_ROLL] < ROLL_ANG_MIN) || (pUsingRCVal[CH_TYPE_ROLL] > ROLL_ANG_MAX))
+    //    pUsingRCVal[CH_TYPE_ROLL] = nPrevRCVal[CH_TYPE_ROLL];
+    
+    //if((pUsingRCVal[CH_TYPE_PITCH] < PITCH_ANG_MIN) || (pUsingRCVal[CH_TYPE_PITCH] > PITCH_ANG_MAX))
+    //    pUsingRCVal[CH_TYPE_PITCH] = nPrevRCVal[CH_TYPE_PITCH];
+    
+    //if((pUsingRCVal[CH_TYPE_YAW] < YAW_RATE_MIN) || (pUsingRCVal[CH_TYPE_YAW] > YAW_RATE_MAX))
+    //    pUsingRCVal[CH_TYPE_YAW] = nPrevRCVal[CH_TYPE_YAW];
+    
+    nPrevRCVal[CH_TYPE_ROLL] = pUsingRCVal[CH_TYPE_ROLL];
+    nPrevRCVal[CH_TYPE_PITCH] = pUsingRCVal[CH_TYPE_PITCH];
+    nPrevRCVal[CH_TYPE_YAW] = pUsingRCVal[CH_TYPE_YAW];
 
     if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 30)
         pFineRPY[0] = nPrevFineRPY[0];
@@ -1035,7 +988,7 @@ inline void _CalculatePID()
         pFineRPY[1] = nPrevFineRPY[1];
 
     //ROLL control
-    pRoll->nAngleErr = pRCCh[CH_TYPE_ROLL] - pFineRPY[0];
+    pRoll->nAngleErr = pUsingRCVal[CH_TYPE_ROLL] - pFineRPY[0];
     pRoll->nCurrErrRate = pRoll->nAngleErr * ROLL_OUTER_P_GAIN - pFineGyro[0];
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
     pRoll->nI_ErrRate = _Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
@@ -1043,15 +996,15 @@ inline void _CalculatePID()
     pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
 
     //PITCH control
-    pPitch->nAngleErr = pRCCh[CH_TYPE_PITCH] - pFineRPY[1];
-    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN + pFineGyro[1];
+    pPitch->nAngleErr = pUsingRCVal[CH_TYPE_PITCH] - pFineRPY[1];
+    pPitch->nCurrErrRate = pPitch->nAngleErr * PITCH_OUTER_P_GAIN - pFineGyro[1];
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
     pPitch->nI_ErrRate = _Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
     pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
 
     //YAW control
-    pYaw->nCurrErrRate = pRCCh[CH_TYPE_YAW] + pFineGyro[2];// - pFineRPY[2];
+    pYaw->nCurrErrRate = 0;//pUsingRCVal[CH_TYPE_YAW] + pFineGyro[2];// - pFineRPY[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
     pYaw->nI_ErrRate = _Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
     pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
@@ -1069,22 +1022,22 @@ inline void _CalculateThrottleVal()
 {
     float                   nEstimatedThrottle = 0.0f;
     static float            nPrevEstimatedThrottle = 0.0f;
-    AxisErrRate_T           *pPitch = &(nSelfFlyHndl.nPitch);
-    AxisErrRate_T           *pRoll = &(nSelfFlyHndl.nRoll);
-    AxisErrRate_T           *pYaw = &(nSelfFlyHndl.nYaw);
-    unsigned long           *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
-    float                   *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
+    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
+    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
+    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
+    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
 
     memset((void *)(&(pThrottle[0])), ESC_MIN, 4 * sizeof(int32_t));
-
-    pRCCh[CH_TYPE_THROTTLE] = floor(pRCCh[CH_TYPE_THROTTLE] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(pRCCh[CH_TYPE_THROTTLE], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
+    
+    pUsingRCVal[CH_TYPE_THROTTLE] = floor(pUsingRCVal[CH_TYPE_THROTTLE] / ROUNDING_BASE) * ROUNDING_BASE;
+    nEstimatedThrottle = (float)(map(pUsingRCVal[CH_TYPE_THROTTLE], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
 
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
 
     nPrevEstimatedThrottle = nEstimatedThrottle;
-
+    
     if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
     {
         pThrottle[0] = _Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
@@ -1097,165 +1050,102 @@ inline void _CalculateThrottleVal()
 
 inline void _UpdateESCs()
 {
-    unsigned long           *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
+    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     int                     i = 0;
+    unsigned long           nLoopTimer = 0;
+    //while(micros() - loop_timer < 4000);                                      //We wait until 4000us are passed.
+    //loop_timer = micros();                                                    //Set the timer for the next loop.
+    
+    nLoopTimer = micros();
+    
+    PORTB |= B00011110;                                                         //Set Digital Port 8, 9, 10, and 11 as high.
+    
+    // Set Relative Throttle Value by Adding Current Time
+    for(i=0 ; i<MAX_CH_ESC ; i++)
+        pThrottle[i] += nLoopTimer;
 
-    #if !USE_DIRECTACCESS_REG
+    while(PORTB & B00011110)
     {
-        for(i=0 ; i<MAX_CH_ESC ; i++)
-            nSelfFlyHndl.pESC[i]->writeMicroseconds(pThrottle[i]);
+        const unsigned long     nCurrTime = micros();
+        
+        if(pThrottle[0] <= nCurrTime)
+            PORTB &= B11111101;
+        
+        if(pThrottle[1] <= nCurrTime)
+            PORTB &= B11111011;
+        
+        if(pThrottle[2] <= nCurrTime)
+            PORTB &= B11110111;
+        
+        if(pThrottle[3] <= nCurrTime)
+            PORTB &= B11101111;
     }
-    #else
-    {
-        unsigned long       nLoopTimer = 0;
-        //while(micros() - loop_timer < 4000);                                      //We wait until 4000us are passed.
-        //loop_timer = micros();                                                    //Set the timer for the next loop.
-        
-        nLoopTimer = micros();
-        
-        PORTB |= B00011110;                                                         //Set Digital Port 8, 9, 10, and 11 as high.
-        
-        // Set Relative Throttle Value by Adding Current Time
-        for(i=0 ; i<MAX_CH_ESC ; i++)
-            pThrottle[i] += nLoopTimer;
-
-        while(PORTB & B00011110)
-        {
-            const unsigned long     nCurrTime = micros();
-            
-            if(pThrottle[0] <= nCurrTime)
-                PORTB &= B11111101;
-            
-            if(pThrottle[1] <= nCurrTime)
-                PORTB &= B11111011;
-            
-            if(pThrottle[2] <= nCurrTime)
-                PORTB &= B11110111;
-            
-            if(pThrottle[3] <= nCurrTime)
-                PORTB &= B11101111;
-        }
-    }
-    #endif
 }
 
 
-#if !USE_DIRECTACCESS_REG
-inline void _nRCInterrupt_CB0()
-{
-    const unsigned long     nCurrTime = micros();
-
-    if(PIND & B01000000)
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
-    else
-        nSelfFlyHndl.nRCCh[CH_TYPE_ROLL] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL];
-}
-
-
-inline void _nRCInterrupt_CB1()
-{
-    const unsigned long     nCurrTime = micros();
-
-    if(PIND & B00100000)
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
-    else
-        nSelfFlyHndl.nRCCh[CH_TYPE_PITCH] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH];
-}
-
-
-inline void _nRCInterrupt_CB2()
-{
-    const unsigned long     nCurrTime = micros();
-
-    if(PIND & B00010000)
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
-    else
-        nSelfFlyHndl.nRCCh[CH_TYPE_THROTTLE] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE];
-}
-
-
-inline void _nRCInterrupt_CB3()
-{
-    const unsigned long     nCurrTime = micros();
-
-    if(PIND & B00001000)
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
-    else
-        nSelfFlyHndl.nRCCh[CH_TYPE_YAW] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW];
-}
-
-
-inline void _nRCInterrupt_CB4()
-{
-    const unsigned long     nCurrTime = micros();
-
-    if(PIND & B00000100)
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
-    else
-        nSelfFlyHndl.nRCCh[CH_TYPE_TAKE_LAND] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
-}
-#else
 ISR(PCINT2_vect)
 {
     const unsigned long     nCurrTime = micros();
 
+    if(true == pSelfFlyHndl->nLock)
+        return;
+    
     if(PIND & B01000000)
     {
-        if(0 == nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL])
-            nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
     }
-    else if(0 != nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL])
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
     {
-        nSelfFlyHndl.nRCCh[CH_TYPE_ROLL] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL];
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
+        pSelfFlyHndl->nCapturedRCVal[CH_TYPE_ROLL] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
     }
 
 
     if(PIND & B00100000)
     {
-        if(0 == nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH])
-            nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
     }
-    else if(0 != nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH])
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
     {
-        nSelfFlyHndl.nRCCh[CH_TYPE_PITCH] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH];
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_PITCH] = 0;
+        pSelfFlyHndl->nCapturedRCVal[CH_TYPE_PITCH] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = 0;
     }
 
     if(PIND & B00010000)
     {
-        if(0 == nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE])
-            nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
     }
-    else if(0 != nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE])
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE])
     {
-        nSelfFlyHndl.nRCCh[CH_TYPE_THROTTLE] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE];
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
+        pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
     }
 
     if(PIND & B00001000)
     {
-        if(0 == nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW])
-            nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
     }
-    else if(0 != nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW])
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
     {
-        nSelfFlyHndl.nRCCh[CH_TYPE_YAW] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW];
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_YAW] = 0;
+        pSelfFlyHndl->nCapturedRCVal[CH_TYPE_YAW] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = 0;
     }
 
     if(PIND & B00000100)
     {
-        if(0 == nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
-            nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
+        if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
+            pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
     }
-    else if(0 != nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
+    else if(0 != pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
     {
-        nSelfFlyHndl.nRCCh[CH_TYPE_TAKE_LAND] = nCurrTime - nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
-        nSelfFlyHndl.nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = 0;
+        pSelfFlyHndl->nCapturedRCVal[CH_TYPE_TAKE_LAND] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
+        pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = 0;
     }
 }
-#endif
 
 
 float _Clip3Float(const float nValue, const int MIN, const int MAX)
@@ -1306,68 +1196,104 @@ float _InvSqrt(float nNumber)
 
 
 #if __PRINT_DEBUG__
-void _print_RC_Signals()
+void _print_CaturedRC_Signals()
 {
-     float          *pRCCh = &(nSelfFlyHndl.nRCCh[0]);
+    long                    *pCapturedRCVal = &(pSelfFlyHndl->nCapturedRCVal[0]);
 
     Serialprint("   //   RC_Roll:");
-    if(pRCCh[CH_TYPE_ROLL] - 1480 < 0)Serialprint("<<<");
-    else if(pRCCh[CH_TYPE_ROLL] - 1520 > 0)Serialprint(">>>");
+    if(pCapturedRCVal[CH_TYPE_ROLL] - 1480 < 0)Serialprint("<<<");
+    else if(pCapturedRCVal[CH_TYPE_ROLL] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(pRCCh[CH_TYPE_ROLL]);
+    Serialprint(pCapturedRCVal[CH_TYPE_ROLL]);
 
     Serialprint("   RC_Pitch:");
-    if(pRCCh[CH_TYPE_PITCH] - 1480 < 0)Serialprint("^^^");
-    else if(pRCCh[CH_TYPE_PITCH] - 1520 > 0)Serialprint("vvv");
+    if(pCapturedRCVal[CH_TYPE_PITCH] - 1480 < 0)Serialprint("^^^");
+    else if(pCapturedRCVal[CH_TYPE_PITCH] - 1520 > 0)Serialprint("vvv");
     else Serialprint("-+-");
-    Serialprint(pRCCh[CH_TYPE_PITCH]);
+    Serialprint(pCapturedRCVal[CH_TYPE_PITCH]);
 
     Serialprint("   RC_Throttle:");
-    if(pRCCh[CH_TYPE_THROTTLE] - 1480 < 0)Serialprint("vvv");
-    else if(pRCCh[CH_TYPE_THROTTLE] - 1520 > 0)Serialprint("^^^");
+    if(pCapturedRCVal[CH_TYPE_THROTTLE] - 1480 < 0)Serialprint("vvv");
+    else if(pCapturedRCVal[CH_TYPE_THROTTLE] - 1520 > 0)Serialprint("^^^");
     else Serialprint("-+-");
-    Serialprint(pRCCh[CH_TYPE_THROTTLE]);
+    Serialprint(pCapturedRCVal[CH_TYPE_THROTTLE]);
 
     Serialprint("   RC_Yaw:");
-    if(pRCCh[CH_TYPE_YAW] - 1480 < 0)Serialprint("<<<");
-    else if(pRCCh[CH_TYPE_YAW] - 1520 > 0)Serialprint(">>>");
+    if(pCapturedRCVal[CH_TYPE_YAW] - 1480 < 0)Serialprint("<<<");
+    else if(pCapturedRCVal[CH_TYPE_YAW] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(pRCCh[CH_TYPE_YAW]);
+    Serialprint(pCapturedRCVal[CH_TYPE_YAW]);
 
     Serialprint("   RC_Gear:");
-    if(pRCCh[CH_TYPE_TAKE_LAND] - 1480 < 0)Serialprint("<<<");
-    else if(pRCCh[CH_TYPE_TAKE_LAND] - 1520 > 0)Serialprint(">>>");
+    if(pCapturedRCVal[CH_TYPE_TAKE_LAND] - 1480 < 0)Serialprint("<<<");
+    else if(pCapturedRCVal[CH_TYPE_TAKE_LAND] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
-    Serialprint(pRCCh[CH_TYPE_TAKE_LAND]);
+    Serialprint(pCapturedRCVal[CH_TYPE_TAKE_LAND]);
+}
+
+
+void _print_UsingRC_Signals()
+{
+    long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
+    
+    Serialprint("   //   RC_Roll:");
+    if(pUsingRCVal[CH_TYPE_ROLL] - 1480 < 0)Serialprint("<<<");
+    else if(pUsingRCVal[CH_TYPE_ROLL] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
+    
+    Serialprint("   RC_Pitch:");
+    if(pUsingRCVal[CH_TYPE_PITCH] - 1480 < 0)Serialprint("^^^");
+    else if(pUsingRCVal[CH_TYPE_PITCH] - 1520 > 0)Serialprint("vvv");
+    else Serialprint("-+-");
+    Serialprint(pUsingRCVal[CH_TYPE_PITCH]);
+    
+    Serialprint("   RC_Throttle:");
+    if(pUsingRCVal[CH_TYPE_THROTTLE] - 1480 < 0)Serialprint("vvv");
+    else if(pUsingRCVal[CH_TYPE_THROTTLE] - 1520 > 0)Serialprint("^^^");
+    else Serialprint("-+-");
+    Serialprint(pUsingRCVal[CH_TYPE_THROTTLE]);
+    
+    Serialprint("   RC_Yaw:");
+    if(pUsingRCVal[CH_TYPE_YAW] - 1480 < 0)Serialprint("<<<");
+    else if(pUsingRCVal[CH_TYPE_YAW] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(pUsingRCVal[CH_TYPE_YAW]);
+    
+    Serialprint("   RC_Gear:");
+    if(pUsingRCVal[CH_TYPE_TAKE_LAND] - 1480 < 0)Serialprint("<<<");
+    else if(pUsingRCVal[CH_TYPE_TAKE_LAND] - 1520 > 0)Serialprint(">>>");
+    else Serialprint("-+-");
+    Serialprint(pUsingRCVal[CH_TYPE_TAKE_LAND]);
 }
 
 
 void _print_Gyro_Signals()
 {
-    float                   *pFineAngle = &(nSelfFlyHndl.nAccelGyroParam.nFineAngle[0]);
+    float                   *pFineAngle = &(pSelfFlyHndl->nAccelGyroParam.nFineAngle[0]);
 
     Serialprint("   Gx: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawGyro[0]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[0]);
     Serialprint("   Gy: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawGyro[1]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[1]);
     Serialprint("   Gz: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawGyro[2]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawGyro[2]);
 
     Serialprint("   Ax: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawAccel[0]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[0]);
     Serialprint("   Ay: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawAccel[1]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[1]);
     Serialprint("   Az: ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawAccel[2]);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawAccel[2]);
 
     Serialprint("   Temp : ");
-    Serialprint(nSelfFlyHndl.nAccelGyroParam.nRawTemp/340.00 + 36.53);
+    Serialprint(pSelfFlyHndl->nAccelGyroParam.nRawTemp/340.00 + 36.53);
 }
 
 
 void _print_Throttle_Signals()
 {
-     unsigned long  *pThrottle = &(nSelfFlyHndl.nThrottle[0]);
+     unsigned long  *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
 
     Serialprint("   //    Thrt1 : ");
     Serialprint(pThrottle[0]);
@@ -1382,7 +1308,7 @@ void _print_Throttle_Signals()
 
 void _print_RPY_Signals()
 {
-     float          *pFineRPY = &(nSelfFlyHndl.nFineRPY[0]);
+     float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
 
     Serialprint("   //    Roll: ");
     Serialprint(pFineRPY[0]);
@@ -1394,7 +1320,7 @@ void _print_RPY_Signals()
 
 void _print_MagData()
 {
-    MagneticParam_T         *pMagParam = &(nSelfFlyHndl.nMagParam);
+    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
 
     Serialprint("   //   Mx:"); Serialprint(pMagParam->nRawMag[0]);
     Serialprint("   pRawMag[Y_AXIS]:"); Serialprint(pMagParam->nRawMag[1]);
@@ -1405,7 +1331,7 @@ void _print_MagData()
 
 void _print_BarometerData()
 {
-    BaroParam_T             *pBaroParam = &(nSelfFlyHndl.nBaroParam);
+    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
 
     Serialprint("   //    Barometer AvgTemp:"); Serialprint(pBaroParam->nAvgTemp);
     Serialprint("   AvgPress:"); Serialprint(pBaroParam->nAvgPressure);
@@ -1418,7 +1344,7 @@ void _print_BarometerData()
 void _print_SonarData()
 {
     Serialprint("   //    Sonar: ");
-    Serialprint(nSelfFlyHndl.SonicParam.nDistFromGnd);
+    Serialprint(pSelfFlyHndl->SonicParam.nDistFromGnd);
     Serialprintln("cm   ");
 }
 #endif
