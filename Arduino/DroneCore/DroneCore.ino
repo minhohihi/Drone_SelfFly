@@ -36,28 +36,28 @@
 #define MAX_CH_ESC                          (4)
 
 // Arduino Pin configuration
-#define PIN_SONAR_TRIG                      (13)
-#define PIN_SONAR_ECHO                      (12)
-#define PIN_ESC_CH2                         (11)
-#define PIN_ESC_CH1                         (10)
-#define PIN_ESC_CH3                         (9)
+#define PIN_RESERVED_D13                    (13)
+#define PIN_RESERVED_D12                    (12)
+#define PIN_ESC_CH3                         (11)
+#define PIN_ESC_CH2                         (10)
+#define PIN_ESC_CH1                         (9)
 #define PIN_ESC_CH0                         (8)
-#define PIN_RESERVED_D02                    (7)
-#define PIN_RC_CH0                          (6)
-#define PIN_RC_CH1                          (5)
+#define PIN_RESERVED_D07                    (7)
+#define PIN_RC_CH4                          (6)
+#define PIN_RC_CH3                          (5)
 #define PIN_RC_CH2                          (4)
-#define PIN_RC_CH3                          (3)
-#define PIN_RC_CH4                          (2)
+#define PIN_RC_CH1                          (3)
+#define PIN_RC_CH0                          (2)
 #define PIN_RESERVED_D01                    (1)
 #define PIN_RESERVED_D00                    (0)
 #define PIN_RESERVED_A07                    (A7)
 #define PIN_RESERVED_A06                    (A6)
-#define PIN_RESERVED_A05                    (A5)
-#define PIN_RESERVED_A04                    (A4)
-#define PIN_RESERVED_A03                    (A3)
+#define PIN_GY86_SCL                        (A5)
+#define PIN_GY86_SDA                        (A4)
+#define PIN_CHECK_POWER_STAT                (A3)
 #define PIN_RESERVED_A02                    (A2)
-#define PIN_RESERVED_A01                    (A1)
-#define PIN_CHECK_POWER_STAT                (A0)
+#define PIN_SONAR_TRIG                      (A1)
+#define PIN_SONAR_ECHO                      (A0)
 
 // ESC configuration
 #define ESC_MIN                             (1000)
@@ -485,7 +485,7 @@ void _Check_Drone_Status()
 void _ESC_Initialize()
 {
     // Set Digital Port 8, 9, 10, and 11 as Output
-    DDRB |= B00011110;
+    DDRB |= B00001111;
     
     delay(100);
     
@@ -1058,27 +1058,27 @@ inline void _UpdateESCs()
     
     nLoopTimer = micros();
     
-    PORTB |= B00011110;                                                         //Set Digital Port 8, 9, 10, and 11 as high.
+    PORTB |= B00001111;                                                         //Set Digital Port 8, 9, 10, and 11 as high.
     
     // Set Relative Throttle Value by Adding Current Time
     for(i=0 ; i<MAX_CH_ESC ; i++)
         pThrottle[i] += nLoopTimer;
 
-    while(PORTB & B00011110)
+    while(PORTB & B00001111)
     {
         const unsigned long     nCurrTime = micros();
         
         if(pThrottle[0] <= nCurrTime)
-            PORTB &= B11111101;
+            PORTB &= B11111110;
         
         if(pThrottle[1] <= nCurrTime)
-            PORTB &= B11111011;
+            PORTB &= B11111101;
         
         if(pThrottle[2] <= nCurrTime)
-            PORTB &= B11110111;
+            PORTB &= B11111011;
         
         if(pThrottle[3] <= nCurrTime)
-            PORTB &= B11101111;
+            PORTB &= B11110111;
     }
 }
 
