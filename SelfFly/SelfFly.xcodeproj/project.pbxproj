@@ -95,6 +95,19 @@
 		8B71B73C1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73B1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c */; };
 		8B71B73E1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73D1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c */; };
 		8B71B7401C15D97000A9B7F0 /* Read_Barometer_MS5611.c in Sources */ = {isa = PBXBuildFile; fileRef = 8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */; };
+		8BF96BD11C50DACE005A028B /* AHRS_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC41C50DACE005A028B /* AHRS_Control.h */; };
+		8BF96BD21C50DACE005A028B /* CommHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC51C50DACE005A028B /* CommHeader.h */; };
+		8BF96BD31C50DACE005A028B /* Debugger.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC61C50DACE005A028B /* Debugger.h */; };
+		8BF96BD41C50DACE005A028B /* ESC_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC71C50DACE005A028B /* ESC_Control.h */; };
+		8BF96BD51C50DACE005A028B /* ExtComm_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC81C50DACE005A028B /* ExtComm_Control.h */; };
+		8BF96BD61C50DACE005A028B /* HMC5883L_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC91C50DACE005A028B /* HMC5883L_Control.h */; };
+		8BF96BD71C50DACE005A028B /* HS5611_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCA1C50DACE005A028B /* HS5611_Control.h */; };
+		8BF96BD81C50DACE005A028B /* LED_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCB1C50DACE005A028B /* LED_Control.h */; };
+		8BF96BD91C50DACE005A028B /* Misc.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCC1C50DACE005A028B /* Misc.h */; };
+		8BF96BDA1C50DACE005A028B /* MPU6050_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCD1C50DACE005A028B /* MPU6050_Control.h */; };
+		8BF96BDB1C50DACE005A028B /* PID_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCE1C50DACE005A028B /* PID_Control.h */; };
+		8BF96BDC1C50DACE005A028B /* RC_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCF1C50DACE005A028B /* RC_Control.h */; };
+		8BF96BDD1C50DACE005A028B /* SR04_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BD01C50DACE005A028B /* SR04_Control.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -432,6 +445,19 @@
 		8B71B73B1C15BD9700A9B7F0 /* Read_AccelGyro_MPU6050.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_AccelGyro_MPU6050.c; path = ../Arduino/Example/Read_AccelGyro_MPU6050.c; sourceTree = "<group>"; };
 		8B71B73D1C15D62600A9B7F0 /* Read_Magnetic_HMC5883L.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_Magnetic_HMC5883L.c; path = ../Arduino/Example/Read_Magnetic_HMC5883L.c; sourceTree = "<group>"; };
 		8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = Read_Barometer_MS5611.c; path = ../Arduino/Example/Read_Barometer_MS5611.c; sourceTree = "<group>"; };
+		8BF96BC41C50DACE005A028B /* AHRS_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AHRS_Control.h; path = ../Arduino/DroneCore/AHRS_Control.h; sourceTree = "<group>"; };
+		8BF96BC51C50DACE005A028B /* CommHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommHeader.h; path = ../Arduino/DroneCore/CommHeader.h; sourceTree = "<group>"; };
+		8BF96BC61C50DACE005A028B /* Debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Debugger.h; path = ../Arduino/DroneCore/Debugger.h; sourceTree = "<group>"; };
+		8BF96BC71C50DACE005A028B /* ESC_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ESC_Control.h; path = ../Arduino/DroneCore/ESC_Control.h; sourceTree = "<group>"; };
+		8BF96BC81C50DACE005A028B /* ExtComm_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ExtComm_Control.h; path = ../Arduino/DroneCore/ExtComm_Control.h; sourceTree = "<group>"; };
+		8BF96BC91C50DACE005A028B /* HMC5883L_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HMC5883L_Control.h; path = ../Arduino/DroneCore/HMC5883L_Control.h; sourceTree = "<group>"; };
+		8BF96BCA1C50DACE005A028B /* HS5611_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HS5611_Control.h; path = ../Arduino/DroneCore/HS5611_Control.h; sourceTree = "<group>"; };
+		8BF96BCB1C50DACE005A028B /* LED_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LED_Control.h; path = ../Arduino/DroneCore/LED_Control.h; sourceTree = "<group>"; };
+		8BF96BCC1C50DACE005A028B /* Misc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Misc.h; path = ../Arduino/DroneCore/Misc.h; sourceTree = "<group>"; };
+		8BF96BCD1C50DACE005A028B /* MPU6050_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MPU6050_Control.h; path = ../Arduino/DroneCore/MPU6050_Control.h; sourceTree = "<group>"; };
+		8BF96BCE1C50DACE005A028B /* PID_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PID_Control.h; path = ../Arduino/DroneCore/PID_Control.h; sourceTree = "<group>"; };
+		8BF96BCF1C50DACE005A028B /* RC_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RC_Control.h; path = ../Arduino/DroneCore/RC_Control.h; sourceTree = "<group>"; };
+		8BF96BD01C50DACE005A028B /* SR04_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SR04_Control.h; path = ../Arduino/DroneCore/SR04_Control.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1724,6 +1750,19 @@
 				8B71B73F1C15D97000A9B7F0 /* Read_Barometer_MS5611.c */,
 				8B367F351BEE301400CB9B92 /* DroneCore.cpp */,
 				8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */,
+				8BF96BC41C50DACE005A028B /* AHRS_Control.h */,
+				8BF96BC51C50DACE005A028B /* CommHeader.h */,
+				8BF96BC61C50DACE005A028B /* Debugger.h */,
+				8BF96BC71C50DACE005A028B /* ESC_Control.h */,
+				8BF96BC81C50DACE005A028B /* ExtComm_Control.h */,
+				8BF96BC91C50DACE005A028B /* HMC5883L_Control.h */,
+				8BF96BCA1C50DACE005A028B /* HS5611_Control.h */,
+				8BF96BCB1C50DACE005A028B /* LED_Control.h */,
+				8BF96BCC1C50DACE005A028B /* Misc.h */,
+				8BF96BCD1C50DACE005A028B /* MPU6050_Control.h */,
+				8BF96BCE1C50DACE005A028B /* PID_Control.h */,
+				8BF96BCF1C50DACE005A028B /* RC_Control.h */,
+				8BF96BD01C50DACE005A028B /* SR04_Control.h */,
 				8B0F2ABE1BF57A7E0044F792 /* _Stub */,
 				8B0F2AC11BF57A7E0044F792 /* AD7746 */,
 				8B0F2AC51BF57A7E0044F792 /* ADS1115 */,
@@ -1777,18 +1816,24 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8BF96BD91C50DACE005A028B /* Misc.h in Headers */,
 				8B0F2CD81BF57A7F0044F792 /* MPU6050_6Axis_MotionApps20.h in Headers */,
 				8B0F2CAF1BF57A7F0044F792 /* calibration.h in Headers */,
+				8BF96BD11C50DACE005A028B /* AHRS_Control.h in Headers */,
 				8B0F2CAE1BF57A7F0044F792 /* DS1307.h in Headers */,
 				8B0F2CD51BF57A7F0044F792 /* helper_3dmath.h in Headers */,
 				8B0F2CD71BF57A7F0044F792 /* MPU6050.h in Headers */,
+				8BF96BD21C50DACE005A028B /* CommHeader.h in Headers */,
+				8BF96BD31C50DACE005A028B /* Debugger.h in Headers */,
 				8B0F2CD01BF57A7F0044F792 /* MPR121.h in Headers */,
 				8B0F2CC01BF57A7F0044F792 /* I2Cdev.h in Headers */,
+				8BF96BD71C50DACE005A028B /* HS5611_Control.h in Headers */,
 				8B0F2C9F1BF57A7F0044F792 /* ADXL345.h in Headers */,
 				8B0F2CBC1BF57A7F0044F792 /* HMC5843.h in Headers */,
 				8B0F2CD91BF57A7F0044F792 /* MPU6050_9Axis_MotionApps41.h in Headers */,
 				8B0F2CE21BF57A7F0044F792 /* MS561101BA.h in Headers */,
 				8B0F2CF11BF57A7F0044F792 /* TCA6424A.h in Headers */,
+				8BF96BDC1C50DACE005A028B /* RC_Control.h in Headers */,
 				8B0F2CEC1BF57A7F0044F792 /* Servo.h in Headers */,
 				8B0F2CC81BF57A7F0044F792 /* L3G4200D.h in Headers */,
 				8B0F2C991BF57A7F0044F792 /* _Stub.h in Headers */,
@@ -1796,6 +1841,7 @@
 				8B0F2C9D1BF57A7F0044F792 /* ADS1115.h in Headers */,
 				8B0F2CB21BF57A7F0044F792 /* calibration.h in Headers */,
 				8B0F2CB41BF57A7F0044F792 /* CommunicationUtils.h in Headers */,
+				8BF96BDB1C50DACE005A028B /* PID_Control.h in Headers */,
 				8B0F2CA51BF57A7F0044F792 /* BMA150.h in Headers */,
 				8B0F2CDD1BF57A7F0044F792 /* MPU9150_9Axis_MotionApps41.h in Headers */,
 				8B0F2CC21BF57A7F0044F792 /* IAQ2000.h in Headers */,
@@ -1805,6 +1851,7 @@
 				8B0F2CB81BF57A7F0044F792 /* vector_math.h in Headers */,
 				8B0F2CA11BF57A7F0044F792 /* ADXL345.h in Headers */,
 				8B0F2CE71BF57A7F0044F792 /* Sensors.h in Headers */,
+				8BF96BD81C50DACE005A028B /* LED_Control.h in Headers */,
 				8B0F2CC41BF57A7F0044F792 /* ITG3200.h in Headers */,
 				8B0F2CE41BF57A7F0044F792 /* ByteBuffer.h in Headers */,
 				8B0F2CE61BF57A7F0044F792 /* PinChangeIntConfig.h in Headers */,
@@ -1814,10 +1861,15 @@
 				8B0F2CEF1BF57A7F0044F792 /* SSD1308.h in Headers */,
 				8B0F2CAB1BF57A7F0044F792 /* BMP085.h in Headers */,
 				8B0F2CCA1BF57A7F0044F792 /* L3GD20H.h in Headers */,
+				8BF96BD51C50DACE005A028B /* ExtComm_Control.h in Headers */,
 				8B0F2CDC1BF57A7F0044F792 /* MPU9150.h in Headers */,
+				8BF96BD61C50DACE005A028B /* HMC5883L_Control.h in Headers */,
 				8B0F2CB71BF57A7F0044F792 /* FreeIMU.h in Headers */,
 				8B0F2C9B1BF57A7F0044F792 /* AD7746.h in Headers */,
 				8B0F2CBE1BF57A7F0044F792 /* HMC5883L.h in Headers */,
+				8BF96BD41C50DACE005A028B /* ESC_Control.h in Headers */,
+				8BF96BDA1C50DACE005A028B /* MPU6050_Control.h in Headers */,
+				8BF96BDD1C50DACE005A028B /* SR04_Control.h in Headers */,
 				8B0F2CCE1BF57A7F0044F792 /* LSM303DLHC.h in Headers */,
 				8B0F2CCC1BF57A7F0044F792 /* LM73.h in Headers */,
 				8B0F2CA91BF57A7F0044F792 /* BMP085.h in Headers */,
