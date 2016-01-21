@@ -80,3 +80,4 @@ void _Barometer_CalculateData()
     pBaroParam->nPrevAvgAbsoluteAltitude = pBaroParam->nAvgAbsoluteAltitude;
 }
 #endif /* HS5611_Controller_h */
+

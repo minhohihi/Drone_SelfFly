@@ -94,3 +94,4 @@ void _Mag_CalculateDirection()
 }
 
 #endif /* HMC5883L_Controller_h */
+

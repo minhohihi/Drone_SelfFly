@@ -161,6 +161,9 @@ typedef struct _SelfFly_T
     
     // For Battery Status
     float               nCurrBatteryVolt;
+    
+    // For LED Control
+    unsigned long       nPrevBlinkTime;
 }SelfFly_T;
 
 
@@ -184,6 +187,7 @@ static SelfFly_T                   *pSelfFlyHndl = NULL;                        
  Function Implementation
  ----------------------------------------------------------------------------------------*/
 #include "CommHeader.h"
+#include "LED_Control.h"
 #include "RC_Control.h"
 #include "ESC_Control.h"
 #include "MPU6050_Control.h"
@@ -238,6 +242,9 @@ void setup()
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
     
+    // Initialize LED
+    _LED_Initialize();
+    
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
     pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
@@ -291,6 +298,8 @@ void loop()
     
     // Update BLDCs
     _UpdateESCs();
+    
+    _LED_Blink();
     
     #if __PROFILE__
     nEndTime = micros();

@@ -18,13 +18,13 @@
 #define MAX_CH_ESC                          (4)
 
 // Arduino Pin configuration
-#define PIN_RESERVED_D13                    (13)
-#define PIN_RESERVED_D12                    (12)
+#define PIN_LED_BLUE                        (13)
+#define PIN_LED_GREEN                       (12)
 #define PIN_ESC_CH3                         (11)
 #define PIN_ESC_CH2                         (10)
 #define PIN_ESC_CH1                         (9)
 #define PIN_ESC_CH0                         (8)
-#define PIN_RESERVED_D07                    (7)
+#define PIN_LED_RED                         (7)
 #define PIN_RC_CH4                          (6)
 #define PIN_RC_CH3                          (5)
 #define PIN_RC_CH2                          (4)
@@ -115,7 +115,11 @@
 #define DRONE_STOP_TIME_TH                  (3000)                          // Unit: num of loop() count, About 30 Sec.
 
 
+// LED Control
+#define LED_BLINK_PERIOD                    (1000)                          // 1000 ms
+
 
 
 
 #endif /* CommHeader_h */
+

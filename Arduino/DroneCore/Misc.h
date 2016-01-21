@@ -29,6 +29,8 @@ void _Check_Drone_Status()
         
         pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
         
+        _LED_SetColor(0, 1, 0);
+        
         return;
     }
     else if(DRONESTATUS_STOP < pSelfFlyHndl->nDroneStatus)
@@ -43,12 +45,16 @@ void _Check_Drone_Status()
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
+                
+                _LED_SetColor(0, 0, 1);
             }
             
             if(nLoopCnt > DRONE_STOP_TIME_TH)
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
+                
+                _LED_SetColor(1, 0, 0);
             }
         }
         else
@@ -57,6 +63,8 @@ void _Check_Drone_Status()
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
+                
+                _LED_SetColor(0, 1, 0);
             }
         }
     }
@@ -140,3 +148,4 @@ float _InvSqrt(float nNumber)
 }
 
 #endif /* Misc_h */
+
