@@ -29,7 +29,7 @@ void _Check_Drone_Status()
         
         pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
         
-        _LED_SetColor(0, 1, 0);
+        _LED_SetColor(0, 1, 0, 1);
         
         return;
     }
@@ -46,7 +46,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
                 
-                _LED_SetColor(0, 0, 1);
+                _LED_SetColor(0, 0, 1, 1);
             }
             
             if(nLoopCnt > DRONE_STOP_TIME_TH)
@@ -54,7 +54,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
                 
-                _LED_SetColor(1, 0, 0);
+                _LED_SetColor(1, 0, 0, 1);
             }
         }
         else
@@ -64,7 +64,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
                 
-                _LED_SetColor(0, 1, 0);
+                _LED_SetColor(0, 1, 0, 1);
             }
         }
     }

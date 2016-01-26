@@ -17,7 +17,7 @@ void _ESC_Initialize()
     delay(100);
     
     // Set Value of Digital Port 8, 9, 10, and 11 as Low to Initialize ESCs
-    PORTB |= B00000000;
+    PORTB &= B11110000;
 }
 
 inline void _UpdateESCs()

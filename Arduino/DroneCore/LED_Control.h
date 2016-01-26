@@ -8,32 +8,38 @@
 #ifndef __LED_CONTROL__
 #define __LED_CONTROL__
 
-static int      nPrevR = 0;
-static int      nPrevG = 0;
-static int      nPrevB = 0;
-
-void _LED_SetColor(int nRed, int nGreen, int nBlue);
+void _LED_SetColor(const int nRed, const int nGreen, const int nBlue, const int bBackUp);
 
 void _LED_Initialize()
 {
     int             i = 0;
 
-    _LED_SetColor(0, 0, 0);
+    // Set Digital Port 7, 12, and 13 as Output
+    DDRB |= B00110000;
+    DDRD |= B10000000;
+    
+    // Set Value of Digital Port 7, 12, and 13 as Low to Initialize LED
+    PORTB &= B11001111;
+    PORTD &= B01111111;
+    
+    _LED_SetColor(1, 1, 1, 1);
 
     delay(1000);
     
     for(i=0 ; i<3 ; i++)
     {
-        _LED_SetColor(1, 0, 0);
+        _LED_SetColor(1, 0, 0, 1);
         delay(500);
-        _LED_SetColor(0, 1, 0);
+        _LED_SetColor(0, 1, 0, 1);
         delay(500);
-        _LED_SetColor(0, 0, 1);
+        _LED_SetColor(0, 0, 1, 1);
         delay(500);
     }
+
+    pSelfFlyHndl->nPrevBlinkTime = micros();  
 }
 
-void _LED_SetColor(int nRed, int nGreen, int nBlue)
+void _LED_SetColor(int nRed, int nGreen, int nBlue, const int bBackUp)
 {
     // Digital Port 7
     if(0 != nRed)
@@ -43,24 +49,23 @@ void _LED_SetColor(int nRed, int nGreen, int nBlue)
     
     // Digital Port 12
     if(0 != nGreen)
-        PORTB |= B01000000;
+        PORTB |= B00010000;
     else
-        PORTB &= B10111111;
+        PORTB &= B11101111;
     
     // Digital Port 13
     if(0 != nBlue)
-        PORTB |= B10000000;
+        PORTB |= B00100000;
     else
-        PORTB &= B01111111;
-    
-    //analogWrite(PIN_LED_RED, nRed);
-    //analogWrite(PIN_LED_GREEN, nGreen);
-    //analogWrite(PIN_LED_BLUE, nBlue);
+        PORTB &= B11011111;
     
     // Backup Current LED Values
-    nPrevR = nRed;
-    nPrevG = nGreen;
-    nPrevB = nBlue;
+    if(0 != bBackUp)
+    {
+        pSelfFlyHndl->nPrevR = nRed;
+        pSelfFlyHndl->nPrevG = nGreen;
+        pSelfFlyHndl->nPrevB = nBlue;
+    }
 }
 
 
@@ -72,9 +77,9 @@ void _LED_Blink()
     if((nCurrTime - pSelfFlyHndl->nPrevBlinkTime) > LED_BLINK_PERIOD)
     {
         if(0 == nLED_Status)
-            _LED_SetColor(nPrevR, nPrevG, nPrevB);
+            _LED_SetColor(pSelfFlyHndl->nPrevR, pSelfFlyHndl->nPrevG, pSelfFlyHndl->nPrevB, 1);
         else
-            _LED_SetColor(0, 0, 0);
+            _LED_SetColor(0, 0, 0, 0);
         
         nLED_Status = !(nLED_Status);
         

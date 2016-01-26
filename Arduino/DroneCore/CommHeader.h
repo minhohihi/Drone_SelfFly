@@ -116,7 +116,7 @@
 
 
 // LED Control
-#define LED_BLINK_PERIOD                    (1000)                          // 1000 ms
+#define LED_BLINK_PERIOD                    (1000000)                       // 1000 ms
 
 
 

@@ -163,6 +163,9 @@ typedef struct _SelfFly_T
     float               nCurrBatteryVolt;
     
     // For LED Control
+    int                 nPrevR;
+    int                 nPrevG;
+    int                 nPrevB;
     unsigned long       nPrevBlinkTime;
 }SelfFly_T;
 
