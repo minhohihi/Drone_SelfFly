@@ -8,6 +8,8 @@
 #ifndef __PID_CONTROL__
 #define __PID_CONTROL__
 
+void _Calculate_Altitude(float *pEstimatedThrottle);
+
 inline void _CalculatePID()
 {
     static long             nPrevRCVal[5] = {0, };              // Filter variables
@@ -96,7 +98,7 @@ inline void _CalculateThrottleVal()
     
     pUsingRCVal[CH_TYPE_THROTTLE] = floor(pUsingRCVal[CH_TYPE_THROTTLE] / ROUNDING_BASE) * ROUNDING_BASE;
     nEstimatedThrottle = (float)(map(pUsingRCVal[CH_TYPE_THROTTLE], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
-
+    
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
 
@@ -111,6 +113,17 @@ inline void _CalculateThrottleVal()
     }
 }
 
+
+void _Calculate_Altitude(float *pEstimatedThrottle)
+{
+    const long              *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
+    const float             nDistFromGnd = pSelfFlyHndl->SonicParam.nDistFromGnd;
+
+    if(1500 < pUsingRCVal[CH_TYPE_TAKE_LAND])
+    {
+        //(nDistFromGnd - HOVERING_ALTITUDE)
+    }
+}
 
 #endif /* PID_Controller_h */
 

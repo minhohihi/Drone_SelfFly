@@ -102,6 +102,7 @@
 
 // Sonar sensor
 #define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
+#define SONAR_GETDATA_PERIOD                (200000)                        // Unit: micro second
 
 #define ROUNDING_BASE                       (10)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
@@ -116,9 +117,11 @@
 
 
 // LED Control
-#define LED_BLINK_PERIOD                    (1000000)                       // 1000 ms
+#define LED_BLINK_PERIOD                    (1000000)                       // Unit: micro second
 
 
+// Hovering
+#define HOVERING_ALTITUDE                   (150)                           // Unit: Centimeter
 
 
 #endif /* CommHeader_h */

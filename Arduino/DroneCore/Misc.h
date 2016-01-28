@@ -90,6 +90,7 @@ void _GetSensorRawData()
     
     // Get Sonar Raw Data
     //_Sonar_GetData();
+    _Sonar_GetData_WithPeriod();
 }
 
 
