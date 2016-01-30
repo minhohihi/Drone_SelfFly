@@ -44,7 +44,7 @@
 // ESC configuration
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
-#define ESC_TAKEOFF_OFFSET                  (999)
+#define ESC_TAKEOFF_OFFSET                  (1050)
 #define ESC_ARM_DELAY                       (1000)
 
 // RC configuration
@@ -99,10 +99,9 @@
 #define MPU6050_ACCEL_OFFSET_Y              (-737)
 #define MPU6050_ACCEL_OFFSET_Z              (0)
 
-
 // Sonar sensor
 #define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
-#define SONAR_GETDATA_PERIOD                (200000)                        // Unit: micro second
+#define SONAR_GETDATA_PERIOD                (200000)                        // Unit: microsecond
 
 #define ROUNDING_BASE                       (10)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
@@ -114,10 +113,10 @@
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
 
 #define DRONE_STOP_TIME_TH                  (3000)                          // Unit: num of loop() count, About 30 Sec.
-
+#define RPY_OFFSET_DELAY                    (4000000)                       // Unit: microsecond
 
 // LED Control
-#define LED_BLINK_PERIOD                    (1000000)                       // Unit: micro second
+#define LED_BLINK_PERIOD                    (1000000)                       // Unit: microsecond
 
 
 // Hovering

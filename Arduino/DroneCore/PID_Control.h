@@ -86,31 +86,43 @@ inline void _CalculatePID()
 
 inline void _CalculateThrottleVal()
 {
-    float                   nEstimatedThrottle = 0.0f;
-    static float            nPrevEstimatedThrottle = 0.0f;
+    unsigned long           nEstimatedThrottle = 0;
+    static unsigned long    nPrevEstimatedThrottle = 0;
     AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
     AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
     AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
     unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
 
-    memset((void *)(&(pThrottle[0])), ESC_MIN, 4 * sizeof(int32_t));
+    // Set Throttle Value as Min Value
+    pThrottle[0] = ESC_MIN;
+    pThrottle[1] = ESC_MIN;
+    pThrottle[2] = ESC_MIN;
+    pThrottle[3] = ESC_MIN;
     
     pUsingRCVal[CH_TYPE_THROTTLE] = floor(pUsingRCVal[CH_TYPE_THROTTLE] / ROUNDING_BASE) * ROUNDING_BASE;
-    nEstimatedThrottle = (float)(map(pUsingRCVal[CH_TYPE_THROTTLE], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX));
+    nEstimatedThrottle = map(pUsingRCVal[CH_TYPE_THROTTLE], RC_CH2_LOW, RC_CH2_HIGH, ESC_MIN, ESC_MAX);
     
     if((nEstimatedThrottle < ESC_MIN) || (nEstimatedThrottle > ESC_MAX))
         nEstimatedThrottle = nPrevEstimatedThrottle;
 
     nPrevEstimatedThrottle = nEstimatedThrottle;
     
-    if(nEstimatedThrottle > ESC_TAKEOFF_OFFSET)
+    if((nEstimatedThrottle > ESC_TAKEOFF_OFFSET) && (DRONESTATUS_READY <= pSelfFlyHndl->nDroneStatus))
     {
-        pThrottle[0] = _Clip3Int((( pPitch->nBalance + pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[1] = _Clip3Int((( pPitch->nBalance - pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[2] = _Clip3Int(((-pPitch->nBalance - pRoll->nBalance) * 0.5 - pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
-        pThrottle[3] = _Clip3Int(((-pPitch->nBalance + pRoll->nBalance) * 0.5 + pYaw->nTorque + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[0] = _Clip3Int((((int)( pPitch->nBalance + pRoll->nBalance) * 0.5) - (int)(pYaw->nTorque) + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[1] = _Clip3Int((((int)( pPitch->nBalance - pRoll->nBalance) * 0.5) + (int)(pYaw->nTorque) + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[2] = _Clip3Int((((int)(-pPitch->nBalance - pRoll->nBalance) * 0.5) - (int)(pYaw->nTorque) + nEstimatedThrottle), ESC_MIN, ESC_MAX);
+        pThrottle[3] = _Clip3Int((((int)(-pPitch->nBalance + pRoll->nBalance) * 0.5) + (int)(pYaw->nTorque) + nEstimatedThrottle), ESC_MIN, ESC_MAX);
     }
+    else if(DRONESTATUS_READY >= pSelfFlyHndl->nDroneStatus)
+    {
+        // Set Throttle Value as Min Value
+        pThrottle[0] = ESC_MIN;
+        pThrottle[1] = ESC_MIN;
+        pThrottle[2] = ESC_MIN;
+        pThrottle[3] = ESC_MIN;
+    }    
 }
 
 

@@ -161,8 +161,8 @@ void _Get_RollPitchYaw()
         pEstGravity[Z_AXIS] = (nSquareQ0) - (nSquareQ1) - (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]);
         
         // Calculate Roll, Pitch, and Yaw
-        pFineRPY[0] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (nSquareGravZ)));
-        pFineRPY[1] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (nSquareGravZ)));
+        pFineRPY[0] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (nSquareGravZ)));
+        pFineRPY[1] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (nSquareGravZ)));
         pFineRPY[2] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * nSquareQ0) + (2 * nSquareQ1) - 1);
     }
     
@@ -170,6 +170,20 @@ void _Get_RollPitchYaw()
     pFineRPY[0] *= RAD_TO_DEG_SCALE;
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
+
+    if(((micros() - pSelfFlyHndl->nInitializedTime) > RPY_OFFSET_DELAY) && (0 == pSelfFlyHndl->bIsInitializeRPY))
+    {
+        pSelfFlyHndl->bIsInitializeRPY = 1;
+        pSelfFlyHndl->nRPYOffset[0] = pFineRPY[0];
+        pSelfFlyHndl->nRPYOffset[1] = pFineRPY[1];
+        pSelfFlyHndl->nRPYOffset[2] = pFineRPY[2];
+    }
+    else
+    {
+        pFineRPY[0] -= pSelfFlyHndl->nRPYOffset[0];
+        pFineRPY[1] -= pSelfFlyHndl->nRPYOffset[1];
+        pFineRPY[2] -= pSelfFlyHndl->nRPYOffset[2];
+    }
 }
 
 

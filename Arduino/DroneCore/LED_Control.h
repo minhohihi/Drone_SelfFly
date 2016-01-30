@@ -29,13 +29,16 @@ void _LED_Initialize()
     for(i=0 ; i<3 ; i++)
     {
         _LED_SetColor(1, 0, 0, 1);
-        delay(500);
+        delay(333);
         _LED_SetColor(0, 1, 0, 1);
-        delay(500);
+        delay(333);
         _LED_SetColor(0, 0, 1, 1);
-        delay(500);
+        delay(333);
     }
 
+    // Set RED Led as Init Color
+    _LED_SetColor(1, 0, 0, 1);
+        
     pSelfFlyHndl->nPrevBlinkTime = micros();  
 }
 

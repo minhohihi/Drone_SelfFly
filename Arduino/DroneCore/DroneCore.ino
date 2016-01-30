@@ -1,5 +1,5 @@
 
-#define __DEBUG__                           (0)
+#define __DEBUG__                           (1)
 #if (__DEBUG__)
     #define __PRINT_DEBUG__                 (1)
     #define __PROFILE__                     (0)
@@ -148,6 +148,9 @@ typedef struct _SelfFly_T
     float               nFineGyro[3];
     float               nQuaternion[4];                         // quaternion
     float               nEstGravity[3];                         // estimated gravity direction
+    bool                bIsInitializeRPY;
+    unsigned long       nInitializedTime;
+    float               nRPYOffset[3];
     
     // For Control Interval
     unsigned long       nCurrSensorCapTime;
@@ -252,6 +255,8 @@ void setup()
     pSelfFlyHndl->nBeta = BETADEF;
     pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
     pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
+    pSelfFlyHndl->nInitializedTime = micros();
+    pSelfFlyHndl->bIsInitializeRPY = 0;
     
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
@@ -266,6 +271,8 @@ void loop()
     
     nStartTime0 = micros();
     #endif
+
+    _LED_Blink();
     
     // Check Drone Status
     //_Check_Drone_Status();
@@ -291,18 +298,16 @@ void loop()
     //_print_Gyro_Signals();
     //_print_MagData();
     //_print_BarometerData();
-    //_print_RPY_Signals();
+    _print_RPY_Signals();
     //_print_CaturedRC_Signals();
     //_print_UsingRC_Signals();
     //_print_Throttle_Signals();
     //_print_SonarData();
-    //Serialprintln(" ");
+    Serialprintln(" ");
     #endif
     
     // Update BLDCs
     _UpdateESCs();
-    
-    _LED_Blink();
     
     #if __PROFILE__
     nEndTime = micros();

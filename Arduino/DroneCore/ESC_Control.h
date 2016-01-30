@@ -8,15 +8,33 @@
 #ifndef __ESC_CONTROL__
 #define __ESC_CONTROL__
 
+inline void _UpdateESCs();
 
 void _ESC_Initialize()
 {
+    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    int                     i = 0;     
+    
     // Set Digital Port 8, 9, 10, and 11 as Output
     DDRB |= B00001111;
     
     delay(100);
+
+    // Set Value of Digital Port 8, 9, 10, and 11 as Low
+    PORTB &= B11110000;
     
-    // Set Value of Digital Port 8, 9, 10, and 11 as Low to Initialize ESCs
+    // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC
+    for(i=0 ; i<30 ; i++)
+    {
+        pThrottle[0] = ESC_MIN;
+        pThrottle[1] = ESC_MIN;
+        pThrottle[2] = ESC_MIN;
+        pThrottle[3] = ESC_MIN;   
+        _UpdateESCs();
+        delay(10);    
+    }    
+
+    // Set Value of Digital Port 8, 9, 10, and 11 as Low
     PORTB &= B11110000;
 }
 

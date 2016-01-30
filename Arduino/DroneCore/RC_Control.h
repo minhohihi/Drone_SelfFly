@@ -27,7 +27,7 @@ ISR(PCINT2_vect)
     if(true == pSelfFlyHndl->nLock)
         return;
     
-    if(PIND & B01000000)
+    if(PIND & B00000100)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
             pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
@@ -38,7 +38,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
     }
     
-    if(PIND & B00100000)
+    if(PIND & B00001000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
             pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
@@ -60,7 +60,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
     }
     
-    if(PIND & B00001000)
+    if(PIND & B00100000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
             pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
@@ -71,7 +71,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = 0;
     }
     
-    if(PIND & B00000100)
+    if(PIND & B01000000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
             pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
