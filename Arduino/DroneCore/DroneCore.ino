@@ -255,7 +255,7 @@ void setup()
     pSelfFlyHndl->nBeta = BETADEF;
     pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
     pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
-    pSelfFlyHndl->nInitializedTime = micros();
+    pSelfFlyHndl->nInitializedTime = 0;
     pSelfFlyHndl->bIsInitializeRPY = 0;
     
     Serialprintln("   **********************************************   ");
@@ -275,9 +275,9 @@ void loop()
     _LED_Blink();
     
     // Check Drone Status
-    //_Check_Drone_Status();
-    //if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
-    //    return;
+    _Check_Drone_Status();
+    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
+        return;
     
     // Check Battery Voltage Status
     _Check_BatteryVolt();
@@ -301,7 +301,7 @@ void loop()
     _print_RPY_Signals();
     //_print_CaturedRC_Signals();
     //_print_UsingRC_Signals();
-    //_print_Throttle_Signals();
+    _print_Throttle_Signals();
     //_print_SonarData();
     Serialprintln(" ");
     #endif

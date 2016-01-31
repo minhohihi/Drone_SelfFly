@@ -34,14 +34,14 @@ inline void _CalculatePID()
     pUsingRCVal[CH_TYPE_PITCH] = map(pUsingRCVal[CH_TYPE_PITCH], RC_CH1_LOW, RC_CH1_HIGH, PITCH_ANG_MIN, PITCH_ANG_MAX) - 1;
     pUsingRCVal[CH_TYPE_YAW] = map(pUsingRCVal[CH_TYPE_YAW], RC_CH3_LOW, RC_CH3_HIGH, YAW_RATE_MIN, YAW_RATE_MAX);
 
-    //if((pUsingRCVal[CH_TYPE_ROLL] < ROLL_ANG_MIN) || (pUsingRCVal[CH_TYPE_ROLL] > ROLL_ANG_MAX))
-    //    pUsingRCVal[CH_TYPE_ROLL] = nPrevRCVal[CH_TYPE_ROLL];
+    if((pUsingRCVal[CH_TYPE_ROLL] < ROLL_ANG_MIN) || (pUsingRCVal[CH_TYPE_ROLL] > ROLL_ANG_MAX))
+        pUsingRCVal[CH_TYPE_ROLL] = nPrevRCVal[CH_TYPE_ROLL];
     
-    //if((pUsingRCVal[CH_TYPE_PITCH] < PITCH_ANG_MIN) || (pUsingRCVal[CH_TYPE_PITCH] > PITCH_ANG_MAX))
-    //    pUsingRCVal[CH_TYPE_PITCH] = nPrevRCVal[CH_TYPE_PITCH];
+    if((pUsingRCVal[CH_TYPE_PITCH] < PITCH_ANG_MIN) || (pUsingRCVal[CH_TYPE_PITCH] > PITCH_ANG_MAX))
+        pUsingRCVal[CH_TYPE_PITCH] = nPrevRCVal[CH_TYPE_PITCH];
     
-    //if((pUsingRCVal[CH_TYPE_YAW] < YAW_RATE_MIN) || (pUsingRCVal[CH_TYPE_YAW] > YAW_RATE_MAX))
-    //    pUsingRCVal[CH_TYPE_YAW] = nPrevRCVal[CH_TYPE_YAW];
+    if((pUsingRCVal[CH_TYPE_YAW] < YAW_RATE_MIN) || (pUsingRCVal[CH_TYPE_YAW] > YAW_RATE_MAX))
+        pUsingRCVal[CH_TYPE_YAW] = nPrevRCVal[CH_TYPE_YAW];
     
     nPrevRCVal[CH_TYPE_ROLL] = pUsingRCVal[CH_TYPE_ROLL];
     nPrevRCVal[CH_TYPE_PITCH] = pUsingRCVal[CH_TYPE_PITCH];
@@ -59,7 +59,7 @@ inline void _CalculatePID()
     pRoll->nP_ErrRate = pRoll->nCurrErrRate * ROLL_INNER_P_GAIN;
     pRoll->nI_ErrRate = _Clip3Float((pRoll->nI_ErrRate + (pRoll->nCurrErrRate * ROLL_INNER_I_GAIN) * nDiffTime), -100, 100);
     pRoll->nD_ErrRate = (pRoll->nCurrErrRate - pRoll->nPrevErrRate) * ROLL_INNER_D_GAIN / nDiffTime;
-    pRoll->nBalance = pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate;
+    pRoll->nBalance = (pRoll->nP_ErrRate + pRoll->nI_ErrRate + pRoll->nD_ErrRate) * ((INVERSE_RC_ROLL) ? (-1) : (1));
 
     //PITCH control
     pPitch->nAngleErr = pUsingRCVal[CH_TYPE_PITCH] - pFineRPY[1];
@@ -67,13 +67,13 @@ inline void _CalculatePID()
     pPitch->nP_ErrRate = pPitch->nCurrErrRate * PITCH_INNER_P_GAIN;
     pPitch->nI_ErrRate = _Clip3Float((pPitch->nI_ErrRate + (pPitch->nCurrErrRate * PITCH_INNER_I_GAIN) * nDiffTime), -100, 100);
     pPitch->nD_ErrRate = (pPitch->nCurrErrRate - pPitch->nPrevErrRate) * PITCH_INNER_D_GAIN / nDiffTime;
-    pPitch->nBalance = pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate;
+    pPitch->nBalance = (pPitch->nP_ErrRate + pPitch->nI_ErrRate + pPitch->nD_ErrRate) * ((INVERSE_RC_PITCH) ? (-1) : (1));
 
     //YAW control
-    pYaw->nCurrErrRate = 0;//pUsingRCVal[CH_TYPE_YAW] + pFineGyro[2];// - pFineRPY[2];
+    pYaw->nCurrErrRate = pUsingRCVal[CH_TYPE_YAW];// + pFineGyro[2];// - pFineRPY[2];
     pYaw->nP_ErrRate = pYaw->nCurrErrRate * YAW_P_GAIN;
     pYaw->nI_ErrRate = _Clip3Float((pYaw->nI_ErrRate + pYaw->nCurrErrRate * YAW_I_GAIN * nDiffTime), -50, 50);
-    pYaw->nTorque = pYaw->nP_ErrRate + pYaw->nI_ErrRate;
+    pYaw->nTorque = (pYaw->nP_ErrRate + pYaw->nI_ErrRate) * ((INVERSE_RC_YAW) ? (-1) : (1));
 
     // Backup for Next
     pRoll->nPrevErrRate = pRoll->nCurrErrRate;

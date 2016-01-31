@@ -58,6 +58,9 @@
 #define RC_CH3_LOW                          (1055)
 #define RC_CH4_HIGH                         (1884)
 #define RC_CH4_LOW                          (1055)
+#define INVERSE_RC_ROLL                     (0)
+#define INVERSE_RC_PITCH                    (1)
+#define INVERSE_RC_YAW                      (0)
 
 // PID configuration
 #define PITCH_OUTER_P_GAIN                  (4.750)                         // angle control
@@ -70,6 +73,9 @@
 #define ROLL_INNER_D_GAIN                   (0.335)
 #define YAW_P_GAIN                          (2.325)                         // yaw -> rate control
 #define YAW_I_GAIN                          (0.650)
+#define INVERSE_RPY_ROLL                    (1)
+#define INVERSE_RPY_PITCH                   (1)
+#define INVERSE_RPY_YAW                     (0)
 
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
 #define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
@@ -117,7 +123,6 @@
 
 // LED Control
 #define LED_BLINK_PERIOD                    (1000000)                       // Unit: microsecond
-
 
 // Hovering
 #define HOVERING_ALTITUDE                   (150)                           // Unit: Centimeter
