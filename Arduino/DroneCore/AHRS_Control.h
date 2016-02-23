@@ -171,11 +171,7 @@ void _Get_RollPitchYaw()
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
     pFineRPY[2] *= RAD_TO_DEG_SCALE;
 
-    if((0 == pSelfFlyHndl->bIsInitializeRPY) && (0 == pSelfFlyHndl->nInitializedTime))
-    {
-        pSelfFlyHndl->nInitializedTime = micros();
-    }
-    else if(((micros() - pSelfFlyHndl->nInitializedTime) > RPY_OFFSET_DELAY) && (0 == pSelfFlyHndl->bIsInitializeRPY))
+    if(((micros() - pSelfFlyHndl->nInitializedTime) > RPY_OFFSET_DELAY) && (0 == pSelfFlyHndl->bIsInitializeRPY))
     {
         pSelfFlyHndl->bIsInitializeRPY = 1;
         pSelfFlyHndl->nRPYOffset[0] = pFineRPY[0];

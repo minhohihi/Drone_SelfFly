@@ -132,9 +132,13 @@ typedef struct _SelfFly_T
     SonicParam_T        SonicParam;                             // HC-SR04 Sonar Sensor
     
     // For PID Control
+    #if USE_NEW_PID
+    AxisErrRate_T       nRPY_PID[3];
+    #else
     AxisErrRate_T       nPitch;
     AxisErrRate_T       nRoll;
     AxisErrRate_T       nYaw;
+    #endif
     
     // For Motor Control
     long                nCapturedRCVal[MAX_CH_RC];              // RC channel inputs

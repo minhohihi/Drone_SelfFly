@@ -44,8 +44,9 @@
 // ESC configuration
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
-#define ESC_TAKEOFF_OFFSET                  (1050)
+#define ESC_TAKEOFF_OFFSET                  (1080)
 #define ESC_ARM_DELAY                       (1000)
+#define ESC_ACTUAL_MIN                      (1150)
 
 // RC configuration
 #define RC_CH0_HIGH                         (1884)
@@ -76,6 +77,7 @@
 #define INVERSE_RPY_ROLL                    (1)
 #define INVERSE_RPY_PITCH                   (1)
 #define INVERSE_RPY_YAW                     (0)
+#define USE_NEW_PID                         (1)
 
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
 #define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))

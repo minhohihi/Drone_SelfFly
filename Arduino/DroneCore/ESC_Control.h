@@ -29,31 +29,37 @@ void _ESC_Initialize()
         pThrottle[0] = ESC_MIN;
         pThrottle[1] = ESC_MIN;
         pThrottle[2] = ESC_MIN;
-        pThrottle[3] = ESC_MIN;   
+        pThrottle[3] = ESC_MIN;
+        
         _UpdateESCs();
-        delay(10);    
+        
+        delay(10);
     }    
 
     // Set Value of Digital Port 8, 9, 10, and 11 as Low
     PORTB &= B11110000;
 }
 
+
 inline void _UpdateESCs()
 {
     unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     int                     i = 0;
     unsigned long           nLoopTimer = 0;
-    //while(micros() - loop_timer < 4000);                                      //We wait until 4000us are passed.
-    //loop_timer = micros();                                                    //Set the timer for the next loop.
-    
+
+    // Wait Until Passing 4ms.
+    while(micros() - nLoopTimer < 4000);
+
+    // Set the timer for the next loop.
     nLoopTimer = micros();
-    
-    PORTB |= B00001111;                                                         //Set Digital Port 8, 9, 10, and 11 as high.
     
     // Set Relative Throttle Value by Adding Current Time
     for(i=0 ; i<MAX_CH_ESC ; i++)
         pThrottle[i] += nLoopTimer;
 
+    // Set Digital Port 8, 9, 10, and 11 as high.
+    PORTB |= B00001111;
+    
     while(PORTB & B00001111)
     {
         const unsigned long     nCurrTime = micros();

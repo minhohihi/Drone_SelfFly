@@ -1,5 +1,5 @@
 
-#define __DEBUG__                           (1)
+#define __DEBUG__                           (0)
 #if (__DEBUG__)
     #define __PRINT_DEBUG__                 (1)
     #define __PROFILE__                     (0)
@@ -132,10 +132,14 @@ typedef struct _SelfFly_T
     SonicParam_T        SonicParam;                             // HC-SR04 Sonar Sensor
     
     // For PID Control
+    #if USE_NEW_PID
+    AxisErrRate_T       nRPY_PID[3];
+    #else
     AxisErrRate_T       nPitch;
     AxisErrRate_T       nRoll;
     AxisErrRate_T       nYaw;
-    
+    #endif
+
     // For Motor Control
     long                nCapturedRCVal[MAX_CH_RC];              // RC channel inputs
     long                nUsingRCVal[MAX_CH_RC];                 // RC channel inputs

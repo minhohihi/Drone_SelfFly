@@ -29,8 +29,13 @@ void _Check_Drone_Status()
         
         pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
         
+        // Turn On a Green Light
         _LED_SetColor(0, 1, 0, 1);
         
+        // Set Initialized Time to Check Proper Time
+        if((0 == pSelfFlyHndl->bIsInitializeRPY) && (0 == pSelfFlyHndl->nInitializedTime))
+            pSelfFlyHndl->nInitializedTime = micros();
+
         return;
     }
     else if(DRONESTATUS_STOP < pSelfFlyHndl->nDroneStatus)
@@ -46,6 +51,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
                 
+                // Turn On a Blue Light
                 _LED_SetColor(0, 0, 1, 1);
             }
             
@@ -54,6 +60,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
                 
+                // Turn On a Red Light
                 _LED_SetColor(1, 0, 0, 1);
             }
         }
@@ -64,6 +71,7 @@ void _Check_Drone_Status()
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
                 
+                // Turn On a Creen Light
                 _LED_SetColor(0, 1, 0, 1);
             }
         }
