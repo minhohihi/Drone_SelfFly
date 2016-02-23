@@ -14,7 +14,7 @@ void _Check_Drone_Status()
     if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
     {
         int                 nLoopCnt = 0;
-        
+
         do
         {
             // Should be Set Lowest Throttle & Highest Right Yaw for About 2 Sec. to Start Drone
@@ -23,15 +23,15 @@ void _Check_Drone_Status()
                 nLoopCnt++;
             else
                 nLoopCnt = 0;
-            
+
             delay(50);
         }while(nLoopCnt < 40);
-        
+
         pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
-        
+
         // Turn On a Green Light
         _LED_SetColor(0, 1, 0, 1);
-        
+
         // Set Initialized Time to Check Proper Time
         if((0 == pSelfFlyHndl->bIsInitializeRPY) && (0 == pSelfFlyHndl->nInitializedTime))
             pSelfFlyHndl->nInitializedTime = micros();
@@ -41,7 +41,7 @@ void _Check_Drone_Status()
     else if(DRONESTATUS_STOP < pSelfFlyHndl->nDroneStatus)
     {
         static int      nLoopCnt = 0;
-        
+
         if(DRONESTATUS_READY == pSelfFlyHndl->nDroneStatus)
         {
             if(1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
@@ -50,16 +50,16 @@ void _Check_Drone_Status()
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
-                
+
                 // Turn On a Blue Light
                 _LED_SetColor(0, 0, 1, 1);
             }
-            
+
             if(nLoopCnt > DRONE_STOP_TIME_TH)
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
-                
+
                 // Turn On a Red Light
                 _LED_SetColor(1, 0, 0, 1);
             }
@@ -70,7 +70,7 @@ void _Check_Drone_Status()
             {
                 nLoopCnt = 0;
                 pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
-                
+
                 // Turn On a Creen Light
                 _LED_SetColor(0, 1, 0, 1);
             }
@@ -83,19 +83,19 @@ void _GetSensorRawData()
 {
     pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
     pSelfFlyHndl->nCurrSensorCapTime = micros();
-    
+
     pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
     pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
-    
+
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
-    
+
     // Get Magnetic Raw Data
     _Mag_GetData();
-    
+
     // Get Barometer Raw Data
     _Barometer_GetData();
-    
+
     // Get Sonar Raw Data
     //_Sonar_GetData();
     //_Sonar_GetData_WithPeriod();
@@ -105,7 +105,7 @@ void _GetSensorRawData()
 void _Check_BatteryVolt()
 {
     pSelfFlyHndl->nCurrBatteryVolt = (0.92 * pSelfFlyHndl->nCurrBatteryVolt) + (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
-    
+
     //Serialprintln(pSelfFlyHndl->nCurrBatteryVolt);
 }
 
@@ -113,12 +113,12 @@ void _Check_BatteryVolt()
 float _Clip3Float(const float nValue, const int MIN, const int MAX)
 {
     float               nClipVal = nValue;
-    
+
     if(nValue < MIN)
         nClipVal = MIN;
     else if(nValue > MAX)
         nClipVal = MAX;
-    
+
     return nClipVal;
 }
 
@@ -126,12 +126,12 @@ float _Clip3Float(const float nValue, const int MIN, const int MAX)
 int _Clip3Int(const int nValue, const int MIN, const int MAX)
 {
     int                 nClipVal = nValue;
-    
+
     if(nValue < MIN)
         nClipVal = MIN;
     else if(nValue > MAX)
         nClipVal = MAX;
-    
+
     return nClipVal;
 }
 
@@ -145,14 +145,14 @@ float _InvSqrt(float nNumber)
     long                i = 0;
     float               x = 0.0f, y = 0.0f;
     const float         f = 1.5F;
-    
+
     x = nNumber * 0.5F;
     y = nNumber;
     i = * ( long * ) &y;
     i = 0x5f375a86 - ( i >> 1 );
     y = * ( float * ) &i;
     y = y * ( f - ( x * y * y ) );
-    
+
     return y;
 }
 

@@ -28,9 +28,9 @@ void _Sonar_Initialize()
 
 void _Sonar_GetData()
 {
-    PORTC |= B00000010;         
+    PORTC |= B00000010;
     delayMicroseconds(10);
-    PORTC &= B11111101;         
+    PORTC &= B11111101;
 
     // Get Raw Distance Value
     pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
@@ -44,11 +44,11 @@ void _Sonar_GetData_WithPeriod()
 {
     static unsigned long    nPrevTime = 0;
     unsigned long           nCurrTime = micros();
-    
+
     if((nCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
     {
         _Sonar_GetData();
-        
+
         nPrevTime = nCurrTime;
     }
 }

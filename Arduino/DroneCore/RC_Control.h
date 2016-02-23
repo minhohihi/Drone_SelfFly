@@ -23,10 +23,10 @@ void _RC_Initialize()
 ISR(PCINT2_vect)
 {
     const unsigned long     nCurrTime = micros();
-    
+
     if(true == pSelfFlyHndl->nLock)
         return;
-    
+
     if(PIND & B00000100)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL])
@@ -37,7 +37,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nCapturedRCVal[CH_TYPE_ROLL] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL];
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
     }
-    
+
     if(PIND & B00001000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH])
@@ -48,7 +48,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nCapturedRCVal[CH_TYPE_PITCH] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH];
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_PITCH] = 0;
     }
-    
+
     if(PIND & B00010000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE])
@@ -59,7 +59,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE];
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
     }
-    
+
     if(PIND & B00100000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW])
@@ -70,7 +70,7 @@ ISR(PCINT2_vect)
         pSelfFlyHndl->nCapturedRCVal[CH_TYPE_YAW] = nCurrTime - pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW];
         pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_YAW] = 0;
     }
-    
+
     if(PIND & B01000000)
     {
         if(0 == pSelfFlyHndl->nRCPrevChangeTime[CH_TYPE_TAKE_LAND])

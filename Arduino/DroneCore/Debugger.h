@@ -48,31 +48,31 @@ void _print_CaturedRC_Signals()
 void _print_UsingRC_Signals()
 {
     long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
-    
+
     Serialprint("   //   RC_Roll:");
     if(pUsingRCVal[CH_TYPE_ROLL] - 1480 < 0)Serialprint("<<<");
     else if(pUsingRCVal[CH_TYPE_ROLL] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
     Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
-    
+
     Serialprint("   RC_Pitch:");
     if(pUsingRCVal[CH_TYPE_PITCH] - 1480 < 0)Serialprint("^^^");
     else if(pUsingRCVal[CH_TYPE_PITCH] - 1520 > 0)Serialprint("vvv");
     else Serialprint("-+-");
     Serialprint(pUsingRCVal[CH_TYPE_PITCH]);
-    
+
     Serialprint("   RC_Throttle:");
     if(pUsingRCVal[CH_TYPE_THROTTLE] - 1480 < 0)Serialprint("vvv");
     else if(pUsingRCVal[CH_TYPE_THROTTLE] - 1520 > 0)Serialprint("^^^");
     else Serialprint("-+-");
     Serialprint(pUsingRCVal[CH_TYPE_THROTTLE]);
-    
+
     Serialprint("   RC_Yaw:");
     if(pUsingRCVal[CH_TYPE_YAW] - 1480 < 0)Serialprint("<<<");
     else if(pUsingRCVal[CH_TYPE_YAW] - 1520 > 0)Serialprint(">>>");
     else Serialprint("-+-");
     Serialprint(pUsingRCVal[CH_TYPE_YAW]);
-    
+
     Serialprint("   RC_Gear:");
     if(pUsingRCVal[CH_TYPE_TAKE_LAND] - 1480 < 0)Serialprint("<<<");
     else if(pUsingRCVal[CH_TYPE_TAKE_LAND] - 1520 > 0)Serialprint(">>>");
@@ -106,7 +106,7 @@ void _print_Gyro_Signals()
 
 void _print_Throttle_Signals()
 {
-     unsigned long  *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+     unsigned long          *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
 
     Serialprint("   //    Thrt1 : ");
     Serialprint(pThrottle[0]);
@@ -121,7 +121,7 @@ void _print_Throttle_Signals()
 
 void _print_RPY_Signals()
 {
-     float          *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
 
     Serialprint("   //    Roll: ");
     Serialprint(pFineRPY[0]);
@@ -158,7 +158,56 @@ void _print_SonarData()
 {
     Serialprint("   //    Sonar: ");
     Serialprint(pSelfFlyHndl->SonicParam.nDistFromGnd);
-    Serialprintln("cm   ");
+    Serialprint("cm   ");
+}
+
+void _print_AllData()
+{
+    long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
+    float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
+    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+	#if !USE_NEW_PID
+    AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
+    AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
+    AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
+	#endif
+
+    Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
+    Serialprint(", ");
+    Serialprint(pUsingRCVal[CH_TYPE_PITCH]);
+    Serialprint(", ");
+    Serialprint(pUsingRCVal[CH_TYPE_THROTTLE]);
+    Serialprint(", ");
+    Serialprint(pUsingRCVal[CH_TYPE_YAW]);
+    Serialprint(", ");
+    Serialprint(pFineRPY[0]);
+    Serialprint(", ");
+    Serialprint(pFineRPY[1]);
+    Serialprint(", ");
+    Serialprint(pFineRPY[2]);
+    Serialprint(", ");
+    #if USE_NEW_PID
+    Serialprint(pSelfFlyHndl->nRPY_PID[0].nBalance);
+    Serialprint(", ");
+    Serialprint(pSelfFlyHndl->nRPY_PID[1].nBalance);
+    Serialprint(", ");
+    Serialprint(pSelfFlyHndl->nRPY_PID[2].nBalance);
+    Serialprint(", ");
+    #else
+    Serialprint(pRoll->nBalance);
+    Serialprint(", ");
+    Serialprint(pPitch->nBalance);
+    Serialprint(", ");
+    Serialprint(pYaw->nTorque);
+    Serialprint(", ");
+    #endif
+    Serialprint(pThrottle[0]);
+    Serialprint(", ");
+    Serialprint(pThrottle[1]);
+    Serialprint(", ");
+    Serialprint(pThrottle[2]);
+    Serialprint(", ");
+    Serialprint(pThrottle[3]);
 }
 #endif
 #endif /* Debugger */

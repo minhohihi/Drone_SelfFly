@@ -11,10 +11,10 @@
 void _Mag_Initialize()
 {
     HMC5883L            *pMagHndl = NULL;
-    
+
     pSelfFlyHndl->nMagHndl = HMC5883L();
     pMagHndl = &(pSelfFlyHndl->nMagHndl);
-    
+
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
     pMagHndl->initialize();

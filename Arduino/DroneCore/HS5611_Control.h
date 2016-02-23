@@ -49,7 +49,7 @@ void _Barometer_GetData()
     // Push to Array to Get Average Pressure & Temperature
     pBaroHndl->pushTemp(pBaroParam->nRawTemp);
     pBaroHndl->pushPressure(pBaroParam->nRawPressure);
-    
+
     // Calculate Altitude
     _Barometer_CalculateData();
 }

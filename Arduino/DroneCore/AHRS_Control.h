@@ -26,7 +26,7 @@ void _AHRSupdate()
     float                   *pRawAccel = &(pSelfFlyHndl->nAccelGyroParam.nRawAccel[X_AXIS]);
     float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
     const float             nGyroOffset = DEG_TO_RAD_SCALE / GYRO_FS;
-    
+
     pRawGyro[X_AXIS] = pRawGyro[X_AXIS] * nGyroOffset;
     pRawGyro[Y_AXIS] = pRawGyro[Y_AXIS] * nGyroOffset;
     pRawGyro[Z_AXIS] = pRawGyro[Z_AXIS] * nGyroOffset;
@@ -146,7 +146,7 @@ void _Get_RollPitchYaw()
     float           *pEstGravity = &(pSelfFlyHndl->nEstGravity[X_AXIS]);
     float           *pQ = &(pSelfFlyHndl->nQuaternion[0]);
     float           *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
-    
+
     // Calculate Roll & Pitch & Yaw
     _AHRSupdate();
 
@@ -154,18 +154,18 @@ void _Get_RollPitchYaw()
         const float nSquareQ0 = pQ[0] * pQ[0];
         const float nSquareQ1 = pQ[1] * pQ[1];
         const float nSquareGravZ = pEstGravity[Z_AXIS] * pEstGravity[Z_AXIS];
-        
+
         // Estimate Gravity
         pEstGravity[X_AXIS] = 2 * ((pQ[1] * pQ[3]) - (pQ[0] * pQ[2]));
         pEstGravity[Y_AXIS] = 2 * ((pQ[0] * pQ[1]) + (pQ[2] * pQ[3]));
         pEstGravity[Z_AXIS] = (nSquareQ0) - (nSquareQ1) - (pQ[2] * pQ[2]) + (pQ[3] * pQ[3]);
-        
+
         // Calculate Roll, Pitch, and Yaw
         pFineRPY[0] = atan(pEstGravity[X_AXIS] / sqrt((pEstGravity[Y_AXIS] * pEstGravity[Y_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_ROLL) ? (-1) : (1));
         pFineRPY[1] = atan(pEstGravity[Y_AXIS] / sqrt((pEstGravity[X_AXIS] * pEstGravity[X_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_PITCH) ? (-1) : (1));
         pFineRPY[2] = atan2((2 * pQ[1] * pQ[2]) - (2 * pQ[0] * pQ[3]), (2 * nSquareQ0) + (2 * nSquareQ1) - 1) * ((INVERSE_RPY_YAW) ? (-1) : (1));
     }
-    
+
     // Convert Radian to Degree
     pFineRPY[0] *= RAD_TO_DEG_SCALE;
     pFineRPY[1] *= RAD_TO_DEG_SCALE;
@@ -185,7 +185,6 @@ void _Get_RollPitchYaw()
         pFineRPY[2] -= pSelfFlyHndl->nRPYOffset[2];
     }
 }
-
 
 #endif /* AHRS_Controller_h */
 

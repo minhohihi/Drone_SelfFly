@@ -96,7 +96,7 @@ typedef struct _BaroParam_T
     float               nRawTemp;                               // Raw Temperature Data
     float               nRawPressure;                           // Raw Pressure Data
     float               nRawAbsoluteAltitude;                   // Estimated Absolute Altitude
-    
+
     float               nAvgPressure;                           // Average Pressure Data
     float               nAvgTemp;                               // Average Temperature Data
     float               nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
@@ -119,18 +119,18 @@ typedef struct _SelfFly_T
     AccelGyroParam_T    nAccelGyroParam;
     //int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
     //int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
-    
+
     // For Magnetometer Sensor
     HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
     MagneticParam_T     nMagParam;
-    
+
     // For Barometer Sensor
     MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
     BaroParam_T         nBaroParam;
-    
+
     // For Sonar Sensor
     SonicParam_T        SonicParam;                             // HC-SR04 Sonar Sensor
-    
+
     // For PID Control
     #if USE_NEW_PID
     AxisErrRate_T       nRPY_PID[3];
@@ -146,7 +146,7 @@ typedef struct _SelfFly_T
     unsigned long       nRCPrevChangeTime[MAX_CH_RC];
     unsigned long       nThrottle[MAX_CH_ESC];
     volatile bool       nLock;
-    
+
     // For Estimated Status of Drone
     float               nFineRPY[3];
     float               nFineGyro[3];
@@ -155,20 +155,20 @@ typedef struct _SelfFly_T
     bool                bIsInitializeRPY;
     unsigned long       nInitializedTime;
     float               nRPYOffset[3];
-    
+
     // For Control Interval
     unsigned long       nCurrSensorCapTime;
     unsigned long       nPrevSensorCapTime;
     float               nDiffTime;
     float               nSampleFreq;                            // half the sample period expressed in seconds
     float               nBeta;
-    
+
     // For Status of Drone
     DroneStatus         nDroneStatus;
-    
+
     // For Battery Status
     float               nCurrBatteryVolt;
-    
+
     // For LED Control
     int                 nPrevR;
     int                 nPrevG;
@@ -215,53 +215,53 @@ void setup()
 {
     int32_t                 i = 0;
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
-    
+
     Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
-    
+
     pSelfFlyHndl = (SelfFly_T *) malloc(sizeof(SelfFly_T));
-    
+
     memset(pSelfFlyHndl, 0, sizeof(SelfFly_T));
-    
+
     Wire.begin();
     TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    
+
     #if __DEBUG__
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
-    
+
     while(!Serial); // wait for Leonardo enumeration, others continue immediately
     #endif
-    
+
     // Initialize RemoteController
     _RC_Initialize();
-    
+
     // Initialize ESCs
     _ESC_Initialize();
-    
+
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
-    
+
     // Initialize Magnetic
     _Mag_Initialize();
-    
+
     // Initialize Barometer
     _Barometer_Initialize();
-    
+
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
-    
+
     // Initialize LED
     _LED_Initialize();
-    
+
     pSelfFlyHndl->nQuaternion[0] = 1.0f;
     pSelfFlyHndl->nBeta = BETADEF;
     pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
     pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
     pSelfFlyHndl->nInitializedTime = 0;
     pSelfFlyHndl->bIsInitializeRPY = 0;
-    
+
     Serialprintln("   **********************************************   ");
     Serialprintln("   **********************************************   ");
     Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
@@ -272,32 +272,32 @@ void loop()
 {
     #if __PROFILE__
     float                   nStartTime0 = 0.0f, nEndTime = 0.0f;
-    
+
     nStartTime0 = micros();
     #endif
 
     _LED_Blink();
-    
+
     // Check Drone Status
     _Check_Drone_Status();
     if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
         return;
-    
+
     // Check Battery Voltage Status
     _Check_BatteryVolt();
-    
+
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
-    
+
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
-    
+
     // PID Computation
     _CalculatePID();
-    
+
     // Throttle Calculation
     _CalculateThrottleVal();
-    
+
     #if __PRINT_DEBUG__
     //_print_Gyro_Signals();
     //_print_MagData();
@@ -309,10 +309,10 @@ void loop()
     //_print_SonarData();
     Serialprintln(" ");
     #endif
-    
+
     // Update BLDCs
     _UpdateESCs();
-    
+
     #if __PROFILE__
     nEndTime = micros();
     Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);

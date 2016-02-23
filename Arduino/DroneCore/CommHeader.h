@@ -108,7 +108,7 @@
 #define MPU6050_ACCEL_OFFSET_Z              (0)
 
 // Sonar sensor
-#define SONAR_MAX_WAIT                      (30000)                         // Unit: microsecond
+#define SONAR_MAX_WAIT                      (18000)                         // Unit: microsecond
 #define SONAR_GETDATA_PERIOD                (200000)                        // Unit: microsecond
 
 #define ROUNDING_BASE                       (10)
@@ -128,7 +128,6 @@
 
 // Hovering
 #define HOVERING_ALTITUDE                   (150)                           // Unit: Centimeter
-
 
 #endif /* CommHeader_h */
 
