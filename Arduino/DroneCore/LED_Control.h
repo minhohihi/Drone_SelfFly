@@ -29,11 +29,11 @@ void _LED_Initialize()
     for(i=0 ; i<3 ; i++)
     {
         _LED_SetColor(1, 0, 0, 1);
-        delay(333);
+        delay(200);
         _LED_SetColor(0, 1, 0, 1);
-        delay(333);
+        delay(200);
         _LED_SetColor(0, 0, 1, 1);
-        delay(333);
+        delay(200);
     }
 
     // Set RED Led as Init Color

@@ -44,9 +44,9 @@
 // ESC configuration
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
-#define ESC_TAKEOFF_OFFSET                  (1080)
+#define ESC_TAKEOFF_OFFSET                  (1100)
 #define ESC_ARM_DELAY                       (1000)
-#define ESC_ACTUAL_MIN                      (1150)
+#define ESC_ACTUAL_MIN                      (1200)
 
 // RC configuration
 #define RC_CH0_HIGH                         (1884)

@@ -8,6 +8,10 @@
 #ifndef __PID_CONTROL__
 #define __PID_CONTROL__
 
+float             nPIDGainTable[3][3] = {{1.4, 0.0, 0.0},     // Roll's P, I, D
+                                         {0.0, 0.0, 0.0},     // Pitch's P, I, D
+                                         {0.0, 0.0, 0.0}};   // Yaw's P, I, D
+        
 void _Calculate_Altitude(float *pEstimatedThrottle);
 
 inline void _CalculatePID()
@@ -37,10 +41,10 @@ inline void _CalculatePID()
             continue;
 
         // Mapping RC Value to (-120) ~ (+120)  <== +-480 / 4
-        if(pUsingRCVal[i] > 1520)
-            pUsingRCVal[i] = (pUsingRCVal[i] - 1520) / 4;
-        else if(pUsingRCVal[i] < 1480)
+        if(pUsingRCVal[i] > 1480)
             pUsingRCVal[i] = (pUsingRCVal[i] - 1480) / 4;
+        else if(pUsingRCVal[i] < 1460)
+            pUsingRCVal[i] = (pUsingRCVal[i] - 1460) / 4;
         else
             pUsingRCVal[i] = 0;
     }
@@ -76,9 +80,13 @@ inline void _CalculatePID()
     #if USE_NEW_PID
     {
         // PID configuration
-        const float             nPIDGainTable[3][3] = {{1.4, 0.03, 15}, {1.4, 0.03, 15},
-                                                       {4.0, 0.02, 0.0}};
+        //const float             nPIDGainTable[3][3] = {{1.4, 0.0, 0.0},     // Roll's P, I, D
+        //                                               {1.4, 0.03, 15},     // Pitch's P, I, D
+        //                                               {4.0, 0.02, 0.0}};   // Yaw's P, I, D
+        const int               nReverseRPYFlag[3] = {1, -1, 1};
+        const int               nErrRateRestriction = 100;
 
+        j = 0;
         for(i=0 ; i<3 ; i++)
         {
             AxisErrRate_T       *pPIDCtrl = &(pSelfFlyHndl->nRPY_PID[i]);
@@ -87,10 +95,14 @@ inline void _CalculatePID()
                 j++;
 
             pPIDCtrl->nCurrErrRate = pUsingRCVal[j] - pFineRPY[j];
+
             pPIDCtrl->nP_ErrRate = nPIDGainTable[i][0] * pPIDCtrl->nCurrErrRate;
-            pPIDCtrl->nI_ErrRate = _Clip3Float(pPIDCtrl->nI_ErrRate + (nPIDGainTable[i][1] * pPIDCtrl->nCurrErrRate), -400, 400);
+            pPIDCtrl->nI_ErrRate += (nPIDGainTable[i][1] * pPIDCtrl->nCurrErrRate);
+            pPIDCtrl->nI_ErrRate = _Clip3Float(pPIDCtrl->nI_ErrRate, -nErrRateRestriction, nErrRateRestriction);
             pPIDCtrl->nD_ErrRate = nPIDGainTable[i][2] * (pPIDCtrl->nCurrErrRate - pPIDCtrl->nPrevErrRate);
-            pPIDCtrl->nBalance = _Clip3Float((pPIDCtrl->nP_ErrRate + pPIDCtrl->nI_ErrRate + pPIDCtrl->nD_ErrRate), -400, 400);
+
+            pPIDCtrl->nBalance = (pPIDCtrl->nP_ErrRate + pPIDCtrl->nI_ErrRate + pPIDCtrl->nD_ErrRate) * nReverseRPYFlag[i];
+            pPIDCtrl->nBalance = _Clip3Float(pPIDCtrl->nBalance, -nErrRateRestriction, nErrRateRestriction);
 
             pPIDCtrl->nPrevErrRate = pPIDCtrl->nCurrErrRate;
 
@@ -123,10 +135,11 @@ inline void _CalculatePID()
     // Backup for Next
     pRoll->nPrevErrRate = pRoll->nCurrErrRate;
     pPitch->nPrevErrRate = pPitch->nCurrErrRate;
+    #endif
+
     nPrevFineRPY[0] = pFineRPY[0];
     nPrevFineRPY[1] = pFineRPY[1];
     nPrevFineRPY[2] = pFineRPY[2];
-    #endif
 }
 
 

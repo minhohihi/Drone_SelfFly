@@ -286,6 +286,26 @@ void loop()
     // Check Battery Voltage Status
     _Check_BatteryVolt();
 
+    {
+        if(Serial.available())
+        {
+            char ch = Serial.read();
+            
+            if(ch == 'a')
+                nPIDGainTable[0][0] -= 0.1;
+            else if(ch == 'z')
+                nPIDGainTable[0][0] += 0.1;
+            else if(ch == 's')
+                nPIDGainTable[0][1] -= 0.1;
+            else if(ch == 'x')
+                nPIDGainTable[0][1] += 0.1;
+            else if(ch == 'd')
+                nPIDGainTable[0][2] -= 0.1;
+            else if(ch == 'c')
+                nPIDGainTable[0][2] += 0.1;
+        }
+    }
+
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
 
@@ -302,11 +322,12 @@ void loop()
     //_print_Gyro_Signals();
     //_print_MagData();
     //_print_BarometerData();
-    _print_RPY_Signals();
+    //_print_RPY_Signals();
     //_print_CaturedRC_Signals();
     //_print_UsingRC_Signals();
-    _print_Throttle_Signals();
+    //_print_Throttle_Signals();
     //_print_SonarData();
+    _print_AllData();
     Serialprintln(" ");
     #endif
 

@@ -166,11 +166,11 @@ void _print_AllData()
     long                    *pUsingRCVal = &(pSelfFlyHndl->nUsingRCVal[0]);
     float                   *pFineRPY = &(pSelfFlyHndl->nFineRPY[0]);
     unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
-	#if !USE_NEW_PID
+    #if !USE_NEW_PID
     AxisErrRate_T           *pPitch = &(pSelfFlyHndl->nPitch);
     AxisErrRate_T           *pRoll = &(pSelfFlyHndl->nRoll);
     AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
-	#endif
+    #endif
 
     Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
     Serialprint(", ");
@@ -193,6 +193,10 @@ void _print_AllData()
     Serialprint(", ");
     Serialprint(pSelfFlyHndl->nRPY_PID[2].nBalance);
     Serialprint(", ");
+    Serialprint(pSelfFlyHndl->nRPY_PID[0].nBalance
+                + pSelfFlyHndl->nRPY_PID[1].nBalance
+                + pSelfFlyHndl->nRPY_PID[2].nBalance);
+    Serialprint(", ");
     #else
     Serialprint(pRoll->nBalance);
     Serialprint(", ");
@@ -201,6 +205,14 @@ void _print_AllData()
     Serialprint(pYaw->nTorque);
     Serialprint(", ");
     #endif
+
+    Serialprint(nPIDGainTable[0][0]);
+    Serialprint(", ");
+    Serialprint(nPIDGainTable[0][1]);
+    Serialprint(", ");
+    Serialprint(nPIDGainTable[0][2]);
+    Serialprint(", ");
+    
     Serialprint(pThrottle[0]);
     Serialprint(", ");
     Serialprint(pThrottle[1]);
