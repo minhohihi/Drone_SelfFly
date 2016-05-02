@@ -8,7 +8,7 @@
 #ifndef __DEBUGGER__
 #define __DEBUGGER__
 
-#if __PRINT_DEBUG__
+#if __PRINT_DEBUG__ || __EXTERNAL_READ__
 void _print_CaturedRC_Signals()
 {
     long                    *pCapturedRCVal = &(pSelfFlyHndl->nCapturedRCVal[0]);
@@ -172,14 +172,14 @@ void _print_AllData()
     AxisErrRate_T           *pYaw = &(pSelfFlyHndl->nYaw);
     #endif
 
-    Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
-    Serialprint(", ");
-    Serialprint(pUsingRCVal[CH_TYPE_PITCH]);
-    Serialprint(", ");
-    Serialprint(pUsingRCVal[CH_TYPE_THROTTLE]);
-    Serialprint(", ");
-    Serialprint(pUsingRCVal[CH_TYPE_YAW]);
-    Serialprint(", ");
+    //Serialprint(pUsingRCVal[CH_TYPE_ROLL]);
+    //Serialprint(", ");
+    //Serialprint(pUsingRCVal[CH_TYPE_PITCH]);
+    //Serialprint(", ");
+    //Serialprint(pUsingRCVal[CH_TYPE_THROTTLE]);
+    //Serialprint(", ");
+    //Serialprint(pUsingRCVal[CH_TYPE_YAW]);
+    //Serialprint(", ");
     Serialprint(pFineRPY[0]);
     Serialprint(", ");
     Serialprint(pFineRPY[1]);
@@ -211,15 +211,15 @@ void _print_AllData()
     Serialprint(nPIDGainTable[0][1]);
     Serialprint(", ");
     Serialprint(nPIDGainTable[0][2]);
-    Serialprint(", ");
+    Serialprintln(", ");
     
-    Serialprint(pThrottle[0]);
-    Serialprint(", ");
-    Serialprint(pThrottle[1]);
-    Serialprint(", ");
-    Serialprint(pThrottle[2]);
-    Serialprint(", ");
-    Serialprint(pThrottle[3]);
+    //Serialprint(pThrottle[0]);
+    //Serialprint(", ");
+    //Serialprint(pThrottle[1]);
+    //Serialprint(", ");
+    //Serialprint(pThrottle[2]);
+    //Serialprint(", ");
+    //Serialprint(pThrottle[3]);
 }
 #endif
 #endif /* Debugger */

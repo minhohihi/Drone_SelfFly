@@ -40,11 +40,11 @@ inline void _CalculatePID()
         if(CH_TYPE_THROTTLE == i)
             continue;
 
-        // Mapping RC Value to (-120) ~ (+120)  <== +-480 / 4
+        // Mapping RC Value to (-40) ~ (+40)  <== +-400 / 10
         if(pUsingRCVal[i] > 1480)
-            pUsingRCVal[i] = (pUsingRCVal[i] - 1480) / 4;
+            pUsingRCVal[i] = (pUsingRCVal[i] - 1480) / 10;
         else if(pUsingRCVal[i] < 1460)
-            pUsingRCVal[i] = (pUsingRCVal[i] - 1460) / 4;
+            pUsingRCVal[i] = (pUsingRCVal[i] - 1460) / 10;
         else
             pUsingRCVal[i] = 0;
     }
@@ -71,10 +71,10 @@ inline void _CalculatePID()
     nPrevRCVal[CH_TYPE_YAW] = pUsingRCVal[CH_TYPE_YAW];
     #endif
 
-    if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 30)
+    if(abs(pFineRPY[0] - nPrevFineRPY[0]) > 40)
         pFineRPY[0] = nPrevFineRPY[0];
 
-    if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 30)
+    if(abs(pFineRPY[1] - nPrevFineRPY[1]) > 40)
         pFineRPY[1] = nPrevFineRPY[1];
 
     #if USE_NEW_PID
@@ -84,7 +84,7 @@ inline void _CalculatePID()
         //                                               {1.4, 0.03, 15},     // Pitch's P, I, D
         //                                               {4.0, 0.02, 0.0}};   // Yaw's P, I, D
         const int               nReverseRPYFlag[3] = {1, -1, 1};
-        const int               nErrRateRestriction = 100;
+        const int               nErrRateRestriction = 50;
 
         j = 0;
         for(i=0 ; i<3 ; i++)
@@ -94,7 +94,7 @@ inline void _CalculatePID()
             if(2 == i)
                 j++;
 
-            pPIDCtrl->nCurrErrRate = pUsingRCVal[j] - pFineRPY[j];
+            pPIDCtrl->nCurrErrRate = (1.0) * (pUsingRCVal[j] - pFineRPY[i]);
 
             pPIDCtrl->nP_ErrRate = nPIDGainTable[i][0] * pPIDCtrl->nCurrErrRate;
             pPIDCtrl->nI_ErrRate += (nPIDGainTable[i][1] * pPIDCtrl->nCurrErrRate);

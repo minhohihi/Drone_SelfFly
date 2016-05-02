@@ -1,8 +1,9 @@
 
-#define __DEBUG__                           (0)
+#define __DEBUG__                           (1)
 #if (__DEBUG__)
-    #define __PRINT_DEBUG__                 (1)
+    #define __PRINT_DEBUG__                 (0)
     #define __PROFILE__                     (0)
+    #define __EXTERNAL_READ__               (1)
     #define SERIAL_BAUDRATE                 (115200)
 #else
     #define __PRINT_DEBUG__                 (1)
@@ -286,6 +287,7 @@ void loop()
     // Check Battery Voltage Status
     _Check_BatteryVolt();
 
+    #if __EXTERNAL_READ__
     {
         if(Serial.available())
         {
@@ -305,6 +307,7 @@ void loop()
                 nPIDGainTable[0][2] += 0.1;
         }
     }
+    #endif
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetSensorRawData();
@@ -312,13 +315,16 @@ void loop()
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
 
+    if(0 == pSelfFlyHndl->bIsInitializeRPY)
+        return;
+
     // PID Computation
     _CalculatePID();
 
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    #if __PRINT_DEBUG__
+    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
     //_print_Gyro_Signals();
     //_print_MagData();
     //_print_BarometerData();
@@ -328,7 +334,7 @@ void loop()
     //_print_Throttle_Signals();
     //_print_SonarData();
     _print_AllData();
-    Serialprintln(" ");
+    //Serialprintln(" ");
     #endif
 
     // Update BLDCs
