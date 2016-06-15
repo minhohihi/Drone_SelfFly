@@ -12,8 +12,8 @@ void _Mag_Initialize()
 {
     HMC5883L            *pMagHndl = NULL;
 
-    pSelfFlyHndl->nMagHndl = HMC5883L();
-    pMagHndl = &(pSelfFlyHndl->nMagHndl);
+    nMagHndl = HMC5883L();
+    pMagHndl = &nMagHndl;
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -42,7 +42,7 @@ void _Mag_Initialize()
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
-    pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
+    nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
 
     Serialprintln(F(" Done"));
 
@@ -53,9 +53,7 @@ void _Mag_Initialize()
 
 void _Mag_GetData()
 {
-    float                   *pRawMag = &(pSelfFlyHndl->nMagParam.nRawMag[X_AXIS]);
-
-    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMag[X_AXIS]), &(pRawMag[Y_AXIS]), &(pRawMag[Z_AXIS]));
+    nMagHndl.getScaledHeading(&(nRawMag[X_AXIS]), &(nRawMag[Y_AXIS]), &(nRawMag[Z_AXIS]));
 
     // Calculate Heading
     //_Mag_CalculateDirection();
@@ -65,32 +63,31 @@ void _Mag_GetData()
 void _Mag_CalculateDirection()
 {
     int                     i = 0;
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
+    
+    nMagHeadingRad = atan2(nRawMag[Y_AXIS], nRawMag[X_AXIS]);
+    nMagHeadingRad -= nDeclinationAngle;      // If East, then Change Operation to PLUS
 
-    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMag[Y_AXIS], pMagParam->nRawMag[X_AXIS]);
-    pMagParam->nMagHeadingRad -= pMagParam->nDeclinationAngle;      // If East, then Change Operation to PLUS
+    if(nMagHeadingRad < 0)
+        nMagHeadingRad += DOUBLE_RADIAN;
 
-    if(pMagParam->nMagHeadingRad < 0)
-        pMagParam->nMagHeadingRad += DOUBLE_RADIAN;
+    if(nMagHeadingRad > DOUBLE_RADIAN)
+        nMagHeadingRad -= DOUBLE_RADIAN;
 
-    if(pMagParam->nMagHeadingRad > DOUBLE_RADIAN)
-        pMagParam->nMagHeadingRad -= DOUBLE_RADIAN;
+    nMagHeadingDeg = nMagHeadingRad * RAD_TO_DEG_SCALE;
 
-    pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
-
-    if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-    else if(pMagParam->nMagHeadingDeg >= 240)
-        pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+    if(nMagHeadingDeg >= 1 && nMagHeadingDeg < 240)
+        nMagHeadingDeg = map(nMagHeadingDeg, 0, 239, 0, 179);
+    else if(nMagHeadingDeg >= 240)
+        nMagHeadingDeg = map(nMagHeadingDeg, 240, 360, 180, 360);
 
     // Smooth angles rotation for +/- 3deg
-    pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);
+    nSmoothHeadingDegrees = round(nMagHeadingDeg);
 
-    if((pMagParam->nSmoothHeadingDegrees < (pMagParam->nPrevHeadingDegrees + 3)) &&
-       (pMagParam->nSmoothHeadingDegrees > (pMagParam->nPrevHeadingDegrees - 3)))
-        pMagParam->nSmoothHeadingDegrees = pMagParam->nPrevHeadingDegrees;
+    if((nSmoothHeadingDegrees < (nPrevHeadingDegrees + 3)) &&
+       (nSmoothHeadingDegrees > (nPrevHeadingDegrees - 3)))
+        nSmoothHeadingDegrees = nPrevHeadingDegrees;
 
-    pMagParam->nPrevHeadingDegrees = pMagParam->nSmoothHeadingDegrees;
+    nPrevHeadingDegrees = nSmoothHeadingDegrees;
 }
 
 #endif /* HMC5883L_Controller_h */

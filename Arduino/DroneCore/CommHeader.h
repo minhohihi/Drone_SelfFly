@@ -8,13 +8,14 @@
 #ifndef __COMMON_HEADER__
 #define __COMMON_HEADER__
 
+#define EEPROM_SIZE                         (36)
+
 // Define Axis
 #define X_AXIS                              (0)
 #define Y_AXIS                              (1)
 #define Z_AXIS                              (2)
 
 // Define Max Number of Each Field
-#define MAX_CH_RC                           (5)
 #define MAX_CH_ESC                          (4)
 
 // Arduino Pin configuration
@@ -45,8 +46,8 @@
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
 #define ESC_TAKEOFF_OFFSET                  (1100)
-#define ESC_ARM_DELAY                       (1000)
-#define ESC_ACTUAL_MIN                      (1200)
+#define ESC_ACTUAL_MIN                      (1100)
+#define ESC_ACTUAL_MAX                      (1900)
 
 // RC configuration
 #define RC_CH0_HIGH                         (1884)
@@ -63,26 +64,60 @@
 #define INVERSE_RC_PITCH                    (1)
 #define INVERSE_RC_YAW                      (0)
 
-// PID configuration
-#define PITCH_OUTER_P_GAIN                  (4.750)                         // angle control
-#define PITCH_INNER_P_GAIN                  (2.933)                         // rate control
-#define PITCH_INNER_I_GAIN                  (0.440)
-#define PITCH_INNER_D_GAIN                  (0.335)
-#define ROLL_OUTER_P_GAIN                   (4.750)                         // angle control
-#define ROLL_INNER_P_GAIN                   (2.833)                         // rate control
-#define ROLL_INNER_I_GAIN                   (0.440)
-#define ROLL_INNER_D_GAIN                   (0.335)
-#define YAW_P_GAIN                          (2.325)                         // yaw -> rate control
-#define YAW_I_GAIN                          (0.650)
-#define INVERSE_RPY_ROLL                    (1)
-#define INVERSE_RPY_PITCH                   (1)
-#define INVERSE_RPY_YAW                     (0)
-#define USE_NEW_PID                         (1)
+// EEPROM Data Address
+typedef enum _EEPROM_DataMap
+{
+    // For Transmitter Range
+    EEPROM_DATA_RC_CH0_LOW_H,
+    EEPROM_DATA_RC_CH0_LOW_L,
+    EEPROM_DATA_RC_CH0_CEN_H,
+    EEPROM_DATA_RC_CH0_CEN_L,
+    EEPROM_DATA_RC_CH0_HIG_H,
+    EEPROM_DATA_RC_CH0_HIG_L,
+    EEPROM_DATA_RC_CH1_LOW_H,
+    EEPROM_DATA_RC_CH1_LOW_L,
+    EEPROM_DATA_RC_CH1_CEN_H,
+    EEPROM_DATA_RC_CH1_CEN_L,
+    EEPROM_DATA_RC_CH1_HIG_H,
+    EEPROM_DATA_RC_CH1_HIG_L,
+    EEPROM_DATA_RC_CH2_LOW_H,
+    EEPROM_DATA_RC_CH2_LOW_L,
+    EEPROM_DATA_RC_CH2_CEN_H,
+    EEPROM_DATA_RC_CH2_CEN_L,
+    EEPROM_DATA_RC_CH2_HIG_H,
+    EEPROM_DATA_RC_CH2_HIG_L,
+    EEPROM_DATA_RC_CH3_LOW_H,
+    EEPROM_DATA_RC_CH3_LOW_L,
+    EEPROM_DATA_RC_CH3_CEN_H,
+    EEPROM_DATA_RC_CH3_CEN_L,
+    EEPROM_DATA_RC_CH3_HIG_H,
+    EEPROM_DATA_RC_CH3_HIG_L,
+    EEPROM_DATA_RC_CH4_LOW_H,
+    EEPROM_DATA_RC_CH4_LOW_L,
+    EEPROM_DATA_RC_CH4_CEN_H,
+    EEPROM_DATA_RC_CH4_CEN_L,
+    EEPROM_DATA_RC_CH4_HIG_H,
+    EEPROM_DATA_RC_CH4_HIG_L,
+    
+    // For Accel & Gyro Offset
+    EEPROM_DATA_GYRO_OFFSET_X,
+    EEPROM_DATA_GYRO_OFFSET_Y,
+    EEPROM_DATA_GYRO_OFFSET_Z,
+    EEPROM_DATA_ACCEL_OFFSET_X,
+    EEPROM_DATA_ACCEL_OFFSET_Y,
+    EEPROM_DATA_ACCEL_OFFSET_Z,
+}EEPROM_DataMap;
 
-#define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
-#define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
-#define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
-#define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
+
+
+
+
+
+#define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_500)           // MPU6050_GYRO_FS_250 / MPU6050_GYRO_FS_500 / MPU6050_GYRO_FS_1000 / MPU6050_GYRO_FS_2000
+#define GYRO_FS                             (65.5f)                         // (2^15 - 1) / (500 * (1 << GYRO_FS_PRECISIOM))
+#define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_8)            // MPU6050_ACCEL_FS_2 / MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
+#define ACCEL_FS                            (16384.0f / (1 << ACCEL_FS_PRECISIOM))
+#define MPU6050_DLP_PRECISION               (MPU6050_DLPF_BW_42)
 
 // Flight parameters
 #define PITCH_ANG_MIN                       (-30)

@@ -14,11 +14,10 @@
 /*----------------------------------------------------------------------------------------
  File Inclusions
  ----------------------------------------------------------------------------------------*/
+#include <EEPROM.h>
 #include <I2Cdev.h>
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include <Wire.h>
-#endif
-#include <MPU6050_6Axis_MotionApps20.h>
+#include <Wire.h>
+//#include <MPU6050_6Axis_MotionApps20.h>
 #include <HMC5883L.h>
 #include <MS561101BA.h>
 #include <math.h>
@@ -47,135 +46,109 @@
  ----------------------------------------------------------------------------------------*/
 typedef enum _RC_CH_Type
 {
-    CH_TYPE_ROLL,
+    CH_TYPE_ROLL                = 0,
     CH_TYPE_PITCH,
     CH_TYPE_THROTTLE,
     CH_TYPE_YAW,
     CH_TYPE_TAKE_LAND,
+    CH_TYPE_MAX,
 }RC_CH_Type;
 
 typedef enum _DroneStatus
 {
-    DRONESTATUS_STOP,
+    DRONESTATUS_STOP            = 0,
     DRONESTATUS_READY,
     DRONESTATUS_START,
 }DroneStatus;
 
 typedef struct _AxisErrRate_T
 {
-    float               nAngleErr;
-    float               nCurrErrRate;
-    float               nPrevErrRate;
-    float               nP_ErrRate;
-    float               nI_ErrRate;
-    float               nD_ErrRate;
-    float               nBalance;
-    float               nTorque;
+    float           nP_ErrRate;
+    float           nI_ErrRate;
+    float           nD_ErrRate;
+    float           nPrevErrRate;
+    float           nBalance;
 }AxisErrRate_T;
 
-typedef struct _AccelGyroParam_T
-{
-    float               nRawGyro[3];
-    float               nRawAccel[3];
-    float               nRawTemp;
-    float               nBaseAccel[3];
-    float               nFineAngle[3];                          // Filtered Angles
-}AccelGyroParam_T;
 
-typedef struct _MagParam_T
-{
-    float               nRawMag[3];
-    float               nMagHeadingRad;
-    float               nMagHeadingDeg;
-    float               nSmoothHeadingDegrees;
-    float               nPrevHeadingDegrees;
-    float               nDeclinationAngle;
-}MagneticParam_T;
+// For Accelerator & Gyroscope Sensor
+double              nRawGyro[3];
+double              nRawAccel[3];
+double              nCalibMeanGyro[3];
+double              nCalibMeanAccel[3];
 
-typedef struct _BaroParam_T
-{
-    float               nRawTemp;                               // Raw Temperature Data
-    float               nRawPressure;                           // Raw Pressure Data
-    float               nRawAbsoluteAltitude;                   // Estimated Absolute Altitude
+// For Magnetometer Sensor
+HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
+float               nRawMag[3];
+double              nMagHeadingRad;
+double              nMagHeadingDeg;
+double              nSmoothHeadingDegrees;
+double              nPrevHeadingDegrees;
+double              nDeclinationAngle;
 
-    float               nAvgPressure;                           // Average Pressure Data
-    float               nAvgTemp;                               // Average Temperature Data
-    float               nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
-    float               nRelativeAltitude;                      // Relative Absolute Altitude Data
-    float               nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
-    float               nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
-    float               nVerticalSpeed;                         // Estimated Vertical Speed
-}BaroParam_T;
+// For Barometer Sensor
+MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
+double              nRawTemp;                               // Raw Temperature Data
+double              nRawPressure;                           // Raw Pressure Data
+double              nRawAbsoluteAltitude;                   // Estimated Absolute Altitude
+double              nAvgPressure;                           // Average Pressure Data
+double              nAvgTemp;                               // Average Temperature Data
+double              nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
+double              nRelativeAltitude;                      // Relative Absolute Altitude Data
+double              nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
+double              nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
+double              nVerticalSpeed;                         // Estimated Vertical Speed
 
-typedef struct _SonicParam_T
-{
-    float               nRawDist;                               // Indicate Distance Calculated From Sensor
-    float               nDistFromGnd;                           // Indicate istance from Ground
-}SonicParam_T;
+// For Sonar Sensor
+double              nRawDist;                               // Indicate Distance Calculated From Sensor
+double              nDistFromGnd;                           // Indicate istance from Ground
 
-typedef struct _SelfFly_T
-{
-    // For Accelerator & Gyroscope Sensor
-    MPU6050             nAccelGyroHndl;                         // MPU6050 Gyroscope Interface
-    AccelGyroParam_T    nAccelGyroParam;
-    //int                 nCalibMean_AX, nCalibMean_AY, nCalibMean_AZ;
-    //int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
+// For PID Control
+AxisErrRate_T       nRPY_PID[3];
+//float               nPrevDErr_Roll, nPrevDErr_Pitch, nPrevDErr_Yaw;
+//float               nIErr_Roll, nIErr_Pitch, nIErr_Yaw;
+//float               nBalance_Roll, nBalance_Pitch, nBalance_Yaw;
 
-    // For Magnetometer Sensor
-    HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
-    MagneticParam_T     nMagParam;
+// For Motor Control
+int                 nLowRC[CH_TYPE_MAX];
+int                 nCenterRC[CH_TYPE_MAX];
+int                 nHighRC[CH_TYPE_MAX];
+int                 nRCReverseFlag[CH_TYPE_MAX];
+int                 nESCOutput[MAX_CH_ESC];
+int                 nAxisReverseFlag[3];
+byte                nRcvChFlag[CH_TYPE_MAX];
+unsigned long       nRcvChHighTime[CH_TYPE_MAX];
+int                 nRcvChVal[CH_TYPE_MAX];
+int                 nCompensatedRCVal[CH_TYPE_MAX];
 
-    // For Barometer Sensor
-    MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
-    BaroParam_T         nBaroParam;
+// For Estimated Status of Drone
+float               nEstimatedRPY[3];
+//float               nFineGyro[3];
+//float               nQuaternion[4];                         // quaternion
+//float               nEstGravity[3];                         // estimated gravity direction
+//bool                bIsInitializeRPY;
+//float               nRPYOffset[3];
 
-    // For Sonar Sensor
-    SonicParam_T        SonicParam;                             // HC-SR04 Sonar Sensor
+// For Control Interval
+unsigned long       nESCLoopTimer;
+unsigned long       nPrevSensorCapTime;
+unsigned long       nCurrSensorCapTime;
+unsigned long       nCurrTime;
+#if __PROFILE__
+unsigned long       nProfileStartTime;
+unsigned long       nProfileEndTime;
+#endif
+double              nDiffTime;
 
-    // For PID Control
-    #if USE_NEW_PID
-    AxisErrRate_T       nRPY_PID[3];
-    #else
-    AxisErrRate_T       nPitch;
-    AxisErrRate_T       nRoll;
-    AxisErrRate_T       nYaw;
-    #endif
+// For Status of Drone
+DroneStatus         nDroneStatus;
 
-    // For Motor Control
-    long                nCapturedRCVal[MAX_CH_RC];              // RC channel inputs
-    long                nUsingRCVal[MAX_CH_RC];                 // RC channel inputs
-    unsigned long       nRCPrevChangeTime[MAX_CH_RC];
-    unsigned long       nThrottle[MAX_CH_ESC];
-    volatile bool       nLock;
+// For Battery Status
+int                 nCurrBatteryVolt;
 
-    // For Estimated Status of Drone
-    float               nFineRPY[3];
-    float               nFineGyro[3];
-    float               nQuaternion[4];                         // quaternion
-    float               nEstGravity[3];                         // estimated gravity direction
-    bool                bIsInitializeRPY;
-    unsigned long       nInitializedTime;
-    float               nRPYOffset[3];
-
-    // For Control Interval
-    unsigned long       nCurrSensorCapTime;
-    unsigned long       nPrevSensorCapTime;
-    float               nDiffTime;
-    float               nSampleFreq;                            // half the sample period expressed in seconds
-    float               nBeta;
-
-    // For Status of Drone
-    DroneStatus         nDroneStatus;
-
-    // For Battery Status
-    float               nCurrBatteryVolt;
-
-    // For LED Control
-    int                 nPrevR;
-    int                 nPrevG;
-    int                 nPrevB;
-    unsigned long       nPrevBlinkTime;
-}SelfFly_T;
+// For LED Control
+int                 nLED_Status;
+unsigned long       nPrevBlinkTime;
 
 
 /*----------------------------------------------------------------------------------------
@@ -186,7 +159,6 @@ typedef struct _SelfFly_T
 /*----------------------------------------------------------------------------------------
  Static Variable
  ----------------------------------------------------------------------------------------*/
-static SelfFly_T                   *pSelfFlyHndl = NULL;                           // SelfFly Main Handle
 
 
 /*----------------------------------------------------------------------------------------
@@ -202,9 +174,9 @@ static SelfFly_T                   *pSelfFlyHndl = NULL;                        
 #include "RC_Control.h"
 #include "ESC_Control.h"
 #include "MPU6050_Control.h"
-#include "HMC5883L_Control.h"
-#include "HS5611_Control.h"
-#include "SR04_Control.h"
+//#include "HMC5883L_Control.h"
+//#include "HS5611_Control.h"
+//#include "SR04_Control.h"
 #include "Misc.h"
 #include "AHRS_Control.h"
 #include "PID_Control.h"
@@ -214,78 +186,75 @@ static SelfFly_T                   *pSelfFlyHndl = NULL;                        
 
 void setup()
 {
-    int32_t                 i = 0;
-    uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
+    int                 i;
 
-    Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
-    Serialprintln("   **********************************************   ");
-    Serialprintln("   **********************************************   ");
+    Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . "));
+    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("   **********************************************   "));
 
-    pSelfFlyHndl = (SelfFly_T *) malloc(sizeof(SelfFly_T));
-
-    memset(pSelfFlyHndl, 0, sizeof(SelfFly_T));
-
+    // Set I2C Enable
     Wire.begin();
-    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-
+    
     #if __DEBUG__
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
-
-    while(!Serial); // wait for Leonardo enumeration, others continue immediately
     #endif
+
+    // Read EEPROM Data
+    _Read_EEPROM();
+
+    // Initialize LED
+    _LED_Initialize();
+      
+    // Initialize ESCs
+    _ESC_Initialize();
 
     // Initialize RemoteController
     _RC_Initialize();
-
-    // Initialize ESCs
-    _ESC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
 
     // Initialize Magnetic
-    _Mag_Initialize();
+    //_Mag_Initialize();
 
     // Initialize Barometer
-    _Barometer_Initialize();
+    //_Barometer_Initialize();
 
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
 
-    // Initialize LED
-    _LED_Initialize();
+    nESCLoopTimer = 0;
+    nDroneStatus = DRONESTATUS_STOP;
+    nCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
+    nLED_Status = 0;
 
-    pSelfFlyHndl->nQuaternion[0] = 1.0f;
-    pSelfFlyHndl->nBeta = BETADEF;
-    pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
-    pSelfFlyHndl->nCurrBatteryVolt = (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
-    pSelfFlyHndl->nInitializedTime = 0;
-    pSelfFlyHndl->bIsInitializeRPY = 0;
-
-    Serialprintln("   **********************************************   ");
-    Serialprintln("   **********************************************   ");
-    Serialprintln("");    Serialprintln("");    Serialprintln("");    Serialprintln("");
+    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
 }
 
 
 void loop()
 {
-    #if __PROFILE__
-    float                   nStartTime0 = 0.0f, nEndTime = 0.0f;
+    int                     i = 0;
 
-    nStartTime0 = micros();
-    #endif
+    // Get Receiver Input
+    // Then Mapping Actual Reciever Value to 1000 ~ 2000
+    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
+        _RC_Compensate(i);
 
-    _LED_Blink();
+    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
+    _GetRawSensorData();
 
-    // Check Drone Status
-    _Check_Drone_Status();
-    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
-        return;
+    // Calculate Roll, Pitch, and Yaw by Quaternion
+    _Get_RollPitchYaw();
 
     // Check Battery Voltage Status
     _Check_BatteryVolt();
+
+    // Check Drone Status
+    _Check_Drone_Status();
 
     #if __EXTERNAL_READ__
     {
@@ -294,29 +263,38 @@ void loop()
             char ch = Serial.read();
             
             if(ch == 'a')
-                nPIDGainTable[0][0] -= 0.1;
+            {
+                nPIDGainTable[0][0] -= 0.01;
+                nPIDGainTable[1][0] -= 0.01;
+            }
             else if(ch == 'z')
-                nPIDGainTable[0][0] += 0.1;
+            {
+                nPIDGainTable[0][0] += 0.01;
+                nPIDGainTable[1][0] += 0.01;
+            }
             else if(ch == 's')
-                nPIDGainTable[0][1] -= 0.1;
+            {
+                nPIDGainTable[0][1] -= 0.01;
+                nPIDGainTable[1][1] -= 0.01;
+            }
             else if(ch == 'x')
-                nPIDGainTable[0][1] += 0.1;
+            {
+                nPIDGainTable[0][1] += 0.01;
+                nPIDGainTable[1][1] += 0.01;
+            }
             else if(ch == 'd')
-                nPIDGainTable[0][2] -= 0.1;
+            {
+                nPIDGainTable[0][2] -= 0.01;
+                nPIDGainTable[1][2] -= 0.01;
+            }
             else if(ch == 'c')
-                nPIDGainTable[0][2] += 0.1;
+            {
+                nPIDGainTable[0][2] += 0.01;
+                nPIDGainTable[1][2] += 0.01;
+            }
         }
     }
     #endif
-
-    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-    _GetSensorRawData();
-
-    // Calculate Roll, Pitch, and Yaw by Quaternion
-    _Get_RollPitchYaw();
-
-    if(0 == pSelfFlyHndl->bIsInitializeRPY)
-        return;
 
     // PID Computation
     _CalculatePID();
@@ -324,26 +302,13 @@ void loop()
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
-    //_print_Gyro_Signals();
-    //_print_MagData();
-    //_print_BarometerData();
-    //_print_RPY_Signals();
-    //_print_CaturedRC_Signals();
-    //_print_UsingRC_Signals();
-    //_print_Throttle_Signals();
-    //_print_SonarData();
-    _print_AllData();
-    //Serialprintln(" ");
-    #endif
-
     // Update BLDCs
     _UpdateESCs();
 
-    #if __PROFILE__
-    nEndTime = micros();
-    Serialprint(" Loop Duration: "); Serialprintln((nEndTime - nStartTime0)/1000);
+    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
+        _print_Data();
     #endif
 }
+
 
 

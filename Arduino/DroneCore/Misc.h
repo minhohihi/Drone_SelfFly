@@ -11,90 +11,65 @@
 
 void _Check_Drone_Status()
 {
-    if(DRONESTATUS_STOP == pSelfFlyHndl->nDroneStatus)
+    int32_t                 nLEDPeriod = 500000;
+    
+    if((1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1050 > nCompensatedRCVal[CH_TYPE_YAW]))
+        nDroneStatus = DRONESTATUS_READY;
+    
+    //When yaw stick is back in the center position start the motors (step 2).
+    if((DRONESTATUS_READY == nDroneStatus) &&
+       (1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1400 < nCompensatedRCVal[CH_TYPE_YAW]))
     {
-        int                 nLoopCnt = 0;
-
-        do
+        int         i = 0;
+        
+        nDroneStatus = DRONESTATUS_START;
+        
+        //Reset the pid controllers for a bumpless start.
+        for(i=0 ; i<3 ; i++)
         {
-            // Should be Set Lowest Throttle & Highest Right Yaw for About 2 Sec. to Start Drone
-            if((1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
-               && (1800 < pSelfFlyHndl->nCapturedRCVal[CH_TYPE_YAW]))
-                nLoopCnt++;
-            else
-                nLoopCnt = 0;
-
-            delay(50);
-        }while(nLoopCnt < 40);
-
-        pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
-
-        // Turn On a Green Light
-        _LED_SetColor(0, 1, 0, 1);
-
-        // Set Initialized Time to Check Proper Time
-        if((0 == pSelfFlyHndl->bIsInitializeRPY) && (0 == pSelfFlyHndl->nInitializedTime))
-            pSelfFlyHndl->nInitializedTime = micros();
-
-        return;
-    }
-    else if(DRONESTATUS_STOP < pSelfFlyHndl->nDroneStatus)
-    {
-        static int      nLoopCnt = 0;
-
-        if(DRONESTATUS_READY == pSelfFlyHndl->nDroneStatus)
-        {
-            if(1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
-                nLoopCnt++;
-            else
-            {
-                nLoopCnt = 0;
-                pSelfFlyHndl->nDroneStatus = DRONESTATUS_START;
-
-                // Turn On a Blue Light
-                _LED_SetColor(0, 0, 1, 1);
-            }
-
-            if(nLoopCnt > DRONE_STOP_TIME_TH)
-            {
-                nLoopCnt = 0;
-                pSelfFlyHndl->nDroneStatus = DRONESTATUS_STOP;
-
-                // Turn On a Red Light
-                _LED_SetColor(1, 0, 0, 1);
-            }
-        }
-        else
-        {
-            if(1100 >= pSelfFlyHndl->nCapturedRCVal[CH_TYPE_THROTTLE])
-            {
-                nLoopCnt = 0;
-                pSelfFlyHndl->nDroneStatus = DRONESTATUS_READY;
-
-                // Turn On a Creen Light
-                _LED_SetColor(0, 1, 0, 1);
-            }
+            nRPY_PID[i].nP_ErrRate = 0.0;
+            nRPY_PID[i].nI_ErrRate = 0.0;
+            nRPY_PID[i].nD_ErrRate = 0.0;
+            nRPY_PID[i].nPrevErrRate = 0.0;
+            nRPY_PID[i].nBalance = 0.0;
         }
     }
+    
+    //Stopping the motors: throttle low and yaw right.
+    if((DRONESTATUS_START == nDroneStatus) &&
+       (1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1950 < nCompensatedRCVal[CH_TYPE_YAW]))
+        nDroneStatus = DRONESTATUS_STOP;
+    
+    // Set LED Period as 200ms When Low Voltage
+    //if((1030 > nCurrBatteryVolt) && (600 < nCurrBatteryVolt))
+    //    nLEDPeriod = 200000;
+
+    if(DRONESTATUS_STOP == nDroneStatus)
+        _LED_Blink(1, 0, 0, nLEDPeriod);                                 // Turn On a Red Light
+    else if(DRONESTATUS_READY == nDroneStatus)
+        _LED_Blink(0, 1, 0, nLEDPeriod);                                 // Turn On a Green Light
+    else if(DRONESTATUS_START == nDroneStatus)
+        _LED_Blink(0, 0, 1, nLEDPeriod);                                 // Turn On a Blue Light
+    
+    return;
 }
 
 
-void _GetSensorRawData()
+void _GetRawSensorData()
 {
-    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
-    pSelfFlyHndl->nCurrSensorCapTime = micros();
+    nPrevSensorCapTime = nCurrSensorCapTime;
+    nCurrSensorCapTime = micros();
 
-    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
-
+    nDiffTime = (nCurrSensorCapTime - nPrevSensorCapTime) / 1000000.0;
+    
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
 
     // Get Magnetic Raw Data
-    _Mag_GetData();
+    //_Mag_GetData();
 
     // Get Barometer Raw Data
-    _Barometer_GetData();
+    //_Barometer_GetData();
 
     // Get Sonar Raw Data
     //_Sonar_GetData();
@@ -102,35 +77,114 @@ void _GetSensorRawData()
 }
 
 
-void _Check_BatteryVolt()
+void _Read_EEPROM()
 {
-    pSelfFlyHndl->nCurrBatteryVolt = (0.92 * pSelfFlyHndl->nCurrBatteryVolt) + (float)(analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+    byte                nEEPRomData[EEPROM_SIZE];                // EEPROM Data
+    int                 i = 0;
+    
+    Serialprintln(F(" *      1. Start Reading EEPROOM Data   "));
+    
+    for(i=0 ; i<EEPROM_SIZE ; i++)
+        nEEPRomData[i] = EEPROM.read(i);
 
-    //Serialprintln(pSelfFlyHndl->nCurrBatteryVolt);
+    for(i=0 ; i<CH_TYPE_MAX ; i++)
+    {
+        const int           nChannel = i + 1;
+        
+        nLowRC[i]         = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
+        nCenterRC[i]      = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
+        nHighRC[i]        = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
+        nRCReverseFlag[i] = !(!(nEEPRomData[nChannel + 23] & 0b10000000));
+    }
+    
+    for(i=0 ; i<3 ; i++)
+        nAxisReverseFlag[i] = !(!(nEEPRomData[28 + i] & 0b10000000));
+    
+    delay(300);
+    
+    Serialprintln(F(" *            => Done!!   "));
 }
 
 
-float _Clip3Float(const float nValue, const int MIN, const int MAX)
+void _Write_EEPROM(int nStartAddress)
+{
+    int                 i = 0;
+    int                 nEEPRomAddress = 0;
+    
+    Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F(" *         Writing Drone Setting to EEPROM          "));
+    Serialprintln(F("   **********************************************   "));
+
+    // Write Range of Transmitter
+    if(EEPROM_DATA_RC_CH0_LOW_H == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write Transmitter Range   "));
+        
+        nEEPRomAddress = EEPROM_DATA_RC_CH0_LOW_H;
+        
+        for(i=0 ; i<4 ; i++)
+        {
+            EEPROM.write(nEEPRomAddress,   nLowRC[i] >> 8);
+            EEPROM.write(nEEPRomAddress+1, nLowRC[i] & 0b11111111);
+            EEPROM.write(nEEPRomAddress+2, nCenterRC[i] >> 8);
+            EEPROM.write(nEEPRomAddress+3, nCenterRC[i] & 0b11111111);
+            EEPROM.write(nEEPRomAddress+4, nHighRC[i] >> 8);
+            EEPROM.write(nEEPRomAddress+5, nHighRC[i] & 0b11111111);
+            
+            nEEPRomAddress += 6;
+        }
+    }
+    else if(EEPROM_DATA_GYRO_OFFSET_X == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write Accel &Gyro Offset  "));
+        
+        nEEPRomAddress = EEPROM_DATA_GYRO_OFFSET_X;
+        
+        EEPROM.write(nEEPRomAddress,   nLowRC[i] >> 8);
+        EEPROM.write(nEEPRomAddress+1, nLowRC[i] & 0b11111111);
+        EEPROM.write(nEEPRomAddress+2, nCenterRC[i] >> 8);
+        EEPROM.write(nEEPRomAddress+3, nCenterRC[i] & 0b11111111);
+        EEPROM.write(nEEPRomAddress+4, nHighRC[i] >> 8);
+        EEPROM.write(nEEPRomAddress+5, nHighRC[i] & 0b11111111);
+    }
+    
+    
+    delay(300);
+    
+    Serialprintln(F(" *            => Done!!   "));
+}
+
+
+void _Check_BatteryVolt()
+{
+    nCurrBatteryVolt = (0.92 * nCurrBatteryVolt) + (analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+
+    //Serialprintln(nCurrBatteryVolt);
+}
+
+
+float _Clip3Float(float nValue, float nMIN, float nMAX)
 {
     float               nClipVal = nValue;
 
-    if(nValue < MIN)
-        nClipVal = MIN;
-    else if(nValue > MAX)
-        nClipVal = MAX;
+    if(nValue < nMIN)
+        nClipVal = nMIN;
+    else if(nValue > nMAX)
+        nClipVal = nMAX;
 
     return nClipVal;
 }
 
 
-int _Clip3Int(const int nValue, const int MIN, const int MAX)
+int _Clip3Int(int nValue, int nMIN, int nMAX)
 {
     int                 nClipVal = nValue;
 
-    if(nValue < MIN)
-        nClipVal = MIN;
-    else if(nValue > MAX)
-        nClipVal = MAX;
+    if(nValue < nMIN)
+        nClipVal = nMIN;
+    else if(nValue > nMAX)
+        nClipVal = nMAX;
 
     return nClipVal;
 }

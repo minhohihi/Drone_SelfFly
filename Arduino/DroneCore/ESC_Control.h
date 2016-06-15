@@ -8,12 +8,11 @@
 #ifndef __ESC_CONTROL__
 #define __ESC_CONTROL__
 
-inline void _UpdateESCs();
-
 void _ESC_Initialize()
 {
-    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
     int                     i = 0;
+
+    Serialprintln(F(" *      3. Start ESC Module Initialization   "));
 
     // Set Digital Port 8, 9, 10, and 11 as Output
     DDRB |= B00001111;
@@ -23,57 +22,58 @@ void _ESC_Initialize()
     // Set Value of Digital Port 8, 9, 10, and 11 as Low
     PORTB &= B11110000;
 
-    // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC
-    for(i=0 ; i<30 ; i++)
+    // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC For Two Seconds
+    for(i=0 ; i<500 ; i++)
     {
-        pThrottle[0] = ESC_MIN;
-        pThrottle[1] = ESC_MIN;
-        pThrottle[2] = ESC_MIN;
-        pThrottle[3] = ESC_MIN;
+        // Set Digital Port 8, 9, 10, and 11 as high.
+        PORTB |= B00001111;
+        delayMicroseconds(1000);
 
-        _UpdateESCs();
-
-        delay(10);
+        //Set digital poort 8, 9, 10, and 11 low.
+        PORTB &= B11110000;
+        delayMicroseconds(3000);
     }
-
-    // Set Value of Digital Port 8, 9, 10, and 11 as Low
-    PORTB &= B11110000;
+    
+    delay(300);
+    
+    Serialprintln(F(" *            => Done!!   "));
 }
 
 
-inline void _UpdateESCs()
+void _UpdateESCs()
 {
-    unsigned long           *pThrottle = &(pSelfFlyHndl->nThrottle[0]);
+    unsigned long           nESCOut[4] = {0, };
     int                     i = 0;
-    unsigned long           nLoopTimer = 0;
-
+    
     // Wait Until Passing 4ms.
-    while(micros() - nLoopTimer < 4000);
+    while(micros() - nESCLoopTimer < 4000);
 
     // Set the timer for the next loop.
-    nLoopTimer = micros();
-
-    // Set Relative Throttle Value by Adding Current Time
-    for(i=0 ; i<MAX_CH_ESC ; i++)
-        pThrottle[i] += nLoopTimer;
+    nESCLoopTimer = micros();
 
     // Set Digital Port 8, 9, 10, and 11 as high.
     PORTB |= B00001111;
 
+    // Set Relative Throttle Value by Adding Current Time
+    nESCOut[0] = nESCOutput[0] + nESCLoopTimer;
+    nESCOut[1] = nESCOutput[1] + nESCLoopTimer;
+    nESCOut[2] = nESCOutput[2] + nESCLoopTimer;
+    nESCOut[3] = nESCOutput[3] + nESCLoopTimer;
+    
     while(PORTB & B00001111)
     {
-        const unsigned long     nCurrTime = micros();
+        nCurrTime = micros();
 
-        if(pThrottle[0] <= nCurrTime)
+        if(nESCOut[0] <= nCurrTime)
             PORTB &= B11111110;
 
-        if(pThrottle[1] <= nCurrTime)
+        if(nESCOut[1] <= nCurrTime)
             PORTB &= B11111101;
 
-        if(pThrottle[2] <= nCurrTime)
+        if(nESCOut[2] <= nCurrTime)
             PORTB &= B11111011;
 
-        if(pThrottle[3] <= nCurrTime)
+        if(nESCOut[3] <= nCurrTime)
             PORTB &= B11110111;
     }
 }

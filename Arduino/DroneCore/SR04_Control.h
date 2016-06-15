@@ -33,17 +33,18 @@ void _Sonar_GetData()
     PORTC &= B11111101;
 
     // Get Raw Distance Value
-    pSelfFlyHndl->SonicParam.nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
+    nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
 
     // Calculate Distance From Ground
-    pSelfFlyHndl->SonicParam.nDistFromGnd = pSelfFlyHndl->SonicParam.nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
+    nDistFromGnd = nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
 }
 
 
 void _Sonar_GetData_WithPeriod()
 {
     static unsigned long    nPrevTime = 0;
-    unsigned long           nCurrTime = micros();
+    
+    nCurrTime = micros();
 
     if((nCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
     {
