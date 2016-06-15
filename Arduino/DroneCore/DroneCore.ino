@@ -70,6 +70,7 @@ typedef struct _AxisErrRate_T
     float           nBalance;
 }AxisErrRate_T;
 
+byte                nEEPROMData[EEPROM_DATA_MAX];
 
 // For Accelerator & Gyroscope Sensor
 double              nRawGyro[3];

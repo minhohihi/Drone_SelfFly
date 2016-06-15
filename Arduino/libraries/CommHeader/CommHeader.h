@@ -8,6 +8,8 @@
 #ifndef __COMMON_HEADER__
 #define __COMMON_HEADER__
 
+#include "Arduino.h"
+
 #define EEPROM_SIZE                         (36)
 
 // Define Axis

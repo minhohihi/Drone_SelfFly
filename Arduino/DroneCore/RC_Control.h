@@ -164,6 +164,33 @@ void _Wait_Receiver()
 }
 
 
+void _Read_RCData_From_EEPROM()
+{
+    int                 i = 0;
+    int                 nRCType = 0;
+    int                 nEEPRomAddress = 0;
+    
+    Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F(" *       Reading Drone Setting from EEPROM          "));
+    Serialprintln(F("   **********************************************   "));
+    
+    // Read Range of Transmitter
+    for(i=EEPROM_DATA_RC_CH0_TYPE ; i<=EEPROM_DATA_RC_CH4_TYPE ; i++)
+        nEEPROMData[i] = EEPROM.read(i);
+
+    for(i=EEPROM_DATA_RC_CH0_REVERSE ; i<=EEPROM_DATA_RC_CH4_REVERSE ; i++)
+        nEEPROMData[i] = EEPROM.read(i);
+    
+    for(i=EEPROM_DATA_RC_CH0_LOW_H ; i<=EEPROM_DATA_RC_CH4_HIG_L ; i++)
+        nEEPROMData[i] = EEPROM.read(i);
+    
+    delay(300);
+    
+    Serialprintln(F(" *            => Done!!   "));
+}
+
+
 #if 1
 ISR(PCINT2_vect)
 {
