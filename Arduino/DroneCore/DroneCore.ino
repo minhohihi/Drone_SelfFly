@@ -70,86 +70,83 @@ typedef struct _AxisErrRate_T
     float           nBalance;
 }AxisErrRate_T;
 
-byte                nEEPROMData[EEPROM_DATA_MAX];
+byte                _gEEPROMData[EEPROM_DATA_MAX] = {0, };
 
 // For Accelerator & Gyroscope Sensor
-double              nRawGyro[3];
-double              nRawAccel[3];
-double              nCalibMeanGyro[3];
-double              nCalibMeanAccel[3];
+double              _gRawGyro[3];
+double              _gRawAccel[3];
+double              _gCalibMeanGyro[3];
+double              _gCalibMeanAccel[3];
 
 // For Magnetometer Sensor
-HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
-float               nRawMag[3];
-double              nMagHeadingRad;
-double              nMagHeadingDeg;
-double              nSmoothHeadingDegrees;
-double              nPrevHeadingDegrees;
-double              nDeclinationAngle;
+HMC5883L            _gMagHndl;                              // HMC5883 Magnetic Interface
+float               _gRawMag[3];
+double              _gMagHeadingRad;
+double              _gMagHeadingDeg;
+double              _gSmoothHeadingDegrees;
+double              _gPrevHeadingDegrees;
+double              _gDeclinationAngle;
 
 // For Barometer Sensor
-MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
-double              nRawTemp;                               // Raw Temperature Data
-double              nRawPressure;                           // Raw Pressure Data
-double              nRawAbsoluteAltitude;                   // Estimated Absolute Altitude
-double              nAvgPressure;                           // Average Pressure Data
-double              nAvgTemp;                               // Average Temperature Data
-double              nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
-double              nRelativeAltitude;                      // Relative Absolute Altitude Data
-double              nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
-double              nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
-double              nVerticalSpeed;                         // Estimated Vertical Speed
+MS561101BA          _gBaroHndl;                             // MS5611 Barometer Interface
+double              _gRawTemp;                              // Raw Temperature Data
+double              _gRawPressure;                          // Raw Pressure Data
+double              _gRawAbsoluteAltitude;                  // Estimated Absolute Altitude
+double              _gAvgPressure;                          // Average Pressure Data
+double              _gAvgTemp;                              // Average Temperature Data
+double              _gAvgAbsoluteAltitude;                  // Average Absolute Altitude Data
+double              _gRelativeAltitude;                     // Relative Absolute Altitude Data
+double              _gPrevAvgAbsoluteAltitude;              // Average Absolute Altitude Data
+double              _gRefAbsoluteAltitude;                  // Reference Absolute Altitude Data
+double              _gVerticalSpeed;                        // Estimated Vertical Speed
 
 // For Sonar Sensor
-double              nRawDist;                               // Indicate Distance Calculated From Sensor
-double              nDistFromGnd;                           // Indicate istance from Ground
+double              _gRawDist;                              // Indicate Distance Calculated From Sensor
+double              _gDistFromGnd;                          // Indicate istance from Ground
 
 // For PID Control
-AxisErrRate_T       nRPY_PID[3];
-//float               nPrevDErr_Roll, nPrevDErr_Pitch, nPrevDErr_Yaw;
-//float               nIErr_Roll, nIErr_Pitch, nIErr_Yaw;
-//float               nBalance_Roll, nBalance_Pitch, nBalance_Yaw;
+AxisErrRate_T       _gRPY_PID[3];
 
 // For Motor Control
-int                 nLowRC[CH_TYPE_MAX];
-int                 nCenterRC[CH_TYPE_MAX];
-int                 nHighRC[CH_TYPE_MAX];
-int                 nRCReverseFlag[CH_TYPE_MAX];
-int                 nESCOutput[MAX_CH_ESC];
-int                 nAxisReverseFlag[3];
-byte                nRcvChFlag[CH_TYPE_MAX];
-unsigned long       nRcvChHighTime[CH_TYPE_MAX];
-int                 nRcvChVal[CH_TYPE_MAX];
-int                 nCompensatedRCVal[CH_TYPE_MAX];
+int                 _gRCSignal_L[CH_TYPE_MAX] = {0, };
+int                 _gRCSignal_M[CH_TYPE_MAX] = {0, };
+int                 _gRCSignal_H[CH_TYPE_MAX] = {0, };
+byte                _gRCReverseFlag[CH_TYPE_MAX] = {0, };
+int                 _gESCOutput[MAX_CH_ESC] = {0, };
+int                 _gAxisReverseFlag[3] = {0, };
+byte                _gRCRisingFlag = 0;
+unsigned long       _gRCChRisingTime[CH_TYPE_MAX] = {0, };
+int                 _gRCSignalVal[CH_TYPE_MAX] = {0, };
+int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 
 // For Estimated Status of Drone
-float               nEstimatedRPY[3];
-//float               nFineGyro[3];
-//float               nQuaternion[4];                         // quaternion
-//float               nEstGravity[3];                         // estimated gravity direction
-//bool                bIsInitializeRPY;
-//float               nRPYOffset[3];
+float               _gEstimatedRPY[3] = {0, };
+//float               _gFineGyro[3];
+//float               _gQuat[4];                         // quaternion
+//float               _gEstGravity[3];                         // estimated gravity direction
+//bool                _gbIsInitializeRPY;
+//float               _gRPYOffset[3];
 
 // For Control Interval
-unsigned long       nESCLoopTimer;
-unsigned long       nPrevSensorCapTime;
-unsigned long       nCurrSensorCapTime;
-unsigned long       nCurrTime;
+unsigned long       _gESCLoopTimer = 0;
+unsigned long       _gPrevSensorCapTime = 0;
+unsigned long       _gCurrSensorCapTime = 0;
+unsigned long       _gCurrTime = 0;
 #if __PROFILE__
-unsigned long       nProfileStartTime;
-unsigned long       nProfileEndTime;
+unsigned long       _gProfileStartTime = 0;
+unsigned long       _gProfileEndTime = 0;
 #endif
-double              nDiffTime;
+double              _gDiffTime = 0;
 
 // For Status of Drone
-DroneStatus         nDroneStatus;
+DroneStatus         _gDroneStatus = DRONESTATUS_STOP;
 
 // For Battery Status
-int                 nCurrBatteryVolt;
+int                 _gCurrBatteryVolt = 0;
 
 // For LED Control
-int                 nLED_Status;
-unsigned long       nPrevBlinkTime;
+int                 _gLED_Status = 0;
+unsigned long       _gPrevBlinkTime = 0;
 
 
 /*----------------------------------------------------------------------------------------
@@ -190,8 +187,8 @@ void setup()
     int                 i;
 
     Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . "));
-    Serialprintln(F("   **********************************************   "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
 
     // Set I2C Enable
     Wire.begin();
@@ -225,13 +222,13 @@ void setup()
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
 
-    nESCLoopTimer = 0;
-    nDroneStatus = DRONESTATUS_STOP;
-    nCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
-    nLED_Status = 0;
+    _gESCLoopTimer = 0;
+    _gDroneStatus = DRONESTATUS_STOP;
+    _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
+    _gLED_Status = 0;
 
-    Serialprintln(F("   **********************************************   "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
 }
 

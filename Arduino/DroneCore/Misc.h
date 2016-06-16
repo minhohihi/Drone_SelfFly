@@ -13,42 +13,42 @@ void _Check_Drone_Status()
 {
     int32_t                 nLEDPeriod = 500000;
     
-    if((1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1050 > nCompensatedRCVal[CH_TYPE_YAW]))
-        nDroneStatus = DRONESTATUS_READY;
+    if((1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1050 > _gCompensatedRCVal[CH_TYPE_YAW]))
+        _gDroneStatus = DRONESTATUS_READY;
     
     //When yaw stick is back in the center position start the motors (step 2).
-    if((DRONESTATUS_READY == nDroneStatus) &&
-       (1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1400 < nCompensatedRCVal[CH_TYPE_YAW]))
+    if((DRONESTATUS_READY == _gDroneStatus) &&
+       (1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1400 < _gCompensatedRCVal[CH_TYPE_YAW]))
     {
         int         i = 0;
         
-        nDroneStatus = DRONESTATUS_START;
+        _gDroneStatus = DRONESTATUS_START;
         
         //Reset the pid controllers for a bumpless start.
         for(i=0 ; i<3 ; i++)
         {
-            nRPY_PID[i].nP_ErrRate = 0.0;
-            nRPY_PID[i].nI_ErrRate = 0.0;
-            nRPY_PID[i].nD_ErrRate = 0.0;
-            nRPY_PID[i].nPrevErrRate = 0.0;
-            nRPY_PID[i].nBalance = 0.0;
+            _gRPY_PID[i].nP_ErrRate = 0.0;
+            _gRPY_PID[i].nI_ErrRate = 0.0;
+            _gRPY_PID[i].nD_ErrRate = 0.0;
+            _gRPY_PID[i].nPrevErrRate = 0.0;
+            _gRPY_PID[i].nBalance = 0.0;
         }
     }
     
     //Stopping the motors: throttle low and yaw right.
-    if((DRONESTATUS_START == nDroneStatus) &&
-       (1050 > nCompensatedRCVal[CH_TYPE_THROTTLE]) && (1950 < nCompensatedRCVal[CH_TYPE_YAW]))
-        nDroneStatus = DRONESTATUS_STOP;
+    if((DRONESTATUS_START == _gDroneStatus) &&
+       (1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1950 < _gCompensatedRCVal[CH_TYPE_YAW]))
+        _gDroneStatus = DRONESTATUS_STOP;
     
     // Set LED Period as 200ms When Low Voltage
-    //if((1030 > nCurrBatteryVolt) && (600 < nCurrBatteryVolt))
+    //if((1030 > _gCurrBatteryVolt) && (600 < _gCurrBatteryVolt))
     //    nLEDPeriod = 200000;
 
-    if(DRONESTATUS_STOP == nDroneStatus)
+    if(DRONESTATUS_STOP == _gDroneStatus)
         _LED_Blink(1, 0, 0, nLEDPeriod);                                 // Turn On a Red Light
-    else if(DRONESTATUS_READY == nDroneStatus)
+    else if(DRONESTATUS_READY == _gDroneStatus)
         _LED_Blink(0, 1, 0, nLEDPeriod);                                 // Turn On a Green Light
-    else if(DRONESTATUS_START == nDroneStatus)
+    else if(DRONESTATUS_START == _gDroneStatus)
         _LED_Blink(0, 0, 1, nLEDPeriod);                                 // Turn On a Blue Light
     
     return;
@@ -57,10 +57,10 @@ void _Check_Drone_Status()
 
 void _GetRawSensorData()
 {
-    nPrevSensorCapTime = nCurrSensorCapTime;
-    nCurrSensorCapTime = micros();
+    _gPrevSensorCapTime = _gCurrSensorCapTime;
+    _gCurrSensorCapTime = micros();
 
-    nDiffTime = (nCurrSensorCapTime - nPrevSensorCapTime) / 1000000.0;
+    _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     
     // Get AccelGyro Raw Data
     _AccelGyro_GetData();
@@ -91,14 +91,14 @@ void _Read_EEPROM()
     {
         const int           nChannel = i + 1;
         
-        nLowRC[i]         = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
-        nCenterRC[i]      = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
-        nHighRC[i]        = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
-        nRCReverseFlag[i] = !(!(nEEPRomData[nChannel + 23] & 0b10000000));
+        _gRCSignal_L[i]         = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
+        _gRCSignal_M[i]      = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
+        _gRCSignal_H[i]        = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
+        _gRCReverseFlag[i] = !(!(nEEPRomData[nChannel + 23] & B10000000));
     }
     
     for(i=0 ; i<3 ; i++)
-        nAxisReverseFlag[i] = !(!(nEEPRomData[28 + i] & 0b10000000));
+        _gAxisReverseFlag[i] = !(!(nEEPRomData[28 + i] & B10000000));
     
     delay(300);
     
@@ -112,9 +112,9 @@ void _Write_EEPROM(int nStartAddress)
     int                 nEEPRomAddress = 0;
     
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
     Serialprintln(F(" *         Writing Drone Setting to EEPROM          "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
 
     // Write Range of Transmitter
     if(EEPROM_DATA_RC_CH0_LOW_H == nStartAddress)
@@ -125,12 +125,12 @@ void _Write_EEPROM(int nStartAddress)
         
         for(i=0 ; i<4 ; i++)
         {
-            EEPROM.write(nEEPRomAddress,   nLowRC[i] >> 8);
-            EEPROM.write(nEEPRomAddress+1, nLowRC[i] & 0b11111111);
-            EEPROM.write(nEEPRomAddress+2, nCenterRC[i] >> 8);
-            EEPROM.write(nEEPRomAddress+3, nCenterRC[i] & 0b11111111);
-            EEPROM.write(nEEPRomAddress+4, nHighRC[i] >> 8);
-            EEPROM.write(nEEPRomAddress+5, nHighRC[i] & 0b11111111);
+            EEPROM.write(nEEPRomAddress,   _gRCSignal_L[i] >> 8);
+            EEPROM.write(nEEPRomAddress+1, _gRCSignal_L[i] & B11111111);
+            EEPROM.write(nEEPRomAddress+2, _gRCSignal_M[i] >> 8);
+            EEPROM.write(nEEPRomAddress+3, _gRCSignal_M[i] & B11111111);
+            EEPROM.write(nEEPRomAddress+4, _gRCSignal_H[i] >> 8);
+            EEPROM.write(nEEPRomAddress+5, _gRCSignal_H[i] & B11111111);
             
             nEEPRomAddress += 6;
         }
@@ -141,12 +141,12 @@ void _Write_EEPROM(int nStartAddress)
         
         nEEPRomAddress = EEPROM_DATA_GYRO_OFFSET_X;
         
-        EEPROM.write(nEEPRomAddress,   nLowRC[i] >> 8);
-        EEPROM.write(nEEPRomAddress+1, nLowRC[i] & 0b11111111);
-        EEPROM.write(nEEPRomAddress+2, nCenterRC[i] >> 8);
-        EEPROM.write(nEEPRomAddress+3, nCenterRC[i] & 0b11111111);
-        EEPROM.write(nEEPRomAddress+4, nHighRC[i] >> 8);
-        EEPROM.write(nEEPRomAddress+5, nHighRC[i] & 0b11111111);
+        EEPROM.write(nEEPRomAddress,   _gRCSignal_L[i] >> 8);
+        EEPROM.write(nEEPRomAddress+1, _gRCSignal_L[i] & B11111111);
+        EEPROM.write(nEEPRomAddress+2, _gRCSignal_M[i] >> 8);
+        EEPROM.write(nEEPRomAddress+3, _gRCSignal_M[i] & B11111111);
+        EEPROM.write(nEEPRomAddress+4, _gRCSignal_H[i] >> 8);
+        EEPROM.write(nEEPRomAddress+5, _gRCSignal_H[i] & B11111111);
     }
     
     
@@ -158,9 +158,9 @@ void _Write_EEPROM(int nStartAddress)
 
 void _Check_BatteryVolt()
 {
-    nCurrBatteryVolt = (0.92 * nCurrBatteryVolt) + (analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+    _gCurrBatteryVolt = (0.92 * _gCurrBatteryVolt) + (analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
 
-    //Serialprintln(nCurrBatteryVolt);
+    //Serialprintln(_gCurrBatteryVolt);
 }
 
 

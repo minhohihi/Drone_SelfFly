@@ -14,7 +14,7 @@ void _Barometer_CalculateData();
 void _Barometer_Initialize()
 {
     int                     i = 0;
-    MS561101BA              *pBaroHndl = &(nBaroHndl);
+    MS561101BA              *pBaroHndl = &(_gBaroHndl);
 
     Serialprint(F(" Initializing Barometer Sensor (MS5611)..."));
 
@@ -27,11 +27,11 @@ void _Barometer_Initialize()
     }
 
     // Get Average Pressure & Temperature
-    nAvgTemp = pBaroHndl->getAvgTemp();
-    nAvgPressure = pBaroHndl->getAvgPressure();
+    _gAvgTemp = pBaroHndl->getAvgTemp();
+    _gAvgPressure = pBaroHndl->getAvgPressure();
 
     // Get Reference Altitude
-    nRefAbsoluteAltitude = pBaroHndl->getAltitude(nAvgPressure, nAvgTemp);
+    _gRefAbsoluteAltitude = pBaroHndl->getAltitude(_gAvgPressure, _gAvgTemp);
 
     Serialprintln(F(" Done"));
 }
@@ -39,14 +39,14 @@ void _Barometer_Initialize()
 
 void _Barometer_GetData()
 {
-    MS561101BA              *pBaroHndl = &(nBaroHndl);
+    MS561101BA              *pBaroHndl = &(_gBaroHndl);
 
-    nRawTemp = pBaroHndl->getTemperature(MS561101BA_OSR_512);
-    nRawPressure = pBaroHndl->getPressure(MS561101BA_OSR_512);
+    _gRawTemp = pBaroHndl->getTemperature(MS561101BA_OSR_512);
+    _gRawPressure = pBaroHndl->getPressure(MS561101BA_OSR_512);
 
     // Push to Array to Get Average Pressure & Temperature
-    pBaroHndl->pushTemp(nRawTemp);
-    pBaroHndl->pushPressure(nRawPressure);
+    pBaroHndl->pushTemp(_gRawTemp);
+    pBaroHndl->pushPressure(_gRawPressure);
 
     // Calculate Altitude
     _Barometer_CalculateData();
@@ -55,26 +55,26 @@ void _Barometer_GetData()
 
 void _Barometer_CalculateData()
 {
-    MS561101BA              *pBaroHndl = &(nBaroHndl);
+    MS561101BA              *pBaroHndl = &(_gBaroHndl);
 
     // Get Average Pressure & Temperature
-    nAvgTemp = pBaroHndl->getAvgTemp();
-    nAvgPressure = pBaroHndl->getAvgPressure();
+    _gAvgTemp = pBaroHndl->getAvgTemp();
+    _gAvgPressure = pBaroHndl->getAvgPressure();
 
     // Get Altitude
-    nRawAbsoluteAltitude = pBaroHndl->getAltitude(nAvgPressure, nAvgTemp);
+    _gRawAbsoluteAltitude = pBaroHndl->getAltitude(_gAvgPressure, _gAvgTemp);
 
     // Push to Array to Get Average Altitude
-    pBaroHndl->pushAltitude(nRawAbsoluteAltitude);
+    pBaroHndl->pushAltitude(_gRawAbsoluteAltitude);
 
     // Get Average Pressure & Temperature
-    nAvgAbsoluteAltitude = pBaroHndl->getAvgAltitude();
+    _gAvgAbsoluteAltitude = pBaroHndl->getAvgAltitude();
 
     // Get Vertical Speed
-    nVerticalSpeed = abs(nAvgAbsoluteAltitude - nPrevAvgAbsoluteAltitude) / (double)(nDiffTime);
-    nRelativeAltitude = nAvgAbsoluteAltitude - nRefAbsoluteAltitude;
+    _gVerticalSpeed = abs(_gAvgAbsoluteAltitude - _gPrevAvgAbsoluteAltitude) / (double)(_gDiffTime);
+    _gRelativeAltitude = _gAvgAbsoluteAltitude - _gRefAbsoluteAltitude;
 
-    nPrevAvgAbsoluteAltitude = nAvgAbsoluteAltitude;
+    _gPrevAvgAbsoluteAltitude = _gAvgAbsoluteAltitude;
 }
 #endif /* HS5611_Controller_h */
 

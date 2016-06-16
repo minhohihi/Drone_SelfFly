@@ -22,7 +22,7 @@
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
 #define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
-#define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
+#define ACCEL_FS                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
@@ -44,9 +44,9 @@
  ----------------------------------------------------------------------------------------*/
 typedef struct _AccelGyroParam_T
 {
-    float               nRawGyro[3];
-    float               nRawAccel[3];
-    float               nRawTemp;
+    float               _gRawGyro[3];
+    float               _gRawAccel[3];
+    float               _gRawTemp;
     float               nBaseGyro[3];
     float               nBaseAccel[3];
     float               nFineAngle[3];                          // Filtered Angles
@@ -54,17 +54,17 @@ typedef struct _AccelGyroParam_T
 
 typedef struct _BaroParam_T
 {
-    float               nRawTemp;                               // Raw Temperature Data
-    float               nRawPressure;                           // Raw Pressure Data
-    float               nRawAbsoluteAltitude;                   // Estimated Absolute Altitude
+    float               _gRawTemp;                               // Raw Temperature Data
+    float               _gRawPressure;                           // Raw Pressure Data
+    float               _gRawAbsoluteAltitude;                   // Estimated Absolute Altitude
     
-    float               nAvgPressure;                           // Average Pressure Data
-    float               nAvgTemp;                               // Average Temperature Data
-    float               nAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
-    float               nRelativeAltitude;                      // Relative Absolute Altitude Data
-    float               nPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
-    float               nRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
-    float               nVerticalSpeed;                         // Estimated Vertical Speed
+    float               _gAvgPressure;                           // Average Pressure Data
+    float               _gAvgTemp;                               // Average Temperature Data
+    float               _gAvgAbsoluteAltitude;                   // Average Absolute Altitude Data
+    float               _gRelativeAltitude;                      // Relative Absolute Altitude Data
+    float               _gPrevAvgAbsoluteAltitude;               // Average Absolute Altitude Data
+    float               _gRefAbsoluteAltitude;                   // Reference Absolute Altitude Data
+    float               _gVerticalSpeed;                         // Estimated Vertical Speed
 }BaroParam_T;
 
 typedef struct _SelfFly_T
@@ -76,12 +76,12 @@ typedef struct _SelfFly_T
     int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
     
     // For Barometer Sensor
-    MS561101BA          nBaroHndl;                              // MS5611 Barometer Interface
+    MS561101BA          _gBaroHndl;                              // MS5611 Barometer Interface
     BaroParam_T         nBaroParam;
         
-    unsigned long       nCurrSensorCapTime;
-    unsigned long       nPrevSensorCapTime;
-    float               nDiffTime;
+    unsigned long       _gCurrSensorCapTime;
+    unsigned long       _gPrevSensorCapTime;
+    float               _gDiffTime;
     float               nSampleFreq;                            // half the sample period expressed in seconds
 }SelfFly_T;
 
@@ -115,8 +115,8 @@ void setup()
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
     
     Serial.println("");    Serial.println("");    Serial.println("");    Serial.println("");
-    Serial.println("   **********************************************   ");
-    Serial.println("   **********************************************   ");
+    Serial.println("****************************************************");
+    Serial.println("****************************************************");
     
     pSelfFlyHndl = (SelfFly_T *) malloc(sizeof(SelfFly_T));
     
@@ -141,19 +141,19 @@ void setup()
     // Initialize Barometer
     _Barometer_Initialize();
     
-    Serial.println("   **********************************************   ");
-    Serial.println("   **********************************************   ");
+    Serial.println("****************************************************");
+    Serial.println("****************************************************");
     Serial.println("");    Serial.println("");    Serial.println("");    Serial.println("");
 }
 
 
 void loop()
 {
-    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
-    pSelfFlyHndl->nCurrSensorCapTime = micros();
+    _gPrevSensorCapTime = _gCurrSensorCapTime;
+    _gCurrSensorCapTime = micros();
     
-    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
+    _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
+    nSampleFreq = 1000000.0 / ((_gCurrSensorCapTime - _gPrevSensorCapTime));
     
     _Barometer_GetData();
     
@@ -168,24 +168,24 @@ void loop()
 
 void _AccelGyro_Initialize()
 {
-    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+    nAccelGyroHndl = MPU6050();
     
     Serial.println(F(" Initializing MPU..."));
-    pSelfFlyHndl->nAccelGyroHndl.initialize();
+    nAccelGyroHndl.initialize();
     
     // Verify Vonnection
     Serial.print(F("    Testing device connections..."));
-    Serial.println(pSelfFlyHndl->nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    Serial.println(nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
     
-    pSelfFlyHndl->nAccelGyroHndl.setI2CMasterModeEnabled(false);
-    pSelfFlyHndl->nAccelGyroHndl.setI2CBypassEnabled(true);
-    pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
+    nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    nAccelGyroHndl.setI2CBypassEnabled(true);
+    nAccelGyroHndl.setSleepEnabled(false);
     
     // supply your own gyro offsets here, scaled for min sensitivity
-    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
+    nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
+    nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
     
     Serial.println(F(" MPU Initialized!!!"));
     
@@ -196,11 +196,11 @@ void _AccelGyro_Initialize()
 void _Barometer_Initialize()
 {
     int                     i = 0;
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    BaroParam_T             *pBaroParam = &(nBaroParam);
     
     Serial.print(F(" Initializing Barometer Sensor (MS5611)..."));
     
-    pSelfFlyHndl->nBaroHndl.init(MS561101BA_ADDR_CSB_LOW);
+    _gBaroHndl.init(MS561101BA_ADDR_CSB_LOW);
     
     for(i=0 ; i<50 ; i++)
     {
@@ -209,11 +209,11 @@ void _Barometer_Initialize()
     }
     
     // Get Average Pressure & Temperature
-    pBaroParam->nAvgTemp = pSelfFlyHndl->nBaroHndl.getAvgTemp();
-    pBaroParam->nAvgPressure = pSelfFlyHndl->nBaroHndl.getAvgPressure();
+    pBaroParam->_gAvgTemp = _gBaroHndl.getAvgTemp();
+    pBaroParam->_gAvgPressure = _gBaroHndl.getAvgPressure();
     
     // Get Reference Altitude
-    pBaroParam->nRefAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAltitude(pBaroParam->nAvgPressure, pBaroParam->nAvgTemp);
+    pBaroParam->_gRefAbsoluteAltitude = _gBaroHndl.getAltitude(pBaroParam->_gAvgPressure, pBaroParam->_gAvgTemp);
     
     Serial.println(F(" Done"));
 }
@@ -221,51 +221,51 @@ void _Barometer_Initialize()
 
 void _Barometer_GetData()
 {
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    BaroParam_T             *pBaroParam = &(nBaroParam);
     
-    pBaroParam->nRawTemp = pSelfFlyHndl->nBaroHndl.getTemperature(MS561101BA_OSR_512);
-    pBaroParam->nRawPressure = pSelfFlyHndl->nBaroHndl.getPressure(MS561101BA_OSR_512);
+    pBaroParam->_gRawTemp = _gBaroHndl.getTemperature(MS561101BA_OSR_512);
+    pBaroParam->_gRawPressure = _gBaroHndl.getPressure(MS561101BA_OSR_512);
     
     // Push to Array to Get Average Pressure & Temperature
-    pSelfFlyHndl->nBaroHndl.pushTemp(pBaroParam->nRawTemp);
-    pSelfFlyHndl->nBaroHndl.pushPressure(pBaroParam->nRawPressure);
+    _gBaroHndl.pushTemp(pBaroParam->_gRawTemp);
+    _gBaroHndl.pushPressure(pBaroParam->_gRawPressure);
 }
 
 
 void _Barometer_CalculateData()
 {
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    BaroParam_T             *pBaroParam = &(nBaroParam);
     
     // Get Average Pressure & Temperature
-    pBaroParam->nAvgTemp = pSelfFlyHndl->nBaroHndl.getAvgTemp();
-    pBaroParam->nAvgPressure = pSelfFlyHndl->nBaroHndl.getAvgPressure();
+    pBaroParam->_gAvgTemp = _gBaroHndl.getAvgTemp();
+    pBaroParam->_gAvgPressure = _gBaroHndl.getAvgPressure();
     
     // Get Altitude
-    pBaroParam->nRawAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAltitude(pBaroParam->nAvgPressure, pBaroParam->nAvgTemp);
+    pBaroParam->_gRawAbsoluteAltitude = _gBaroHndl.getAltitude(pBaroParam->_gAvgPressure, pBaroParam->_gAvgTemp);
     
     // Push to Array to Get Average Altitude
-    pSelfFlyHndl->nBaroHndl.pushAltitude(pBaroParam->nRawAbsoluteAltitude);
+    _gBaroHndl.pushAltitude(pBaroParam->_gRawAbsoluteAltitude);
     
     // Get Average Pressure & Temperature
-    pBaroParam->nAvgAbsoluteAltitude = pSelfFlyHndl->nBaroHndl.getAvgAltitude();
+    pBaroParam->_gAvgAbsoluteAltitude = _gBaroHndl.getAvgAltitude();
     
     // Get Vertical Speed
-    pBaroParam->nVerticalSpeed = abs(pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nPrevAvgAbsoluteAltitude) / (pSelfFlyHndl->nDiffTime);
-    pBaroParam->nRelativeAltitude = pBaroParam->nAvgAbsoluteAltitude - pBaroParam->nRefAbsoluteAltitude;
+    pBaroParam->_gVerticalSpeed = abs(pBaroParam->_gAvgAbsoluteAltitude - pBaroParam->_gPrevAvgAbsoluteAltitude) / (_gDiffTime);
+    pBaroParam->_gRelativeAltitude = pBaroParam->_gAvgAbsoluteAltitude - pBaroParam->_gRefAbsoluteAltitude;
     
-    pBaroParam->nPrevAvgAbsoluteAltitude = pBaroParam->nAvgAbsoluteAltitude;
+    pBaroParam->_gPrevAvgAbsoluteAltitude = pBaroParam->_gAvgAbsoluteAltitude;
 }
 
 
 void _print_BarometerData()
 {
-    BaroParam_T             *pBaroParam = &(pSelfFlyHndl->nBaroParam);
+    BaroParam_T             *pBaroParam = &(nBaroParam);
     
-    Serial.print("           "); Serial.print(pBaroParam->nAvgTemp);                  // Barometer AvgTemp
-    Serial.print("           "); Serial.print(pBaroParam->nAvgPressure);              // AvgPress
-    Serial.print("           "); Serial.print(pBaroParam->nAvgAbsoluteAltitude);      // AvgAlt
-    Serial.print("           "); Serial.print(pBaroParam->nRelativeAltitude);         // RelativeAlt
-    Serial.print("           "); Serial.print(pBaroParam->nVerticalSpeed);            // VerticalSpeed
+    Serial.print("           "); Serial.print(pBaroParam->_gAvgTemp);                  // Barometer AvgTemp
+    Serial.print("           "); Serial.print(pBaroParam->_gAvgPressure);              // AvgPress
+    Serial.print("           "); Serial.print(pBaroParam->_gAvgAbsoluteAltitude);      // AvgAlt
+    Serial.print("           "); Serial.print(pBaroParam->_gRelativeAltitude);         // RelativeAlt
+    Serial.print("           "); Serial.print(pBaroParam->_gVerticalSpeed);            // VerticalSpeed
     Serial.println("   ");
 }
 

@@ -7,7 +7,7 @@ Servo motor[4];
 
 void setup() 
 {
-    unsigned long     nCurrTime = 0;  
+    unsigned long     _gCurrTime = 0;  
     int               i = 0;
     
     Serial.begin(115200);
@@ -26,10 +26,10 @@ void setup()
         motor[2].writeMicroseconds(MAX_SIGNAL);
         motor[3].writeMicroseconds(MAX_SIGNAL);
 
-        nCurrTime = micros();
+        _gCurrTime = micros();
       
         // Wait for input
-        //while((micros() - nCurrTime) < 2000000);
+        //while((micros() - _gCurrTime) < 2000000);
         delay(4000);
       
         // Send min output

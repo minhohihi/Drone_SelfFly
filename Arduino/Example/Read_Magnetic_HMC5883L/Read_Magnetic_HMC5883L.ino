@@ -22,7 +22,7 @@
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)
 #define GYRO_FS                             (131.0f)                        // (2^15 - 1) / (250 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_2)            //  MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
-#define ACCEL_STD_DENOM                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
+#define ACCEL_FS                     (16384.0f / (1 << ACCEL_FS_PRECISIOM))
 
 #define ROUNDING_BASE                       (50)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
@@ -44,9 +44,9 @@
  ----------------------------------------------------------------------------------------*/
 typedef struct _AccelGyroParam_T
 {
-    float               nRawGyro[3];
-    float               nRawAccel[3];
-    float               nRawTemp;
+    float               _gRawGyro[3];
+    float               _gRawAccel[3];
+    float               _gRawTemp;
     float               nBaseGyro[3];
     float               nBaseAccel[3];
     float               nFineAngle[3];                          // Filtered Angles
@@ -54,12 +54,12 @@ typedef struct _AccelGyroParam_T
 
 typedef struct _MagParam_T
 {
-    float               nRawMagData[3];
-    float               nMagHeadingRad;
-    float               nMagHeadingDeg;
-    float               nSmoothHeadingDegrees;
-    float               nPrevHeadingDegrees;
-    float               nDeclinationAngle;
+    float               _gRawMagData[3];
+    float               _gMagHeadingRad;
+    float               _gMagHeadingDeg;
+    float               _gSmoothHeadingDegrees;
+    float               _gPrevHeadingDegrees;
+    float               _gDeclinationAngle;
 }MagneticParam_T;
 
 typedef struct _SelfFly_T
@@ -71,12 +71,12 @@ typedef struct _SelfFly_T
     int                 nCalibMean_GX, nCalibMean_GY, nCalibMean_GZ;
 
     // For Magnetometer Sensor
-    HMC5883L            nMagHndl;                               // HMC5883 Magnetic Interface
+    HMC5883L            _gMagHndl;                               // HMC5883 Magnetic Interface
     MagneticParam_T     nMagParam;
         
-    unsigned long       nCurrSensorCapTime;
-    unsigned long       nPrevSensorCapTime;
-    float               nDiffTime;
+    unsigned long       _gCurrSensorCapTime;
+    unsigned long       _gPrevSensorCapTime;
+    float               _gDiffTime;
     float               nSampleFreq;                            // half the sample period expressed in seconds
 }SelfFly_T;
 
@@ -110,8 +110,8 @@ void setup()
     uint8_t                 nDevStatus;                         // return status after each device operation (0 = success, !0 = error)
     
     Serial.println("");    Serial.println("");    Serial.println("");    Serial.println("");
-    Serial.println("   **********************************************   ");
-    Serial.println("   **********************************************   ");
+    Serial.println("****************************************************");
+    Serial.println("****************************************************");
     
     pSelfFlyHndl = (SelfFly_T *) malloc(sizeof(SelfFly_T));
     
@@ -136,19 +136,19 @@ void setup()
     // Initialize Magnetic
     _Mag_Initialize();
     
-    Serial.println("   **********************************************   ");
-    Serial.println("   **********************************************   ");
+    Serial.println("****************************************************");
+    Serial.println("****************************************************");
     Serial.println("");    Serial.println("");    Serial.println("");    Serial.println("");
 }
 
 
 void loop()
 {
-    pSelfFlyHndl->nPrevSensorCapTime = pSelfFlyHndl->nCurrSensorCapTime;
-    pSelfFlyHndl->nCurrSensorCapTime = micros();
+    _gPrevSensorCapTime = _gCurrSensorCapTime;
+    _gCurrSensorCapTime = micros();
     
-    pSelfFlyHndl->nDiffTime = (pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime) / 1000000.0;
-    pSelfFlyHndl->nSampleFreq = 1000000.0 / ((pSelfFlyHndl->nCurrSensorCapTime - pSelfFlyHndl->nPrevSensorCapTime));
+    _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
+    nSampleFreq = 1000000.0 / ((_gCurrSensorCapTime - _gPrevSensorCapTime));
     
     _Mag_GetData();
     
@@ -162,24 +162,24 @@ void loop()
 
 void _AccelGyro_Initialize()
 {
-    pSelfFlyHndl->nAccelGyroHndl = MPU6050();
+    nAccelGyroHndl = MPU6050();
     
     Serial.println(F(" Initializing MPU..."));
-    pSelfFlyHndl->nAccelGyroHndl.initialize();
+    nAccelGyroHndl.initialize();
     
     // Verify Vonnection
     Serial.print(F("    Testing device connections..."));
-    Serial.println(pSelfFlyHndl->nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    Serial.println(nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
     
-    pSelfFlyHndl->nAccelGyroHndl.setI2CMasterModeEnabled(false);
-    pSelfFlyHndl->nAccelGyroHndl.setI2CBypassEnabled(true);
-    pSelfFlyHndl->nAccelGyroHndl.setSleepEnabled(false);
+    nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    nAccelGyroHndl.setI2CBypassEnabled(true);
+    nAccelGyroHndl.setSleepEnabled(false);
     
     // supply your own gyro offsets here, scaled for min sensitivity
-    pSelfFlyHndl->nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    pSelfFlyHndl->nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
-    pSelfFlyHndl->nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
+    nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
+    nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
+    nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
     
     Serial.println(F(" MPU Initialized!!!"));
     
@@ -189,25 +189,25 @@ void _AccelGyro_Initialize()
 
 void _Mag_Initialize()
 {
-    pSelfFlyHndl->nMagHndl = HMC5883L();
+    _gMagHndl = HMC5883L();
     
     // initialize Magnetic
     Serial.println(F(" Initializing Magnetic..."));
-    pSelfFlyHndl->nMagHndl.initialize();
+    _gMagHndl.initialize();
     
     // Verify Vonnection
     Serial.print(F("    Testing device connections..."));
-    Serial.println(pSelfFlyHndl->nMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
+    Serial.println(_gMagHndl.testConnection() ? F("  HMC5883L connection successful") : F("  HMC5883L connection failed"));
     
     // Calibrate Magnetic
     Serial.print(F("    Start Calibration of Magnetic Sensor (HMC5883L) "));
-    //pSelfFlyHndl->nMagHndl.calibration_offset(3);
+    //_gMagHndl.calibration_offset(3);
     Serial.println(F("Done"));
     
-    pSelfFlyHndl->nMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
-    pSelfFlyHndl->nMagHndl.setGain(HMC5883L_GAIN_1090);
-    pSelfFlyHndl->nMagHndl.setDataRate(HMC5883L_RATE_75);
-    pSelfFlyHndl->nMagHndl.setSampleAveraging(HMC5883L_AVERAGING_8);
+    _gMagHndl.setMode(HMC5883L_MODE_CONTINUOUS);
+    _gMagHndl.setGain(HMC5883L_GAIN_1090);
+    _gMagHndl.setDataRate(HMC5883L_RATE_75);
+    _gMagHndl.setSampleAveraging(HMC5883L_AVERAGING_8);
     
     // Date: 2015-11-05
     // Location: Seoul, South Korea
@@ -217,7 +217,7 @@ void _Mag_Initialize()
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
-    pSelfFlyHndl->nMagParam.nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
+    nMagParam._gDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
     
     Serial.println(F(" Done"));
     
@@ -229,55 +229,55 @@ float               _gRawMagData[3];
 
 void _Mag_GetData()
 {
-    float                   *pRawMagData = &(pSelfFlyHndl->nMagParam.nRawMagData[X_AXIS]);
+    float                   *pRawMagData = &(nMagParam._gRawMagData[X_AXIS]);
     
-    pSelfFlyHndl->nMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
-    pSelfFlyHndl->nMagHndl.getRawHeading(&(_gRawMagData[X_AXIS]), &(_gRawMagData[Y_AXIS]), &(_gRawMagData[Z_AXIS]));
+    _gMagHndl.getScaledHeading(&(pRawMagData[X_AXIS]), &(pRawMagData[Y_AXIS]), &(pRawMagData[Z_AXIS]));
+    _gMagHndl.getRawHeading(&(_gRawMagData[X_AXIS]), &(_gRawMagData[Y_AXIS]), &(_gRawMagData[Z_AXIS]));
 }
 
 
 void _Mag_CalculateDirection()
 {
     int                     i = 0;
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
+    MagneticParam_T         *pMagParam = &(nMagParam);
     
-    pMagParam->nMagHeadingRad = atan2(pMagParam->nRawMagData[Y_AXIS], pMagParam->nRawMagData[X_AXIS]);
-    pMagParam->nMagHeadingRad -= pMagParam->nDeclinationAngle;      // If East, then Change Operation to PLUS
+    pMagParam->_gMagHeadingRad = atan2(pMagParam->_gRawMagData[Y_AXIS], pMagParam->_gRawMagData[X_AXIS]);
+    pMagParam->_gMagHeadingRad -= pMagParam->_gDeclinationAngle;      // If East, then Change Operation to PLUS
     
-    if(pMagParam->nMagHeadingRad < 0)
-        pMagParam->nMagHeadingRad += DOUBLE_RADIAN;
+    if(pMagParam->_gMagHeadingRad < 0)
+        pMagParam->_gMagHeadingRad += DOUBLE_RADIAN;
     
-    if(pMagParam->nMagHeadingRad > DOUBLE_RADIAN)
-        pMagParam->nMagHeadingRad -= DOUBLE_RADIAN;
+    if(pMagParam->_gMagHeadingRad > DOUBLE_RADIAN)
+        pMagParam->_gMagHeadingRad -= DOUBLE_RADIAN;
     
-    pMagParam->nMagHeadingDeg = pMagParam->nMagHeadingRad * RAD_TO_DEG_SCALE;
+    pMagParam->_gMagHeadingDeg = pMagParam->_gMagHeadingRad * RAD_TO_DEG_SCALE;
     
-    //if(pMagParam->nMagHeadingDeg >= 1 && pMagParam->nMagHeadingDeg < 240)
-    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 0, 239, 0, 179);
-    //else if(pMagParam->nMagHeadingDeg >= 240)
-    //    pMagParam->nMagHeadingDeg = map(pMagParam->nMagHeadingDeg, 240, 360, 180, 360);
+    //if(pMagParam->_gMagHeadingDeg >= 1 && pMagParam->_gMagHeadingDeg < 240)
+    //    pMagParam->_gMagHeadingDeg = map(pMagParam->_gMagHeadingDeg, 0, 239, 0, 179);
+    //else if(pMagParam->_gMagHeadingDeg >= 240)
+    //    pMagParam->_gMagHeadingDeg = map(pMagParam->_gMagHeadingDeg, 240, 360, 180, 360);
     
     // Smooth angles rotation for +/- 3deg
-    pMagParam->nSmoothHeadingDegrees = round(pMagParam->nMagHeadingDeg);
+    pMagParam->_gSmoothHeadingDegrees = round(pMagParam->_gMagHeadingDeg);
     
-    if((pMagParam->nSmoothHeadingDegrees < (pMagParam->nPrevHeadingDegrees + 3)) &&
-       (pMagParam->nSmoothHeadingDegrees > (pMagParam->nPrevHeadingDegrees - 3)))
-        pMagParam->nSmoothHeadingDegrees = pMagParam->nPrevHeadingDegrees;
+    if((pMagParam->_gSmoothHeadingDegrees < (pMagParam->_gPrevHeadingDegrees + 3)) &&
+       (pMagParam->_gSmoothHeadingDegrees > (pMagParam->_gPrevHeadingDegrees - 3)))
+        pMagParam->_gSmoothHeadingDegrees = pMagParam->_gPrevHeadingDegrees;
     
-    pMagParam->nPrevHeadingDegrees = pMagParam->nSmoothHeadingDegrees;
+    pMagParam->_gPrevHeadingDegrees = pMagParam->_gSmoothHeadingDegrees;
 }
 
 
 void _print_MagData()
 {
-    MagneticParam_T         *pMagParam = &(pSelfFlyHndl->nMagParam);
+    MagneticParam_T         *pMagParam = &(nMagParam);
     
-    Serial.print(pMagParam->nRawMagData[0]);                       // Mx
-    Serial.print(":"); Serial.print((int)pMagParam->nRawMagData[1]);                       // My
-    Serial.print(":"); Serial.print((int)pMagParam->nRawMagData[2]);                       // Mz    
-    Serial.print(":"); Serial.print((int)pMagParam->nMagHeadingDeg);                       // Mx
-    Serial.print(":"); Serial.print((int)pMagParam->nMagHeadingDeg);                       // My
-    Serial.print(":"); Serial.print((int)pMagParam->nSmoothHeadingDegrees);                       // Mz    
+    Serial.print(pMagParam->_gRawMagData[0]);                       // Mx
+    Serial.print(":"); Serial.print((int)pMagParam->_gRawMagData[1]);                       // My
+    Serial.print(":"); Serial.print((int)pMagParam->_gRawMagData[2]);                       // Mz    
+    Serial.print(":"); Serial.print((int)pMagParam->_gMagHeadingDeg);                       // Mx
+    Serial.print(":"); Serial.print((int)pMagParam->_gMagHeadingDeg);                       // My
+    Serial.print(":"); Serial.print((int)pMagParam->_gSmoothHeadingDegrees);                       // Mz    
     Serial.println("");
 }
 

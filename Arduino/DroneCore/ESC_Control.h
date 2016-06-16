@@ -46,34 +46,34 @@ void _UpdateESCs()
     int                     i = 0;
     
     // Wait Until Passing 4ms.
-    while(micros() - nESCLoopTimer < 4000);
+    while(micros() - _gESCLoopTimer < 4000);
 
     // Set the timer for the next loop.
-    nESCLoopTimer = micros();
+    _gESCLoopTimer = micros();
 
     // Set Digital Port 8, 9, 10, and 11 as high.
     PORTB |= B00001111;
 
     // Set Relative Throttle Value by Adding Current Time
-    nESCOut[0] = nESCOutput[0] + nESCLoopTimer;
-    nESCOut[1] = nESCOutput[1] + nESCLoopTimer;
-    nESCOut[2] = nESCOutput[2] + nESCLoopTimer;
-    nESCOut[3] = nESCOutput[3] + nESCLoopTimer;
+    nESCOut[0] = _gESCOutput[0] + _gESCLoopTimer;
+    nESCOut[1] = _gESCOutput[1] + _gESCLoopTimer;
+    nESCOut[2] = _gESCOutput[2] + _gESCLoopTimer;
+    nESCOut[3] = _gESCOutput[3] + _gESCLoopTimer;
     
     while(PORTB & B00001111)
     {
-        nCurrTime = micros();
+        _gCurrTime = micros();
 
-        if(nESCOut[0] <= nCurrTime)
+        if(nESCOut[0] <= _gCurrTime)
             PORTB &= B11111110;
 
-        if(nESCOut[1] <= nCurrTime)
+        if(nESCOut[1] <= _gCurrTime)
             PORTB &= B11111101;
 
-        if(nESCOut[2] <= nCurrTime)
+        if(nESCOut[2] <= _gCurrTime)
             PORTB &= B11111011;
 
-        if(nESCOut[3] <= nCurrTime)
+        if(nESCOut[3] <= _gCurrTime)
             PORTB &= B11110111;
     }
 }

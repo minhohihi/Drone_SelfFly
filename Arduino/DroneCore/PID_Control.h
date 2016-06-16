@@ -21,116 +21,116 @@ void _CalculatePID()
     int                     i = 0, j = 0;
     
     nEstimatedRCVal[CH_TYPE_ROLL] = 0;
-    if(nCompensatedRCVal[CH_TYPE_ROLL] > 1508)
-        nEstimatedRCVal[CH_TYPE_ROLL] = (nCompensatedRCVal[CH_TYPE_ROLL] - 1508) / 3.0;
-    else if(nCompensatedRCVal[CH_TYPE_ROLL] < 1492)
-        nEstimatedRCVal[CH_TYPE_ROLL] = (nCompensatedRCVal[CH_TYPE_ROLL] - 1492) / 3.0;
+    if(_gCompensatedRCVal[CH_TYPE_ROLL] > 1508)
+        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[CH_TYPE_ROLL] - 1508) / 3.0;
+    else if(_gCompensatedRCVal[CH_TYPE_ROLL] < 1492)
+        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[CH_TYPE_ROLL] - 1492) / 3.0;
     
     nEstimatedRCVal[CH_TYPE_PITCH] = 0;
-    if(nCompensatedRCVal[CH_TYPE_PITCH] > 1508)
-        nEstimatedRCVal[CH_TYPE_PITCH] = (nCompensatedRCVal[CH_TYPE_PITCH] - 1508) / 3.0;
-    else if(nCompensatedRCVal[CH_TYPE_PITCH] < 1492)
-        nEstimatedRCVal[CH_TYPE_PITCH] = (nCompensatedRCVal[CH_TYPE_PITCH] - 1492) / 3.0;
+    if(_gCompensatedRCVal[CH_TYPE_PITCH] > 1508)
+        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[CH_TYPE_PITCH] - 1508) / 3.0;
+    else if(_gCompensatedRCVal[CH_TYPE_PITCH] < 1492)
+        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[CH_TYPE_PITCH] - 1492) / 3.0;
     
     nEstimatedRCVal[CH_TYPE_YAW] = 0;
-    if(nCompensatedRCVal[CH_TYPE_THROTTLE] > 1050)
+    if(_gCompensatedRCVal[CH_TYPE_THROTTLE] > 1050)
     {
-        if(nCompensatedRCVal[CH_TYPE_YAW] > 1508)
-            nEstimatedRCVal[CH_TYPE_YAW] = (nCompensatedRCVal[CH_TYPE_YAW] - 1508) / 3.0;
-        else if(nCompensatedRCVal[CH_TYPE_YAW] < 1492)
-            nEstimatedRCVal[CH_TYPE_YAW] = (nCompensatedRCVal[CH_TYPE_YAW] - 1492) / 3.0;
+        if(_gCompensatedRCVal[CH_TYPE_YAW] > 1508)
+            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[CH_TYPE_YAW] - 1508) / 3.0;
+        else if(_gCompensatedRCVal[CH_TYPE_YAW] < 1492)
+            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[CH_TYPE_YAW] - 1492) / 3.0;
     }
 
     // PID configuration
     // Roll
     {
-        nCurrErrRate = nEstimatedRPY[1] - nEstimatedRCVal[CH_TYPE_ROLL];
+        nCurrErrRate = _gEstimatedRPY[1] - nEstimatedRCVal[CH_TYPE_ROLL];
         
-        nRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
-        nRPY_PID[0].nI_ErrRate += nPIDGainTable[0][1] * nCurrErrRate;
-        nRPY_PID[0].nI_ErrRate = _Clip3Float(nRPY_PID[0].nI_ErrRate, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
-        nRPY_PID[0].nD_ErrRate = nPIDGainTable[0][2] * (nCurrErrRate - nRPY_PID[0].nPrevErrRate);
+        _gRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
+        _gRPY_PID[0].nI_ErrRate += nPIDGainTable[0][1] * nCurrErrRate;
+        _gRPY_PID[0].nI_ErrRate = _Clip3Float(_gRPY_PID[0].nI_ErrRate, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
+        _gRPY_PID[0].nD_ErrRate = nPIDGainTable[0][2] * (nCurrErrRate - _gRPY_PID[0].nPrevErrRate);
         
-        nRPY_PID[0].nBalance = nRPY_PID[0].nP_ErrRate + nRPY_PID[0].nI_ErrRate + nRPY_PID[0].nD_ErrRate;
-        nRPY_PID[0].nBalance = _Clip3Float(nRPY_PID[0].nBalance, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
+        _gRPY_PID[0].nBalance = _gRPY_PID[0].nP_ErrRate + _gRPY_PID[0].nI_ErrRate + _gRPY_PID[0].nD_ErrRate;
+        _gRPY_PID[0].nBalance = _Clip3Float(_gRPY_PID[0].nBalance, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
         
-        nRPY_PID[0].nPrevErrRate = nCurrErrRate;
+        _gRPY_PID[0].nPrevErrRate = nCurrErrRate;
     }
 
     // Picth
     {
-        nCurrErrRate = nEstimatedRPY[0] - nEstimatedRCVal[CH_TYPE_PITCH];
+        nCurrErrRate = _gEstimatedRPY[0] - nEstimatedRCVal[CH_TYPE_PITCH];
         
-        nRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
-        nRPY_PID[1].nI_ErrRate += nPIDGainTable[1][1] * nCurrErrRate;
-        nRPY_PID[1].nI_ErrRate = _Clip3Float(nRPY_PID[1].nI_ErrRate, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
-        nRPY_PID[1].nD_ErrRate = nPIDGainTable[1][2] * (nCurrErrRate - nRPY_PID[1].nPrevErrRate);
+        _gRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
+        _gRPY_PID[1].nI_ErrRate += nPIDGainTable[1][1] * nCurrErrRate;
+        _gRPY_PID[1].nI_ErrRate = _Clip3Float(_gRPY_PID[1].nI_ErrRate, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
+        _gRPY_PID[1].nD_ErrRate = nPIDGainTable[1][2] * (nCurrErrRate - _gRPY_PID[1].nPrevErrRate);
         
-        nRPY_PID[1].nBalance = nRPY_PID[1].nP_ErrRate + nRPY_PID[1].nI_ErrRate + nRPY_PID[1].nD_ErrRate;
-        nRPY_PID[1].nBalance = _Clip3Float(nRPY_PID[1].nBalance, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
+        _gRPY_PID[1].nBalance = _gRPY_PID[1].nP_ErrRate + _gRPY_PID[1].nI_ErrRate + _gRPY_PID[1].nD_ErrRate;
+        _gRPY_PID[1].nBalance = _Clip3Float(_gRPY_PID[1].nBalance, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
         
-        nRPY_PID[1].nPrevErrRate = nCurrErrRate;
+        _gRPY_PID[1].nPrevErrRate = nCurrErrRate;
     }
 
     // Yaw
     {
-        nCurrErrRate = nEstimatedRPY[2] - nEstimatedRCVal[CH_TYPE_YAW];
+        nCurrErrRate = _gEstimatedRPY[2] - nEstimatedRCVal[CH_TYPE_YAW];
         
-        nRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;
-        nRPY_PID[2].nI_ErrRate += nPIDGainTable[2][1] * nCurrErrRate;
-        nRPY_PID[2].nI_ErrRate = _Clip3Float(nRPY_PID[2].nI_ErrRate, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
-        nRPY_PID[2].nD_ErrRate = nPIDGainTable[2][2] * (nCurrErrRate - nRPY_PID[2].nPrevErrRate);
+        _gRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;
+        _gRPY_PID[2].nI_ErrRate += nPIDGainTable[2][1] * nCurrErrRate;
+        _gRPY_PID[2].nI_ErrRate = _Clip3Float(_gRPY_PID[2].nI_ErrRate, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
+        _gRPY_PID[2].nD_ErrRate = nPIDGainTable[2][2] * (nCurrErrRate - _gRPY_PID[2].nPrevErrRate);
         
-        nRPY_PID[2].nBalance = nRPY_PID[2].nP_ErrRate + nRPY_PID[2].nI_ErrRate + nRPY_PID[2].nD_ErrRate;
-        nRPY_PID[2].nBalance = _Clip3Float(nRPY_PID[2].nBalance, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
+        _gRPY_PID[2].nBalance = _gRPY_PID[2].nP_ErrRate + _gRPY_PID[2].nI_ErrRate + _gRPY_PID[2].nD_ErrRate;
+        _gRPY_PID[2].nBalance = _Clip3Float(_gRPY_PID[2].nBalance, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
         
-        nRPY_PID[2].nPrevErrRate = nCurrErrRate;
+        _gRPY_PID[2].nPrevErrRate = nCurrErrRate;
     }
 }
 
 
 void _CalculateThrottleVal()
 {
-    int                     nThrottle = nCompensatedRCVal[CH_TYPE_THROTTLE];
+    int                     nThrottle = _gCompensatedRCVal[CH_TYPE_THROTTLE];
     int                     i = 0;
     
-    if(DRONESTATUS_START == nDroneStatus)
+    if(DRONESTATUS_START == _gDroneStatus)
     {
-        int                 nRollBalance    = (int)(nRPY_PID[0].nBalance);
-        int                 nPitchBalance   = (int)(nRPY_PID[1].nBalance);
-        int                 nYawBalance     = (int)(nRPY_PID[2].nBalance);
+        int                 nRollBalance    = (int)(_gRPY_PID[0].nBalance);
+        int                 nPitchBalance   = (int)(_gRPY_PID[1].nBalance);
+        int                 nYawBalance     = (int)(_gRPY_PID[2].nBalance);
 
         if(1800 < nThrottle)
             nThrottle = 1800;
         
-        nESCOutput[0] = nThrottle + nRollBalance + nPitchBalance + nYawBalance;
-        nESCOutput[1] = nThrottle - nRollBalance + nPitchBalance - nYawBalance;
-        nESCOutput[2] = nThrottle - nRollBalance - nPitchBalance + nYawBalance;
-        nESCOutput[3] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
+        _gESCOutput[0] = nThrottle + nRollBalance + nPitchBalance + nYawBalance;
+        _gESCOutput[1] = nThrottle - nRollBalance + nPitchBalance - nYawBalance;
+        _gESCOutput[2] = nThrottle - nRollBalance - nPitchBalance + nYawBalance;
+        _gESCOutput[3] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
 
         for(i=0 ; i<4 ; i++)
         {
-            if(nESCOutput[i] < ESC_ACTUAL_MIN)
-                nESCOutput[i] = ESC_ACTUAL_MIN;
+            if(_gESCOutput[i] < ESC_ACTUAL_MIN)
+                _gESCOutput[i] = ESC_ACTUAL_MIN;
 
-            if(nESCOutput[i] > ESC_ACTUAL_MAX)
-                nESCOutput[i] = ESC_ACTUAL_MAX;
+            if(_gESCOutput[i] > ESC_ACTUAL_MAX)
+                _gESCOutput[i] = ESC_ACTUAL_MAX;
         }
     }
     else
     {
         // Set Throttle Value as Min Value
         for(i=0 ; i<4 ; i++)
-            nESCOutput[i] = ESC_MIN;
+            _gESCOutput[i] = ESC_MIN;
     }
 }
 
 
 void _Calculate_Altitude(float *pEstimatedThrottle)
 {
-    if(1500 < nCompensatedRCVal[CH_TYPE_TAKE_LAND])
+    if(1500 < _gCompensatedRCVal[CH_TYPE_TAKE_LAND])
     {
-        //(nDistFromGnd - HOVERING_ALTITUDE)
+        //(_gDistFromGnd - HOVERING_ALTITUDE)
     }
 }
 

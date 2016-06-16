@@ -14,6 +14,9 @@ void _AccelGyro_Calibration();
 
 void _AccelGyro_Initialize()
 {
+    uint8_t             *pOffset;
+    int                 i = 0;
+    
     Serialprintln(F(" *      5. Start MPU6050 Module Initialization   "));
     
 //    nAccelGyroHndl = MPU6050();
@@ -70,13 +73,37 @@ void _AccelGyro_Initialize()
     Wire.write(0x1A);                    
     Wire.write(0x03);                    
     Wire.endTransmission();
-    
-    nEstimatedRPY[0] = nEstimatedRPY[1] = nEstimatedRPY[2] = 0.0;
 
     delay(300);
     
     // Calibration
     _AccelGyro_Calibration();
+
+    #if 0
+    // Set Gyro Offset
+    for(i=0 ; i<=Z_AXIS ; i++)
+    {
+        pOffset = &(_gCalibMeanGyro[i]);
+        Wire.beginTransmission(0x68);
+        Wire.write(0x13 + (2 * i));
+        Wire.write((pOffset[0]);
+        Wire.write((pOffset[1]);
+        Wire.endTransmission();
+    }
+                   
+    // Set Accel Offset
+    for(i=0 ; i<=Z_AXIS ; i++)
+    {
+        pOffset = &(_gCalibMeanAccel[i]);
+        Wire.beginTransmission(0x68);
+        Wire.write(0x06 + (2 * i));
+        Wire.write((pOffset[0]);
+        Wire.write((pOffset[1]);
+        Wire.endTransmission();
+    }
+    #endif
+    
+    _gEstimatedRPY[0] = _gEstimatedRPY[1] = _gEstimatedRPY[2] = 0.0;
     
     delay(300);
     
@@ -93,16 +120,16 @@ void _AccelGyro_GetData()
     Wire.endTransmission();
     Wire.requestFrom(0x68, 6);                                      // request a total of 14 registers
 
-    nRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-    nRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    nRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    _gRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+    _gRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    _gRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
     
-    nRawGyro[X_AXIS] -= nCalibMeanGyro[X_AXIS];
-    if(1 == nAxisReverseFlag[X_AXIS]) nRawGyro[X_AXIS] *= -1;
-    nRawGyro[Y_AXIS] -= nCalibMeanGyro[Y_AXIS];
-    if(1 == nAxisReverseFlag[Y_AXIS]) nRawGyro[Y_AXIS] *= -1;
-    nRawGyro[Z_AXIS] -= nCalibMeanGyro[Z_AXIS];
-    if(1 == nAxisReverseFlag[Z_AXIS]) nRawGyro[Z_AXIS] *= -1;
+    _gRawGyro[X_AXIS] -= _gCalibMeanGyro[X_AXIS];
+    if(1 == _gAxisReverseFlag[X_AXIS]) _gRawGyro[X_AXIS] *= -1;
+    _gRawGyro[Y_AXIS] -= _gCalibMeanGyro[Y_AXIS];
+    if(1 == _gAxisReverseFlag[Y_AXIS]) _gRawGyro[Y_AXIS] *= -1;
+    _gRawGyro[Z_AXIS] -= _gCalibMeanGyro[Z_AXIS];
+    if(1 == _gAxisReverseFlag[Z_AXIS]) _gRawGyro[Z_AXIS] *= -1;
 }
 
 
@@ -113,7 +140,7 @@ void _AccelGyro_Calibration()
     Serialprint(F(" *          Calibrating "));
     
     for(i=0 ; i<=Z_AXIS ; i++)
-        nCalibMeanGyro[i] = 0.0;
+        _gCalibMeanGyro[i] = 0.0;
     
     for(i=0 ; i<2000 ; i++)
     {
@@ -134,9 +161,9 @@ void _AccelGyro_Calibration()
         Wire.endTransmission();
         Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
         
-        nCalibMeanGyro[X_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-        nCalibMeanGyro[Y_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-        nCalibMeanGyro[Z_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+        _gCalibMeanGyro[X_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+        _gCalibMeanGyro[Y_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+        _gCalibMeanGyro[Z_AXIS] += (Wire.read()<<8 | Wire.read());       // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
         
         if(0 == (i % 20))
         {
@@ -146,7 +173,7 @@ void _AccelGyro_Calibration()
     }
     
     for(i=0 ; i<=Z_AXIS ; i++)
-        nCalibMeanGyro[i] /= 2000;
+        _gCalibMeanGyro[i] /= 2000;
     
     Serialprintln(F("."));
 

@@ -12,8 +12,8 @@ void _Mag_Initialize()
 {
     HMC5883L            *pMagHndl = NULL;
 
-    nMagHndl = HMC5883L();
-    pMagHndl = &nMagHndl;
+    _gMagHndl = HMC5883L();
+    pMagHndl = &_gMagHndl;
 
     // initialize Magnetic
     Serialprintln(F(" Initializing Magnetic..."));
@@ -42,7 +42,7 @@ void _Mag_Initialize()
     // Annual Change (minutes/year): 3.9 '/y West
     // http://www.geomag.nrcan.gc.ca/calc/mdcal-en.php
     // http://www.magnetic-declination.com/
-    nDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
+    _gDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
 
     Serialprintln(F(" Done"));
 
@@ -53,7 +53,7 @@ void _Mag_Initialize()
 
 void _Mag_GetData()
 {
-    nMagHndl.getScaledHeading(&(nRawMag[X_AXIS]), &(nRawMag[Y_AXIS]), &(nRawMag[Z_AXIS]));
+    _gMagHndl.getScaledHeading(&(_gRawMag[X_AXIS]), &(_gRawMag[Y_AXIS]), &(_gRawMag[Z_AXIS]));
 
     // Calculate Heading
     //_Mag_CalculateDirection();
@@ -64,30 +64,30 @@ void _Mag_CalculateDirection()
 {
     int                     i = 0;
     
-    nMagHeadingRad = atan2(nRawMag[Y_AXIS], nRawMag[X_AXIS]);
-    nMagHeadingRad -= nDeclinationAngle;      // If East, then Change Operation to PLUS
+    _gMagHeadingRad = atan2(_gRawMag[Y_AXIS], _gRawMag[X_AXIS]);
+    _gMagHeadingRad -= _gDeclinationAngle;      // If East, then Change Operation to PLUS
 
-    if(nMagHeadingRad < 0)
-        nMagHeadingRad += DOUBLE_RADIAN;
+    if(_gMagHeadingRad < 0)
+        _gMagHeadingRad += DOUBLE_RADIAN;
 
-    if(nMagHeadingRad > DOUBLE_RADIAN)
-        nMagHeadingRad -= DOUBLE_RADIAN;
+    if(_gMagHeadingRad > DOUBLE_RADIAN)
+        _gMagHeadingRad -= DOUBLE_RADIAN;
 
-    nMagHeadingDeg = nMagHeadingRad * RAD_TO_DEG_SCALE;
+    _gMagHeadingDeg = _gMagHeadingRad * RAD_TO_DEG_SCALE;
 
-    if(nMagHeadingDeg >= 1 && nMagHeadingDeg < 240)
-        nMagHeadingDeg = map(nMagHeadingDeg, 0, 239, 0, 179);
-    else if(nMagHeadingDeg >= 240)
-        nMagHeadingDeg = map(nMagHeadingDeg, 240, 360, 180, 360);
+    if(_gMagHeadingDeg >= 1 && _gMagHeadingDeg < 240)
+        _gMagHeadingDeg = map(_gMagHeadingDeg, 0, 239, 0, 179);
+    else if(_gMagHeadingDeg >= 240)
+        _gMagHeadingDeg = map(_gMagHeadingDeg, 240, 360, 180, 360);
 
     // Smooth angles rotation for +/- 3deg
-    nSmoothHeadingDegrees = round(nMagHeadingDeg);
+    _gSmoothHeadingDegrees = round(_gMagHeadingDeg);
 
-    if((nSmoothHeadingDegrees < (nPrevHeadingDegrees + 3)) &&
-       (nSmoothHeadingDegrees > (nPrevHeadingDegrees - 3)))
-        nSmoothHeadingDegrees = nPrevHeadingDegrees;
+    if((_gSmoothHeadingDegrees < (_gPrevHeadingDegrees + 3)) &&
+       (_gSmoothHeadingDegrees > (_gPrevHeadingDegrees - 3)))
+        _gSmoothHeadingDegrees = _gPrevHeadingDegrees;
 
-    nPrevHeadingDegrees = nSmoothHeadingDegrees;
+    _gPrevHeadingDegrees = _gSmoothHeadingDegrees;
 }
 
 #endif /* HMC5883L_Controller_h */

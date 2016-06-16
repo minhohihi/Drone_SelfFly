@@ -437,6 +437,7 @@
 		8B0F2C971BF57A7F0044F792 /* TCA6424A.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCA6424A.h; sourceTree = "<group>"; };
 		8B31B8561BEAE0F1005634F8 /* libSelfFly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSelfFly.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = DroneCore.ino; path = ../Arduino/DroneCore/DroneCore.ino; sourceTree = "<group>"; };
+		8B79A1A71D11415C008F38B9 /* Read_Receiver.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_Receiver.ino; path = ../Arduino/Example/Read_Receiver/Read_Receiver.ino; sourceTree = "<group>"; };
 		8BB81AB91D0E26A300EF39AD /* tmp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = tmp.c; path = ../../../Downloads/tmp.c; sourceTree = "<group>"; };
 		8BCB60D01D0FDE2D00515379 /* ESC_Calibration.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = ESC_Calibration.ino; path = ../Arduino/Example/ESC_Calibration/ESC_Calibration.ino; sourceTree = "<group>"; };
 		8BCB60D11D0FDE3700515379 /* Read_AccelGyro_MPU6050.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_AccelGyro_MPU6050.ino; path = ../Arduino/Example/Read_AccelGyro_MPU6050/Read_AccelGyro_MPU6050.ino; sourceTree = "<group>"; };
@@ -1762,6 +1763,7 @@
 				8BCB60D11D0FDE3700515379 /* Read_AccelGyro_MPU6050.ino */,
 				8BCB60D21D0FDE4200515379 /* Read_Barometer_MS5611.ino */,
 				8BCB60D31D0FDE4A00515379 /* Read_Magnetic_HMC5883L.ino */,
+				8B79A1A71D11415C008F38B9 /* Read_Receiver.ino */,
 				8BCB60D41D0FDE5200515379 /* ReadGPS.ino */,
 				8B0F2ABE1BF57A7E0044F792 /* _Stub */,
 				8B0F2AC11BF57A7E0044F792 /* AD7746 */,

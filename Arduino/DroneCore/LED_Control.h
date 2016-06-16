@@ -42,7 +42,7 @@ void _LED_Initialize()
     // Set RED Led as Init Color
     _LED_Blink(1, 0, 0, 0);
 
-    nPrevBlinkTime = micros();
+    _gPrevBlinkTime = micros();
     
     delay(300);
     
@@ -74,20 +74,20 @@ void _LED_SetColor(int nRed, int nGreen, int nBlue)
 
 void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod)
 {
-    nCurrTime = micros();
+    _gCurrTime = micros();
 
     if(0 == nLinkPeriod)
         _LED_SetColor(nRed, nGreen, nBlue);
-    else if((nCurrTime - nPrevBlinkTime) > nLinkPeriod)
+    else if((_gCurrTime - _gPrevBlinkTime) > nLinkPeriod)
     {
-        if(0 == nLED_Status)
+        if(0 == _gLED_Status)
             _LED_SetColor(nRed, nGreen, nBlue);
         else
             _LED_SetColor(0, 0, 0);
 
-        nLED_Status = !(nLED_Status);
+        _gLED_Status = !(_gLED_Status);
 
-        nPrevBlinkTime = nCurrTime;
+        _gPrevBlinkTime = _gCurrTime;
     }
 }
 

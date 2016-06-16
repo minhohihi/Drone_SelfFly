@@ -20,101 +20,101 @@ void _print_EEPRomData()
 void _print_DroneStatus()
 {
     Serialprint(F("   //   Drone Status:")); 
-    Serialprint(nDroneStatus);
+    Serialprint(_gDroneStatus);
 }
 
 
 void _print_CaturedRC_Signals()
 {
     Serialprint(F("   //   RC_Roll:"));
-    Serialprint(nRcvChVal[CH_TYPE_ROLL]);
+    Serialprint(_gRCSignalVal[CH_TYPE_ROLL]);
     Serialprint(F("   RC_Pitch:"));
-    Serialprint(nRcvChVal[CH_TYPE_PITCH]);
+    Serialprint(_gRCSignalVal[CH_TYPE_PITCH]);
     Serialprint(F("   RC_Throttle:"));
-    Serialprint(nRcvChVal[CH_TYPE_THROTTLE]);
+    Serialprint(_gRCSignalVal[CH_TYPE_THROTTLE]);
     Serialprint(F("   RC_Yaw:"));
-    Serialprint(nRcvChVal[CH_TYPE_YAW]);
+    Serialprint(_gRCSignalVal[CH_TYPE_YAW]);
     Serialprint(F("   RC_Gear:"));
-    Serialprint(nRcvChVal[CH_TYPE_TAKE_LAND]);
+    Serialprint(_gRCSignalVal[CH_TYPE_TAKE_LAND]);
 }
 
 
 void _print_CompensatedRC_Signals()
 {
     Serialprint(F("   //   RC_Roll:"));
-    Serialprint(nCompensatedRCVal[CH_TYPE_ROLL]);
+    Serialprint(_gCompensatedRCVal[CH_TYPE_ROLL]);
     Serialprint(F("   RC_Pitch:"));
-    Serialprint(nCompensatedRCVal[CH_TYPE_PITCH]);
+    Serialprint(_gCompensatedRCVal[CH_TYPE_PITCH]);
     Serialprint(F("   RC_Throttle:"));
-    Serialprint(nCompensatedRCVal[CH_TYPE_THROTTLE]);
+    Serialprint(_gCompensatedRCVal[CH_TYPE_THROTTLE]);
     Serialprint(F("   RC_Yaw:"));
-    Serialprint(nCompensatedRCVal[CH_TYPE_YAW]);
+    Serialprint(_gCompensatedRCVal[CH_TYPE_YAW]);
     Serialprint(F("   RC_Gear:"));
-    Serialprint(nCompensatedRCVal[CH_TYPE_TAKE_LAND]);
+    Serialprint(_gCompensatedRCVal[CH_TYPE_TAKE_LAND]);
 }
 
 
 void _print_Gyro_Signals()
 {
     Serialprint(F("   //   Gx:"));
-    Serialprint(nRawGyro[0]);
+    Serialprint(_gRawGyro[0]);
     Serialprint(F("   Gy:"));
-    Serialprint(nRawGyro[1]);
+    Serialprint(_gRawGyro[1]);
     Serialprint(F("   Gz:"));
-    Serialprint(nRawGyro[2]);
+    Serialprint(_gRawGyro[2]);
 }
 
 
 void _print_Accel_Signals()
 {
     Serialprint(F("   //   Ax:"));
-    Serialprint(nRawAccel[0]);
+    Serialprint(_gRawAccel[0]);
     Serialprint(F("   Ay:"));
-    Serialprint(nRawAccel[1]);
+    Serialprint(_gRawAccel[1]);
     Serialprint(F("   Az:"));
-    Serialprint(nRawAccel[2]);
+    Serialprint(_gRawAccel[2]);
 }
 
 
 void _print_Temp_Signals()
 {
     Serialprint(F("   //   Temp:"));
-    Serialprint(nRawTemp/340.00 + 36.53);
+    Serialprint(_gRawTemp/340.00 + 36.53);
 }
 
 
 void _print_MagData()
 {
     Serialprint(F("   //   Mx:"));
-    Serialprint(nRawMag[0]);
+    Serialprint(_gRawMag[0]);
     Serialprint(F("   My:"));
-    Serialprint(nRawMag[1]);
+    Serialprint(_gRawMag[1]);
     Serialprint(F("   Mz:"));
-    Serialprint(nRawMag[2]);
+    Serialprint(_gRawMag[2]);
     Serialprint(F("   Magnetic HEAD:"));
-    Serialprint(nMagHeadingDeg);
+    Serialprint(_gMagHeadingDeg);
     Serialprint(F("   SmoothHEAD:"));
-    Serialprint(nSmoothHeadingDegrees);
+    Serialprint(_gSmoothHeadingDegrees);
 }
 
 void _print_BarometerData()
 {
     Serialprint(F("   //   Barometer AvgTemp:"));
-    Serialprint(nAvgTemp);
+    Serialprint(_gAvgTemp);
     Serialprint(F("   AvgPress:"));
-    Serialprint(nAvgPressure);
+    Serialprint(_gAvgPressure);
     Serialprint(F("   AvgAlt:"));
-    Serialprint(nAvgAbsoluteAltitude);
+    Serialprint(_gAvgAbsoluteAltitude);
     Serialprint(F("   RelativeAlt:"));
-    Serialprint(nRelativeAltitude);
+    Serialprint(_gRelativeAltitude);
     Serialprint(F("   VerticalSpeed:"));
-    Serialprint(nVerticalSpeed);
+    Serialprint(_gVerticalSpeed);
 }
 
 void _print_SonarData()
 {
     Serialprint(F("   //   Sonar:"));
-    Serialprint(nDistFromGnd);
+    Serialprint(_gDistFromGnd);
     Serialprint(F("cm"));
 }
 
@@ -122,11 +122,11 @@ void _print_SonarData()
 void _print_RPY_Signals()
 {
     Serialprint(F("   //   EstRoll:"));
-    Serialprint(nEstimatedRPY[0]);
+    Serialprint(_gEstimatedRPY[0]);
     Serialprint(F("   EstPitch:"));
-    Serialprint(nEstimatedRPY[1]);
+    Serialprint(_gEstimatedRPY[1]);
     Serialprint(F("   EstYaw:"));
-    Serialprint(nEstimatedRPY[2]);
+    Serialprint(_gEstimatedRPY[2]);
 }
 
 
@@ -146,38 +146,38 @@ void _print_PIDGain()
 void _print_PIDBalance()
 {
     Serialprint(F("   //   PIDBal_Roll:"));
-    Serialprint(nRPY_PID[0].nBalance);
+    Serialprint(_gRPY_PID[0].nBalance);
     Serialprint(F("   PIDBal_Picth:"));
-    Serialprint(nRPY_PID[1].nBalance);
+    Serialprint(_gRPY_PID[1].nBalance);
     Serialprint(F("   PIDBal_Yaw:"));
-    Serialprint(nRPY_PID[2].nBalance);
+    Serialprint(_gRPY_PID[2].nBalance);
     Serialprint(F("   PIDBal_Sum:"));
-    Serialprint(nRPY_PID[0].nBalance + nRPY_PID[1].nBalance + nRPY_PID[2].nBalance);
+    Serialprint(_gRPY_PID[0].nBalance + _gRPY_PID[1].nBalance + _gRPY_PID[2].nBalance);
 }
 
 
 void _print_Throttle_Signals()
 {
     Serialprint(F("   //   Thrt1:"));
-    Serialprint(nESCOutput[0]);
+    Serialprint(_gESCOutput[0]);
     Serialprint(F("  Thrt2:"));
-    Serialprint(nESCOutput[1]);
+    Serialprint(_gESCOutput[1]);
     Serialprint(F("  Thrt3:"));
-    Serialprint(nESCOutput[2]);
+    Serialprint(_gESCOutput[2]);
     Serialprint(F("  Thrt4:"));
-    Serialprint(nESCOutput[3]);
+    Serialprint(_gESCOutput[3]);
 }
 
 
 void _print_Profile()
 {
     #if __PROFILE__
-    nProfileEndTime = micros();
+    _gProfileEndTime = micros();
 
     Serialprint(F("   //   Loop Duration:")); 
-    Serialprint((nProfileEndTime - nProfileStartTime) / 1000.0);
+    Serialprint((_gProfileEndTime - _gProfileStartTime) / 1000.0);
 
-    nProfileStartTime = micros();
+    _gProfileStartTime = micros();
     #endif
 }
 

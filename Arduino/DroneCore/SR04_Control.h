@@ -33,10 +33,10 @@ void _Sonar_GetData()
     PORTC &= B11111101;
 
     // Get Raw Distance Value
-    nRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
+    _gRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
 
     // Calculate Distance From Ground
-    nDistFromGnd = nRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
+    _gDistFromGnd = _gRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
 }
 
 
@@ -44,13 +44,13 @@ void _Sonar_GetData_WithPeriod()
 {
     static unsigned long    nPrevTime = 0;
     
-    nCurrTime = micros();
+    _gCurrTime = micros();
 
-    if((nCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
+    if((_gCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
     {
         _Sonar_GetData();
 
-        nPrevTime = nCurrTime;
+        nPrevTime = _gCurrTime;
     }
 }
 

@@ -38,9 +38,9 @@ void _RC_GetRCRange()
     
     for(i=0 ; i<5 ; i++)
     {
-        nLowRC[i] = 9999;
-        nCenterRC[i] = 1500;
-        nHighRC[i] = 0;
+        _gRCSignal_L[i] = 9999;
+        _gRCSignal_M[i] = 1500;
+        _gRCSignal_H[i] = 0;
     }
 
     Serialprintln(F(" *      Start Receiver Range Check   "));
@@ -50,20 +50,20 @@ void _RC_GetRCRange()
     while(nFlag < 15)
     {
         // Set Min & Max Range
-        if(nRcvChVal[0] < nLowRC[0])  nLowRC[0]  = nRcvChVal[0];
-        if(nRcvChVal[0] > nHighRC[0]) nHighRC[0] = nRcvChVal[0];
-        if(nRcvChVal[1] < nLowRC[1])  nLowRC[1]  = nRcvChVal[1];
-        if(nRcvChVal[1] > nHighRC[1]) nHighRC[1] = nRcvChVal[1];
-        if(nRcvChVal[2] < nLowRC[2])  nLowRC[2]  = nRcvChVal[2];
-        if(nRcvChVal[2] > nHighRC[2]) nHighRC[2] = nRcvChVal[2];
-        if(nRcvChVal[3] < nLowRC[3])  nLowRC[3]  = nRcvChVal[3];
-        if(nRcvChVal[3] > nHighRC[3]) nHighRC[3] = nRcvChVal[3];
+        if(_gRCSignalVal[0] < _gRCSignal_L[0])  _gRCSignal_L[0]  = _gRCSignalVal[0];
+        if(_gRCSignalVal[0] > _gRCSignal_H[0]) _gRCSignal_H[0] = _gRCSignalVal[0];
+        if(_gRCSignalVal[1] < _gRCSignal_L[1])  _gRCSignal_L[1]  = _gRCSignalVal[1];
+        if(_gRCSignalVal[1] > _gRCSignal_H[1]) _gRCSignal_H[1] = _gRCSignalVal[1];
+        if(_gRCSignalVal[2] < _gRCSignal_L[2])  _gRCSignal_L[2]  = _gRCSignalVal[2];
+        if(_gRCSignalVal[2] > _gRCSignal_H[2]) _gRCSignal_H[2] = _gRCSignalVal[2];
+        if(_gRCSignalVal[3] < _gRCSignal_L[3])  _gRCSignal_L[3]  = _gRCSignalVal[3];
+        if(_gRCSignalVal[3] > _gRCSignal_H[3]) _gRCSignal_H[3] = _gRCSignalVal[3];
 
         // Check Center Position
-        if((nRcvChVal[0] > (nCenterRC[0] - nOffset)) && (nRcvChVal[0] < (nCenterRC[0] + nOffset)))  nFlag |= 0b00000001;
-        if((nRcvChVal[1] > (nCenterRC[1] - nOffset)) && (nRcvChVal[1] < (nCenterRC[1] + nOffset)))  nFlag |= 0b00000010;
-        if((nRcvChVal[2] > (nCenterRC[2] - nOffset)) && (nRcvChVal[2] < (nCenterRC[2] + nOffset)))  nFlag |= 0b00000100;
-        if((nRcvChVal[3] > (nCenterRC[3] - nOffset)) && (nRcvChVal[3] < (nCenterRC[3] + nOffset)))  nFlag |= 0b00001000;
+        if((_gRCSignalVal[0] > (_gRCSignal_M[0] - nOffset)) && (_gRCSignalVal[0] < (_gRCSignal_M[0] + nOffset)))  nFlag |= B00000001;
+        if((_gRCSignalVal[1] > (_gRCSignal_M[1] - nOffset)) && (_gRCSignalVal[1] < (_gRCSignal_M[1] + nOffset)))  nFlag |= B00000010;
+        if((_gRCSignalVal[2] > (_gRCSignal_M[2] - nOffset)) && (_gRCSignalVal[2] < (_gRCSignal_M[2] + nOffset)))  nFlag |= B00000100;
+        if((_gRCSignalVal[3] > (_gRCSignal_M[3] - nOffset)) && (_gRCSignalVal[3] < (_gRCSignal_M[3] + nOffset)))  nFlag |= B00001000;
 
         Serialprint(F("."));
         
@@ -73,18 +73,18 @@ void _RC_GetRCRange()
     Serialprintln(F(" *            => Done!!   "));
     
     for(i=0 ; i<4 ; i++)
-        nCenterRC[i] = (nHighRC[i] + nLowRC[i]) / 2;
+        _gRCSignal_M[i] = (_gRCSignal_H[i] + _gRCSignal_L[i]) / 2;
         
     for(i=0 ; i<4 ; i++)
     {
         Serialprint(F(" *              Ch"));
         Serialprint(i);
         Serialprint(F(" Range: "));
-        Serialprint(nLowRC[i]);
+        Serialprint(_gRCSignal_L[i]);
         Serialprint(F(" ~ "));
-        Serialprint(nCenterRC[i]);
+        Serialprint(_gRCSignal_M[i]);
         Serialprint(F(" ~ "));
-        Serialprintln(nHighRC[i]);
+        Serialprintln(_gRCSignal_H[i]);
     }
     
     Serialprintln(F(" "));
@@ -92,13 +92,13 @@ void _RC_GetRCRange()
 
 //This part converts the actual receiver signals to a standardized 1000 – 1500 – 2000 microsecond value.
 //The stored data in the EEPROM is used.
-void _RC_Compensate(unsigned char nRCCh)
+void _RC_Compensate(byte nRCCh)
 {
-    unsigned char           nReverse = nRCReverseFlag[nRCCh];
-    int                     nLow = nLowRC[nRCCh];
-    int                     nCenter = nCenterRC[nRCCh];
-    int                     nHigh = nHighRC[nRCCh];
-    int                     nActualRC = nRcvChVal[nRCCh];
+    byte                    nReverse = _gRCReverseFlag[nRCCh];
+    int                     nLow = _gRCSignal_L[nRCCh];
+    int                     nCenter = _gRCSignal_M[nRCCh];
+    int                     nHigh = _gRCSignal_H[nRCCh];
+    int                     nActualRC = _gRCSignalVal[nRCCh];
     int                     nDiff = 0;
     int                     nCompensatedRC = 0;
   
@@ -137,7 +137,7 @@ void _RC_Compensate(unsigned char nRCCh)
     else
         nCompensatedRC = 1500;
     
-    nCompensatedRCVal[nRCCh] = nCompensatedRC;
+    _gCompensatedRCVal[nRCCh] = nCompensatedRC;
 }
 
 
@@ -147,17 +147,17 @@ void _Wait_Receiver()
     
     while(nFlag < 15)
     {
-        if(nRcvChVal[CH_TYPE_ROLL] < 2100 && nRcvChVal[CH_TYPE_ROLL] > 900)
-            nFlag |= 0b00000001;
+        if(_gRCSignalVal[CH_TYPE_ROLL] < 2100 && _gRCSignalVal[CH_TYPE_ROLL] > 900)
+            nFlag |= B00000001;
         
-        if(nRcvChVal[CH_TYPE_PITCH] < 2100 && nRcvChVal[CH_TYPE_PITCH] > 900)
-            nFlag |= 0b00000010;
+        if(_gRCSignalVal[CH_TYPE_PITCH] < 2100 && _gRCSignalVal[CH_TYPE_PITCH] > 900)
+            nFlag |= B00000010;
         
-        if(nRcvChVal[CH_TYPE_THROTTLE] < 2100 && nRcvChVal[CH_TYPE_THROTTLE] > 900)
-            nFlag |= 0b00000100;
+        if(_gRCSignalVal[CH_TYPE_THROTTLE] < 2100 && _gRCSignalVal[CH_TYPE_THROTTLE] > 900)
+            nFlag |= B00000100;
         
-        if(nRcvChVal[CH_TYPE_YAW] < 2100 && nRcvChVal[CH_TYPE_YAW] > 900)
-            nFlag |= 0b00001000;
+        if(_gRCSignalVal[CH_TYPE_YAW] < 2100 && _gRCSignalVal[CH_TYPE_YAW] > 900)
+            nFlag |= B00001000;
         
         delay(500);
     }
@@ -171,19 +171,19 @@ void _Read_RCData_From_EEPROM()
     int                 nEEPRomAddress = 0;
     
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
     Serialprintln(F(" *       Reading Drone Setting from EEPROM          "));
-    Serialprintln(F("   **********************************************   "));
+    Serialprintln(F("********************************************************************"));
     
     // Read Range of Transmitter
     for(i=EEPROM_DATA_RC_CH0_TYPE ; i<=EEPROM_DATA_RC_CH4_TYPE ; i++)
-        nEEPROMData[i] = EEPROM.read(i);
+        _gEEPROMData[i] = EEPROM.read(i);
 
     for(i=EEPROM_DATA_RC_CH0_REVERSE ; i<=EEPROM_DATA_RC_CH4_REVERSE ; i++)
-        nEEPROMData[i] = EEPROM.read(i);
+        _gEEPROMData[i] = EEPROM.read(i);
     
     for(i=EEPROM_DATA_RC_CH0_LOW_H ; i<=EEPROM_DATA_RC_CH4_HIG_L ; i++)
-        nEEPROMData[i] = EEPROM.read(i);
+        _gEEPROMData[i] = EEPROM.read(i);
     
     delay(300);
     
@@ -191,142 +191,86 @@ void _Read_RCData_From_EEPROM()
 }
 
 
-#if 1
+// Get Transmitter Signal From Digital Pin 2, 3, 4, 5, and 6 by HW Interrupt
 ISR(PCINT2_vect)
 {
-    nCurrTime = micros();
+    _gCurrTime = micros();
     
+    // Check Status of Digital Pin 2
     if(PIND & B00000100)
     {
-        if(0 == nRcvChFlag[CH_TYPE_ROLL])
+        if(0 == (_gRCRisingFlag & B00000001))
         {
-            nRcvChFlag[CH_TYPE_ROLL] = 1;
-            nRcvChHighTime[CH_TYPE_ROLL] = nCurrTime;
+            _gRCRisingFlag |= B00000001;
+            _gRCChRisingTime[0] = _gCurrTime;
         }
     }
-    else if(1 == nRcvChFlag[CH_TYPE_ROLL])
+    else if(_gRCRisingFlag & B00000001)
     {
-        nRcvChFlag[CH_TYPE_ROLL] = 0;
-        nRcvChVal[CH_TYPE_ROLL] = nCurrTime - nRcvChHighTime[CH_TYPE_ROLL];
+        _gRCRisingFlag &= B11111110;
+        _gRCSignalVal[0] = _gCurrTime - _gRCChRisingTime[0];
     }
 
+    // Check Status of Digital Pin 3
     if(PIND & B00001000)
     {
-        if(0 == nRcvChFlag[CH_TYPE_PITCH])
+        if(0 == (_gRCRisingFlag & B00000010))
         {
-            nRcvChFlag[CH_TYPE_PITCH] = 1;
-            nRcvChHighTime[CH_TYPE_PITCH] = nCurrTime;
+            _gRCRisingFlag |= B00000010;
+            _gRCChRisingTime[1] = _gCurrTime;
         }
     }
-    else if(1 == nRcvChFlag[CH_TYPE_PITCH])
+    else if(_gRCRisingFlag & B00000010)
     {
-        nRcvChFlag[CH_TYPE_PITCH] = 0;
-        nRcvChVal[CH_TYPE_PITCH] = nCurrTime - nRcvChHighTime[CH_TYPE_PITCH];
+        _gRCRisingFlag &= B11111101;
+        _gRCSignalVal[1] = _gCurrTime - _gRCChRisingTime[1];
     }
 
+    // Check Status of Digital Pin 4
     if(PIND & B00010000)
     {
-        if(0 == nRcvChFlag[CH_TYPE_THROTTLE])
+        if(0 == (_gRCRisingFlag & B00000100))
         {
-            nRcvChFlag[CH_TYPE_THROTTLE] = 1;
-            nRcvChHighTime[CH_TYPE_THROTTLE] = nCurrTime;
+            _gRCRisingFlag |= B00000100;
+            _gRCChRisingTime[2] = _gCurrTime;
         }
     }
-    else if(1 == nRcvChFlag[CH_TYPE_THROTTLE])
+    else if(_gRCRisingFlag & B00000100)
     {
-        nRcvChFlag[CH_TYPE_THROTTLE] = 0;
-        nRcvChVal[CH_TYPE_THROTTLE] = nCurrTime - nRcvChHighTime[CH_TYPE_THROTTLE];
+        _gRCRisingFlag &= B11111011;
+        _gRCSignalVal[2] = _gCurrTime - _gRCChRisingTime[2];
     }
 
+    // Check Status of Digital Pin 5
     if(PIND & B00100000)
     {
-        if(0 == nRcvChFlag[CH_TYPE_YAW])
+        if(0 == (_gRCRisingFlag & B00001000))
         {
-            nRcvChFlag[CH_TYPE_YAW] = 1;
-            nRcvChHighTime[CH_TYPE_YAW] = nCurrTime;
+            _gRCRisingFlag |= B00001000;
+            _gRCChRisingTime[3] = _gCurrTime;
         }
     }
-    else if(1 == nRcvChFlag[CH_TYPE_YAW])
+    else if(_gRCRisingFlag & B00001000)
     {
-        nRcvChFlag[CH_TYPE_YAW] = 0;
-        nRcvChVal[CH_TYPE_YAW] = nCurrTime - nRcvChHighTime[CH_TYPE_YAW];
+        _gRCRisingFlag &= B11110111;
+        _gRCSignalVal[3] = _gCurrTime - _gRCChRisingTime[3];
     }
     
+    // Check Status of Digital Pin 6
     if(PIND & B01000000)
     {
-        if(0 == nRcvChFlag[CH_TYPE_TAKE_LAND])
+        if(0 == (_gRCRisingFlag & B00010000))
         {
-            nRcvChFlag[CH_TYPE_TAKE_LAND] = 1;
-            nRcvChHighTime[CH_TYPE_TAKE_LAND] = nCurrTime;
+            _gRCRisingFlag |= B00010000;
+            _gRCChRisingTime[4] = _gCurrTime;
         }
     }
-    else if(1 == nRcvChFlag[CH_TYPE_TAKE_LAND])
+    else if(_gRCRisingFlag & B00010000)
     {
-        nRcvChFlag[CH_TYPE_TAKE_LAND] = 0;
-        nRcvChVal[CH_TYPE_TAKE_LAND] = nCurrTime - nRcvChHighTime[CH_TYPE_TAKE_LAND];
+        _gRCRisingFlag &= B11101111;
+        _gRCSignalVal[4] = _gCurrTime - _gRCChRisingTime[4];
     }
 }
-#else
-ISR(PCINT2_vect)
-{
-    nCurrTime = micros();
-
-    if(PIND & B00000100)
-    {
-        if(0 == nRCPrevChangeTime[CH_TYPE_ROLL])
-            nRCPrevChangeTime[CH_TYPE_ROLL] = nCurrTime;
-    }
-    else if(0 != nRCPrevChangeTime[CH_TYPE_ROLL])
-    {
-        nRcvChVal[CH_TYPE_ROLL] = nCurrTime - nRCPrevChangeTime[CH_TYPE_ROLL];
-        nRCPrevChangeTime[CH_TYPE_ROLL] = 0;
-    }
-
-    if(PIND & B00001000)
-    {
-        if(0 == nRCPrevChangeTime[CH_TYPE_PITCH])
-            nRCPrevChangeTime[CH_TYPE_PITCH] = nCurrTime;
-    }
-    else if(0 != nRCPrevChangeTime[CH_TYPE_PITCH])
-    {
-        nRcvChVal[CH_TYPE_PITCH] = nCurrTime - nRCPrevChangeTime[CH_TYPE_PITCH];
-        nRCPrevChangeTime[CH_TYPE_PITCH] = 0;
-    }
-
-    if(PIND & B00010000)
-    {
-        if(0 == nRCPrevChangeTime[CH_TYPE_THROTTLE])
-            nRCPrevChangeTime[CH_TYPE_THROTTLE] = nCurrTime;
-    }
-    else if(0 != nRCPrevChangeTime[CH_TYPE_THROTTLE])
-    {
-        nRcvChVal[CH_TYPE_THROTTLE] = nCurrTime - nRCPrevChangeTime[CH_TYPE_THROTTLE];
-        nRCPrevChangeTime[CH_TYPE_THROTTLE] = 0;
-    }
-
-    if(PIND & B00100000)
-    {
-        if(0 == nRCPrevChangeTime[CH_TYPE_YAW])
-            nRCPrevChangeTime[CH_TYPE_YAW] = nCurrTime;
-    }
-    else if(0 != nRCPrevChangeTime[CH_TYPE_YAW])
-    {
-        nRcvChVal[CH_TYPE_YAW] = nCurrTime - nRCPrevChangeTime[CH_TYPE_YAW];
-        nRCPrevChangeTime[CH_TYPE_YAW] = 0;
-    }
-
-    if(PIND & B01000000)
-    {
-        if(0 == nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
-            nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = nCurrTime;
-    }
-    else if(0 != nRCPrevChangeTime[CH_TYPE_TAKE_LAND])
-    {
-        nRcvChVal[CH_TYPE_TAKE_LAND] = nCurrTime - nRCPrevChangeTime[CH_TYPE_TAKE_LAND];
-        nRCPrevChangeTime[CH_TYPE_TAKE_LAND] = 0;
-    }
-}
-#endif
 
 #endif /* RC_Controller_h */
 
