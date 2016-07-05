@@ -63,7 +63,7 @@ void _GetRawSensorData()
     _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     
     // Get AccelGyro Raw Data
-    _AccelGyro_GetData();
+    _AccelGyro_GetGyroData();
 
     // Get Magnetic Raw Data
     //_Mag_GetData();

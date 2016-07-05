@@ -142,47 +142,55 @@ void _AHRSupdate()
 void _Get_RollPitchYaw()
 {
     #if 1
-    _gEstimatedRPY[X_AXIS] = (_gEstimatedRPY[X_AXIS] * 0.8) + ((_gRawGyro[X_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
-    _gEstimatedRPY[Y_AXIS] = (_gEstimatedRPY[Y_AXIS] * 0.8) + ((_gRawGyro[Y_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
-    _gEstimatedRPY[Z_AXIS] = (_gEstimatedRPY[Z_AXIS] * 0.8) + ((_gRawGyro[Z_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
+        #if USE_MPU6050_DMP
+            _AccelGyro_GetRPY();
+
+            _gEstimatedRPY[X_AXIS] = ypr[2] * RAD_TO_DEG_SCALE;         // Roll
+            _gEstimatedRPY[Y_AXIS] = ypr[1] * RAD_TO_DEG_SCALE;         // Pitch
+            _gEstimatedRPY[Z_AXIS] = ypr[0] * RAD_TO_DEG_SCALE;         // Yaw
+        #else
+            _gEstimatedRPY[X_AXIS] = (_gEstimatedRPY[X_AXIS] * 0.8) + ((_gRawGyro[X_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
+            _gEstimatedRPY[Y_AXIS] = (_gEstimatedRPY[Y_AXIS] * 0.8) + ((_gRawGyro[Y_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
+            _gEstimatedRPY[Z_AXIS] = (_gEstimatedRPY[Z_AXIS] * 0.8) + ((_gRawGyro[Z_AXIS] / 57.14286) * 0.2);    //Gyro pid input is deg/sec.
+        #endif
     #else
-    // Calculate Roll & Pitch & Yaw
-    _AHRSupdate();
+        // Calculate Roll & Pitch & Yaw
+        _AHRSupdate();
 
-    {
-        const float nSquareQ0 = _gQuat[0] * _gQuat[0];
-        const float nSquareQ1 = _gQuat[1] * _gQuat[1];
-        const float nSquareGravZ = _gEstGravity[Z_AXIS] * _gEstGravity[Z_AXIS];
+        {
+            const float nSquareQ0 = _gQuat[0] * _gQuat[0];
+            const float nSquareQ1 = _gQuat[1] * _gQuat[1];
+            const float nSquareGravZ = _gEstGravity[Z_AXIS] * _gEstGravity[Z_AXIS];
 
-        // Estimate Gravity
-        _gEstGravity[X_AXIS] = 2 * ((_gQuat[1] * _gQuat[3]) - (_gQuat[0] * _gQuat[2]));
-        _gEstGravity[Y_AXIS] = 2 * ((_gQuat[0] * _gQuat[1]) + (_gQuat[2] * _gQuat[3]));
-        _gEstGravity[Z_AXIS] = (nSquareQ0) - (nSquareQ1) - (_gQuat[2] * _gQuat[2]) + (_gQuat[3] * _gQuat[3]);
+            // Estimate Gravity
+            _gEstGravity[X_AXIS] = 2 * ((_gQuat[1] * _gQuat[3]) - (_gQuat[0] * _gQuat[2]));
+            _gEstGravity[Y_AXIS] = 2 * ((_gQuat[0] * _gQuat[1]) + (_gQuat[2] * _gQuat[3]));
+            _gEstGravity[Z_AXIS] = (nSquareQ0) - (nSquareQ1) - (_gQuat[2] * _gQuat[2]) + (_gQuat[3] * _gQuat[3]);
 
-        // Calculate Roll, Pitch, and Yaw
-        _gEstimatedRPY[0] = atan(_gEstGravity[X_AXIS] / sqrt((_gEstGravity[Y_AXIS] * _gEstGravity[Y_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_ROLL) ? (-1) : (1));
-        _gEstimatedRPY[1] = atan(_gEstGravity[Y_AXIS] / sqrt((_gEstGravity[X_AXIS] * _gEstGravity[X_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_PITCH) ? (-1) : (1));
-        _gEstimatedRPY[2] = atan2((2 * _gQuat[1] * _gQuat[2]) - (2 * _gQuat[0] * _gQuat[3]), (2 * nSquareQ0) + (2 * nSquareQ1) - 1) * ((INVERSE_RPY_YAW) ? (-1) : (1));
-    }
+            // Calculate Roll, Pitch, and Yaw
+            _gEstimatedRPY[0] = atan(_gEstGravity[X_AXIS] / sqrt((_gEstGravity[Y_AXIS] * _gEstGravity[Y_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_ROLL) ? (-1) : (1));
+            _gEstimatedRPY[1] = atan(_gEstGravity[Y_AXIS] / sqrt((_gEstGravity[X_AXIS] * _gEstGravity[X_AXIS]) + (nSquareGravZ))) * ((INVERSE_RPY_PITCH) ? (-1) : (1));
+            _gEstimatedRPY[2] = atan2((2 * _gQuat[1] * _gQuat[2]) - (2 * _gQuat[0] * _gQuat[3]), (2 * nSquareQ0) + (2 * nSquareQ1) - 1) * ((INVERSE_RPY_YAW) ? (-1) : (1));
+        }
 
-    // Convert Radian to Degree
-    _gEstimatedRPY[0] *= RAD_TO_DEG_SCALE;
-    _gEstimatedRPY[1] *= RAD_TO_DEG_SCALE;
-    _gEstimatedRPY[2] *= RAD_TO_DEG_SCALE;
+        // Convert Radian to Degree
+        _gEstimatedRPY[0] *= RAD_TO_DEG_SCALE;
+        _gEstimatedRPY[1] *= RAD_TO_DEG_SCALE;
+        _gEstimatedRPY[2] *= RAD_TO_DEG_SCALE;
 
-    if(((micros() - nInitializedTime) > RPY_OFFSET_DELAY) && (0 == _gbIsInitializeRPY))
-    {
-        _gbIsInitializeRPY = 1;
-        _gRPYOffset[0] = _gEstimatedRPY[0];
-        _gRPYOffset[1] = _gEstimatedRPY[1];
-        _gRPYOffset[2] = _gEstimatedRPY[2];
-    }
-    else
-    {
-        _gEstimatedRPY[0] -= _gRPYOffset[0];
-        _gEstimatedRPY[1] -= _gRPYOffset[1];
-        _gEstimatedRPY[2] -= _gRPYOffset[2];
-    }
+        if(((micros() - nInitializedTime) > RPY_OFFSET_DELAY) && (0 == _gbIsInitializeRPY))
+        {
+            _gbIsInitializeRPY = 1;
+            _gRPYOffset[0] = _gEstimatedRPY[0];
+            _gRPYOffset[1] = _gEstimatedRPY[1];
+            _gRPYOffset[2] = _gEstimatedRPY[2];
+        }
+        else
+        {
+            _gEstimatedRPY[0] -= _gRPYOffset[0];
+            _gEstimatedRPY[1] -= _gRPYOffset[1];
+            _gEstimatedRPY[2] -= _gRPYOffset[2];
+        }
     #endif
 }
 
