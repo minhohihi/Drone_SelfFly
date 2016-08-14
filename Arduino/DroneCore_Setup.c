@@ -1,13 +1,12 @@
-
 #define __DEBUG__                           (0)
 #if (__DEBUG__)
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (1)
-    #define __EXTERNAL_READ__               (0)
-    #define SERIAL_BAUDRATE                 (115200)
+#define __PRINT_DEBUG__                 (1)
+#define __PROFILE__                     (1)
+#define __EXTERNAL_READ__               (0)
+#define SERIAL_BAUDRATE                 (115200)
 #else
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (0)
+#define __PRINT_DEBUG__                 (1)
+#define __PROFILE__                     (0)
 #endif
 
 
@@ -19,7 +18,7 @@
 #include <I2Cdev.h>
 #include <Wire.h>
 #if USE_MPU6050_DMP
-    #include <MPU6050_6Axis_MotionApps20.h>
+#include <MPU6050_6Axis_MotionApps20.h>
 #endif
 #include <HMC5883L.h>
 #include <MS561101BA.h>
@@ -35,11 +34,11 @@
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
 #if __DEBUG__
-    #define Serialprint(...)                Serial.print(__VA_ARGS__)
-    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
+#define Serialprint(...)                Serial.print(__VA_ARGS__)
+#define Serialprintln(...)              Serial.println(__VA_ARGS__)
 #else
-    #define Serialprint(...)
-    #define Serialprintln(...)
+#define Serialprint(...)
+#define Serialprintln(...)
 #endif
 
 
@@ -130,7 +129,6 @@ byte                _gRCRisingFlag = 0;
 unsigned long       _gRCChRisingTime[CH_TYPE_MAX] = {0, };
 int                 _gRCSignalVal[CH_TYPE_MAX] = {0, };
 byte                _gRCChAxis[CH_TYPE_MAX] = {0, };
-int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 
 // For Estimated Status of Drone
 float               _gEstimatedRPY[3] = {0, };
@@ -194,92 +192,102 @@ unsigned long       _gPrevBlinkTime = 0;
 #include "ExtComm_Control.h"
 #include "Debugger.h"
 
-
 void setup()
 {
     int                 i;
-
+    
     Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . "));
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("********************************************************************"));
-
+    
     // Set I2C Enable
     Wire.begin();
     
-    #if __DEBUG__
+#if __DEBUG__
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
-    #endif
-
-    // Read EEPROM Data
-    _Read_EEPROM();
-
-    // Initialize LED
-    _LED_Initialize();
-      
-    // Initialize ESCs
-    _ESC_Initialize();
-
+#endif
+    
     // Initialize RemoteController
     _RC_Initialize();
-
+    
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
-
+    
     // Initialize Magnetic
     //_Mag_Initialize();
-
+    
     // Initialize Barometer
     //_Barometer_Initialize();
-
+    
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
-
-    _gESCLoopTimer = 0;
-    _gDroneStatus = DRONESTATUS_STOP;
-    _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
-    _gLED_Status = 0;
-
+    
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
 }
 
-
 void loop()
 {
-    int                     i = 0;
-
-    // Get Receiver Input
-    // Then Mapping Actual Reciever Value to 1000 ~ 2000
-    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
-        _RC_Compensate(i);
-
-    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-    _GetRawSensorData();
-
-    // Calculate Roll, Pitch, and Yaw by Quaternion
-    _Get_RollPitchYaw();
-
-    // Check Battery Voltage Status
-    _Check_BatteryVolt();
-
-    // Check Drone Status
-    _Check_Drone_Status();
-
-    // PID Computation
-    _CalculatePID();
-
-    // Throttle Calculation
-    _CalculateThrottleVal();
-
-    // Update BLDCs
-    _UpdateESCs();
-
-    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
-        _print_Data();
-    #endif
+    // put your main code here, to run repeatedly:
+    
+    // Get Asix of Each RC Channel
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 1. Get Axis Type of RC Channel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    _RC_CheckAxis(0);
+    _RC_CheckAxis(1);
+    _RC_CheckAxis(2);
+    _RC_CheckAxis(3);
+    
+    // Get Range of RC Signal
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 2. Get Range of Each RC Channel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    _RC_GetRCRange();
+    
+    // Calibration Gyro
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 3. Gyro & Accel Calibration"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    _AccelGyro_Calibration();
+    
+    // Get Axis Type of Gyro & Accel
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 4. Get Axis Type of Gyro & Accel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    _AccelGyro_CheckAxis(0);
+    _AccelGyro_CheckAxis(1);
+    _AccelGyro_CheckAxis(2);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -45,12 +45,14 @@ int main()
         
             nDataBuf[0] = nAngle++;
             write(nSerialPort0, nDataBuf, 1);
+            write(nSerialPort0, nDataBuf, 1);
+            write(nSerialPort0, "\n", 1);
             //write(nSerialPort0, "\n", 1);
             if(nAngle > 120)
                 nAngle = 60;
         }
         
-        usleep(5000);
+        usleep(20000);
     }
     
     CloseSerialPort(nSerialPort0);
@@ -62,7 +64,7 @@ int OpenSerialPort(char *pDeviceName)
 {
     int             fd;
     struct termios  newtio;
-    speed_t         nBaudRate = B9600;
+    speed_t         nBaudRate = B115200;
     
     fd = open(pDeviceName, O_RDWR | O_NOCTTY | O_NDELAY);
     

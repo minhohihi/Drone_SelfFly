@@ -1,19 +1,18 @@
-
-#define __DEBUG__                           (0)
-#if (__DEBUG__)
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (1)
-    #define __EXTERNAL_READ__               (0)
-    #define SERIAL_BAUDRATE                 (115200)
-#else
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (0)
+#define __DEBUG__                           (1)
+    #if (__DEBUG__)
+        #define __PRINT_DEBUG__                 (1)
+        #define __PROFILE__                     (1)
+        #define __EXTERNAL_READ__               (0)
+        #define SERIAL_BAUDRATE                 (115200)
+    #else
+        #define __PRINT_DEBUG__                 (1)
+        #define __PROFILE__                     (0)
 #endif
 
 
 /*----------------------------------------------------------------------------------------
- File Inclusions
- ----------------------------------------------------------------------------------------*/
+File Inclusions
+----------------------------------------------------------------------------------------*/
 #include "CommHeader.h"
 #include <EEPROM.h>
 #include <I2Cdev.h>
@@ -27,13 +26,13 @@
 
 
 /*----------------------------------------------------------------------------------------
- Constant Definitions
- ----------------------------------------------------------------------------------------*/
+Constant Definitions
+----------------------------------------------------------------------------------------*/
 
 
 /*----------------------------------------------------------------------------------------
- Macro Definitions
- ----------------------------------------------------------------------------------------*/
+Macro Definitions
+----------------------------------------------------------------------------------------*/
 #if __DEBUG__
     #define Serialprint(...)                Serial.print(__VA_ARGS__)
     #define Serialprintln(...)              Serial.println(__VA_ARGS__)
@@ -44,8 +43,8 @@
 
 
 /*----------------------------------------------------------------------------------------
- Type Definitions
- ----------------------------------------------------------------------------------------*/
+Type Definitions
+----------------------------------------------------------------------------------------*/
 typedef enum _RC_CH_Type
 {
     CH_TYPE_ROLL                = 0,
@@ -163,23 +162,23 @@ unsigned long       _gPrevBlinkTime = 0;
 
 
 /*----------------------------------------------------------------------------------------
- Static Function
- ----------------------------------------------------------------------------------------*/
+Static Function
+----------------------------------------------------------------------------------------*/
 
 
 /*----------------------------------------------------------------------------------------
- Static Variable
- ----------------------------------------------------------------------------------------*/
+Static Variable
+----------------------------------------------------------------------------------------*/
 
 
 /*----------------------------------------------------------------------------------------
- Global Variable
- ----------------------------------------------------------------------------------------*/
+Global Variable
+----------------------------------------------------------------------------------------*/
 
 
 /*----------------------------------------------------------------------------------------
- Function Implementation
- ----------------------------------------------------------------------------------------*/
+Function Implementation
+----------------------------------------------------------------------------------------*/
 #include "CommHeader.h"
 #include "LED_Control.h"
 #include "RC_Control.h"
@@ -194,7 +193,6 @@ unsigned long       _gPrevBlinkTime = 0;
 #include "ExtComm_Control.h"
 #include "Debugger.h"
 
-
 void setup()
 {
     int                 i;
@@ -205,23 +203,14 @@ void setup()
 
     // Set I2C Enable
     Wire.begin();
-    
+
     #if __DEBUG__
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
     #endif
 
-    // Read EEPROM Data
-    _Read_EEPROM();
-
-    // Initialize LED
-    _LED_Initialize();
-      
-    // Initialize ESCs
-    _ESC_Initialize();
-
     // Initialize RemoteController
-    _RC_Initialize();
+    //_RC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
@@ -235,11 +224,6 @@ void setup()
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
 
-    _gESCLoopTimer = 0;
-    _gDroneStatus = DRONESTATUS_STOP;
-    _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
-    _gLED_Status = 0;
-
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
@@ -248,38 +232,64 @@ void setup()
 
 void loop()
 {
-    int                     i = 0;
+    // put your main code here, to run repeatedly:
 
-    // Get Receiver Input
-    // Then Mapping Actual Reciever Value to 1000 ~ 2000
-    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
-        _RC_Compensate(i);
+    // Get Asix of Each RC Channel
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 1. Get Axis Type of RC Channel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    //_RC_CheckAxis(0);
+    //_RC_CheckAxis(1);
+    //_RC_CheckAxis(2);
+    //_RC_CheckAxis(3);
 
-    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-    _GetRawSensorData();
+    // Get Range of RC Signal
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 2. Get Range of Each RC Channel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    //_RC_GetRCRange();
 
-    // Calculate Roll, Pitch, and Yaw by Quaternion
-    _Get_RollPitchYaw();
+    // Calibration Gyro
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 3. Gyro & Accel Calibration"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    //_AccelGyro_Calibration();
 
-    // Check Battery Voltage Status
-    _Check_BatteryVolt();
-
-    // Check Drone Status
-    _Check_Drone_Status();
-
-    // PID Computation
-    _CalculatePID();
-
-    // Throttle Calculation
-    _CalculateThrottleVal();
-
-    // Update BLDCs
-    _UpdateESCs();
-
-    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
-        _print_Data();
-    #endif
+    // Get Axis Type of Gyro & Accel
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   Step 4. Get Axis Type of Gyro & Accel"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F(""));
+    _AccelGyro_CheckAxis(0);
+    _AccelGyro_CheckAxis(1);
+    _AccelGyro_CheckAxis(2);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

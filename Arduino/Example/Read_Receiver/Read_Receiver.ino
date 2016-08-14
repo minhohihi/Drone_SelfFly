@@ -32,7 +32,7 @@ void _RC_Initialize();
 void _RC_EstimateRCRange();
 void _RC_Compensate(byte nRCCh);
 void _RC_CheckStickType(int nStickType);
-void _Wait_Receiver();
+void _RC_Wait_Signal();
 void _print_CaturedRC_Signals();
 void _print_CompensatedRC_Signals();
 
@@ -165,7 +165,7 @@ void _RC_Initialize()
     PCMSK2 |= (1 << PCINT22);             // Set Digital Input 6 as RC Input (Landing & TakeOff)
 
     Serialprintln(F(" *        Pease Move All Sticks to Center"));
-    _Wait_Receiver();
+    _RC_Wait_Signal();
     
     delay(300);
     
@@ -372,11 +372,11 @@ void _RC_CheckStickType(int nStickType)
     Serialprint(_gRCStickChMapTable[nStickType]);
     Serialprintln(_gRCReverseFlag[nStickType] ? F("  [Reversed]") : F(" "));
 
-    _Wait_Receiver();
+    _RC_Wait_Signal();
 }
 
 
-void _Wait_Receiver()
+void _RC_Wait_Signal()
 {
     byte                nFlag = 0;
     int                 nMin = 1100;

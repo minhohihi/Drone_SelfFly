@@ -91,6 +91,7 @@
 		8B0F2CEF1BF57A7F0044F792 /* SSD1308.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B0F2C931BF57A7F0044F792 /* SSD1308.h */; };
 		8B0F2CF01BF57A7F0044F792 /* TCA6424A.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B0F2C961BF57A7F0044F792 /* TCA6424A.cpp */; };
 		8B0F2CF11BF57A7F0044F792 /* TCA6424A.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B0F2C971BF57A7F0044F792 /* TCA6424A.h */; };
+		8BDAA3B11D60A97800DCC137 /* DroneCore_Setup.c in Sources */ = {isa = PBXBuildFile; fileRef = 8BDAA3B01D60A97800DCC137 /* DroneCore_Setup.c */; };
 		8BF96BD11C50DACE005A028B /* AHRS_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC41C50DACE005A028B /* AHRS_Control.h */; };
 		8BF96BD21C50DACE005A028B /* CommHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC51C50DACE005A028B /* CommHeader.h */; };
 		8BF96BD31C50DACE005A028B /* Debugger.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC61C50DACE005A028B /* Debugger.h */; };
@@ -438,12 +439,13 @@
 		8B31B8561BEAE0F1005634F8 /* libSelfFly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSelfFly.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = DroneCore.ino; path = ../Arduino/DroneCore/DroneCore.ino; sourceTree = "<group>"; };
 		8B79A1A71D11415C008F38B9 /* Read_Receiver.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_Receiver.ino; path = ../Arduino/Example/Read_Receiver/Read_Receiver.ino; sourceTree = "<group>"; };
-		8BB81AB91D0E26A300EF39AD /* tmp.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = tmp.c; path = ../../../Downloads/tmp.c; sourceTree = "<group>"; };
 		8BCB60D01D0FDE2D00515379 /* ESC_Calibration.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = ESC_Calibration.ino; path = ../Arduino/Example/ESC_Calibration/ESC_Calibration.ino; sourceTree = "<group>"; };
 		8BCB60D11D0FDE3700515379 /* Read_AccelGyro_MPU6050.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_AccelGyro_MPU6050.ino; path = ../Arduino/Example/Read_AccelGyro_MPU6050/Read_AccelGyro_MPU6050.ino; sourceTree = "<group>"; };
 		8BCB60D21D0FDE4200515379 /* Read_Barometer_MS5611.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_Barometer_MS5611.ino; path = ../Arduino/Example/Read_Barometer_MS5611/Read_Barometer_MS5611.ino; sourceTree = "<group>"; };
 		8BCB60D31D0FDE4A00515379 /* Read_Magnetic_HMC5883L.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_Magnetic_HMC5883L.ino; path = ../Arduino/Example/Read_Magnetic_HMC5883L/Read_Magnetic_HMC5883L.ino; sourceTree = "<group>"; };
 		8BCB60D41D0FDE5200515379 /* ReadGPS.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = ReadGPS.ino; path = ../Arduino/Example/ReadGPS/ReadGPS.ino; sourceTree = "<group>"; };
+		8BDAA3B01D60A97800DCC137 /* DroneCore_Setup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = DroneCore_Setup.c; path = ../Arduino/DroneCore_Setup.c; sourceTree = "<group>"; };
+		8BDAA3B31D60ACC900DCC137 /* DroneCore_Setup.ino */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = DroneCore_Setup.ino; path = ../Arduino/DroneCore_Setup/DroneCore_Setup.ino; sourceTree = "<group>"; };
 		8BF96BC41C50DACE005A028B /* AHRS_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AHRS_Control.h; path = ../Arduino/DroneCore/AHRS_Control.h; sourceTree = "<group>"; };
 		8BF96BC51C50DACE005A028B /* CommHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommHeader.h; path = ../Arduino/DroneCore/CommHeader.h; sourceTree = "<group>"; };
 		8BF96BC61C50DACE005A028B /* Debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Debugger.h; path = ../Arduino/DroneCore/Debugger.h; sourceTree = "<group>"; };
@@ -1744,8 +1746,8 @@
 		8B31B84D1BEAE0F1005634F8 = {
 			isa = PBXGroup;
 			children = (
-				8BB81AB91D0E26A300EF39AD /* tmp.c */,
 				8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */,
+				8BDAA3B31D60ACC900DCC137 /* DroneCore_Setup.ino */,
 				8BF96BC41C50DACE005A028B /* AHRS_Control.h */,
 				8BF96BC51C50DACE005A028B /* CommHeader.h */,
 				8BF96BC61C50DACE005A028B /* Debugger.h */,
@@ -1759,6 +1761,7 @@
 				8BF96BCE1C50DACE005A028B /* PID_Control.h */,
 				8BF96BCF1C50DACE005A028B /* RC_Control.h */,
 				8BF96BD01C50DACE005A028B /* SR04_Control.h */,
+				8BDAA3B01D60A97800DCC137 /* DroneCore_Setup.c */,
 				8BCB60D01D0FDE2D00515379 /* ESC_Calibration.ino */,
 				8BCB60D11D0FDE3700515379 /* Read_AccelGyro_MPU6050.ino */,
 				8BCB60D21D0FDE4200515379 /* Read_Barometer_MS5611.ino */,
@@ -1972,6 +1975,7 @@
 				8B0F2CEA1BF57A7F0044F792 /* Servo.cpp in Sources */,
 				8B0F2CBB1BF57A7F0044F792 /* HMC5843.cpp in Sources */,
 				8B0F2CDB1BF57A7F0044F792 /* MPU9150.cpp in Sources */,
+				8BDAA3B11D60A97800DCC137 /* DroneCore_Setup.c in Sources */,
 				8B0F2CD61BF57A7F0044F792 /* MPU6050.cpp in Sources */,
 				8B0F2CA21BF57A7F0044F792 /* AK8975.cpp in Sources */,
 			);

@@ -71,7 +71,7 @@ typedef struct _SelfFly_T
  Static Function
  ----------------------------------------------------------------------------------------*/
 void _AccelGyro_Initialize();
-void _AccelGyro_GetData();
+void _AccelGyro_GetGyroData();
 void _AccelGyro_CalculateAngle();
 void _AccelGyro_GetMeanSensor();
 void _AccelGyro_Calibration();
@@ -137,7 +137,7 @@ void loop()
     _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     nSampleFreq = 1000000.0 / ((_gCurrSensorCapTime - _gPrevSensorCapTime));
     
-    _AccelGyro_GetData();
+    _AccelGyro_GetGyroData();
     
     delay(50);
     
@@ -147,68 +147,189 @@ void loop()
 
 void _AccelGyro_Initialize()
 {
-    nAccelGyroHndl = MPU6050();
-    
-    Serial.println(F(" Initializing MPU..."));
-    nAccelGyroHndl.initialize();
-    
-    // Verify Vonnection
-    Serial.print(F("    Testing device connections..."));
-    Serial.println(nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
-    
-    nAccelGyroHndl.setI2CMasterModeEnabled(false);
-    nAccelGyroHndl.setI2CBypassEnabled(true);
-    nAccelGyroHndl.setSleepEnabled(false);
-    
-    // Calibrate GyroAccel
-    #if 0
+    uint8_t             *pOffset;
+    int                 i = 0;
+
+    Serialprintln(F(" *      5. Start MPU6050 Module Initialization   "));
+
+    //    nAccelGyroHndl = MPU6050();
+    //
+    //    Serialprintln(F(" Initializing MPU..."));
+    //    nAccelGyroHndl.initialize();
+    //
+    //    delay(100);
+    //
+    //    // Verify Vonnection
+    //    Serialprint(F("    Testing device connections..."));
+    //    Serialprintln(nAccelGyroHndl.testConnection() ? F("  MPU6050 connection successful") : F("  MPU6050 connection failed"));
+    //
+    //    nAccelGyroHndl.setI2CMasterModeEnabled(false);
+    //    nAccelGyroHndl.setI2CBypassEnabled(true);
+    //    nAccelGyroHndl.setSleepEnabled(false);
+    //
+    //    // Calibrate GyroAccel
+    //    //nAccelGyroHndl.doCalibration();
+    //    nAccelGyroHndl.setXGyroOffset(MPU6050_GYRO_OFFSET_X);
+    //    nAccelGyroHndl.setYGyroOffset(MPU6050_GYRO_OFFSET_Y);
+    //    nAccelGyroHndl.setZGyroOffset(MPU6050_GYRO_OFFSET_Z);
+    //    nAccelGyroHndl.setXAccelOffset(MPU6050_ACCEL_OFFSET_X);
+    //    nAccelGyroHndl.setYAccelOffset(MPU6050_ACCEL_OFFSET_Y);
+    //    //nAccelGyroHndl.setZAccelOffset(MPU6050_ACCEL_OFFSET_Z);
+    //
+    //    // supply your own gyro offsets here, scaled for min sensitivity
+    //    nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
+    //    nAccelGyroHndl.setDLPFMode(MPU6050_DLP_PRECISION);
+    //    nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);
+    //    nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);
+
+    Wire.beginTransmission(0x68);
+    Wire.write(0x6B);
+    Wire.write(0x00);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(0x68);
+    Wire.write(0x1B);
+    Wire.write(0x08);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(0x68);
+    Wire.write(0x1B);
+    Wire.endTransmission();
+    Wire.requestFrom(0x68, 1);
+    while(Wire.available() < 1);
+    if(Wire.read() != 0x08)
+    {
+        digitalWrite(12,HIGH);
+        while(1)
+            delay(10);
+    }
+
+    Wire.beginTransmission(0x68);
+    Wire.write(0x1A);
+    Wire.write(0x03);
+    Wire.endTransmission();
+
+    delay(300);
+
+    // Calibration
     _AccelGyro_Calibration();
-    #else
-    nAccelGyroHndl.setXGyroOffset(65);
-    nAccelGyroHndl.setYGyroOffset(-42);
-    nAccelGyroHndl.setZGyroOffset(-3);
-    nAccelGyroHndl.setXAccelOffset(-73);
-    nAccelGyroHndl.setYAccelOffset(-737);
-    nAccelGyroHndl.setZAccelOffset(0);
+
+    #if 0
+    // Set Gyro Offset
+    for(i=0 ; i<=Z_AXIS ; i++)
+    {
+        pOffset = &(_gCalibMeanGyro[i]);
+        Wire.beginTransmission(0x68);
+        Wire.write(0x13 + (2 * i));
+        Wire.write((pOffset[0]);
+        Wire.write((pOffset[1]);
+        Wire.endTransmission();
+    }
+
+    // Set Accel Offset
+    for(i=0 ; i<=Z_AXIS ; i++)
+    {
+        pOffset = &(_gCalibMeanAccel[i]);
+        Wire.beginTransmission(0x68);
+        Wire.write(0x06 + (2 * i));
+        Wire.write((pOffset[0]);
+        Wire.write((pOffset[1]);
+        Wire.endTransmission();
+    }
     #endif
-    
-    // supply your own gyro offsets here, scaled for min sensitivity
-    nAccelGyroHndl.setRate(1);                                            // Sample Rate (500Hz = 1Hz Gyro SR / 1+1)
-    nAccelGyroHndl.setDLPFMode(MPU6050_DLPF_BW_20);                       // Low Pass filter 20hz
-    nAccelGyroHndl.setFullScaleGyroRange(GYRO_FS_PRECISIOM);              // 250? / s (MPU6050_GYRO_FS_250)
-    nAccelGyroHndl.setFullScaleAccelRange(ACCEL_FS_PRECISIOM);            // +-2g (MPU6050_ACCEL_FS_2)
-    
-    Serial.println(F(" MPU Initialized!!!"));
-    
+
+    _gEstimatedRPY[0] = _gEstimatedRPY[1] = _gEstimatedRPY[2] = 0.0;
+
+    delay(300);
+
+    Serialprintln(F(" *            => Done!!   "));
+
     return;
 }
 
 
-void _AccelGyro_GetData()
+void _AccelGyro_GetGyroData()
 {
-    AccelGyroParam_T        *pAccelGyroParam = &(nAccelGyroParam);
-    float                   *pRawGyro = &(pAccelGyroParam->_gRawGyro[X_AXIS]);
-    float                   *pRawAccel = &(pAccelGyroParam->_gRawAccel[X_AXIS]);
-    const float             *pBaseGyro = &(pAccelGyroParam->nBaseGyro[X_AXIS]);
-    
-    // Read Gyro and Accelerate Data
-    Wire.beginTransmission(MPU6050_ADDRESS_AD0_LOW);
-    Wire.write(MPU6050_RA_ACCEL_XOUT_H);  // starting with register 0x3B (ACCEL_XOUT_H)
-    Wire.endTransmission(false);
-    Wire.requestFrom(MPU6050_ADDRESS_AD0_LOW, 14, true);  // request a total of 14 registers
-    
-    pRawAccel[X_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    pRawAccel[Y_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    pRawAccel[Z_AXIS] = (float)(Wire.read()<<8 | Wire.read());               // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-    pAccelGyroParam->_gRawTemp = (float)(Wire.read()<<8 | Wire.read());       // 0x41 (TEMP_OUT_H) & 0x42 (TEMP_OUT_L)        340 per degrees Celsius, -512 at 35 degrees
-    pRawGyro[X_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-    pRawGyro[Y_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    pRawGyro[Z_AXIS]= (float)(Wire.read()<<8 | Wire.read());                 // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
-    
-    // Remove Bias of Gyro
-    pRawGyro[X_AXIS] = (pRawGyro[X_AXIS] - pBaseGyro[X_AXIS]);
-    pRawGyro[Y_AXIS] = (pRawGyro[Y_AXIS] - pBaseGyro[Y_AXIS]);
-    pRawGyro[Z_AXIS] = (pRawGyro[Z_AXIS] - pBaseGyro[Z_AXIS]);
+    Wire.beginTransmission(0x68);
+    Wire.write(0x43);                                               // starting with register 0x43 (GYRO_XOUT_H)
+    Wire.endTransmission();
+    Wire.requestFrom(0x68, 6);                                      // request a total of 14 registers
+
+    _gRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+    _gRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    _gRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+
+    _gRawGyro[X_AXIS] -= _gCalibMeanGyro[X_AXIS];
+    if(1 == _gAxisReverseFlag[X_AXIS]) _gRawGyro[X_AXIS] *= -1;
+    _gRawGyro[Y_AXIS] -= _gCalibMeanGyro[Y_AXIS];
+    if(1 == _gAxisReverseFlag[Y_AXIS]) _gRawGyro[Y_AXIS] *= -1;
+    _gRawGyro[Z_AXIS] -= _gCalibMeanGyro[Z_AXIS];
+    if(1 == _gAxisReverseFlag[Z_AXIS]) _gRawGyro[Z_AXIS] *= -1;
+}
+
+
+void _AccelGyro_GetAccelData()
+{
+    Wire.beginTransmission(0x68);
+    Wire.write(0x3B);                                               // starting with register 0x3B (ACCEL_XOUT_H)
+    Wire.endTransmission();
+    Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
+
+    _gRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+    _gRawAccel[Y_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+    _gRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+
+    _gRawAccel[X_AXIS] -= _gCalibMeanAccel[X_AXIS];
+    if(1 == _gAxisReverseFlag[X_AXIS]) _gRawAccel[X_AXIS] *= -1;
+    _gRawAccel[Y_AXIS] -= _gCalibMeanAccel[Y_AXIS];
+    if(1 == _gAxisReverseFlag[Y_AXIS]) _gRawAccel[Y_AXIS] *= -1;
+    _gRawAccel[Z_AXIS] -= _gCalibMeanAccel[Z_AXIS];
+    if(1 == _gAxisReverseFlag[Z_AXIS]) _gRawAccel[Z_AXIS] *= -1;
+}
+
+
+void _AccelGyro_Calibration()
+{
+    int                     i = 0;
+
+    Serialprint(F(" *          Calibrating "));
+
+    for(i=0 ; i<=Z_AXIS ; i++)
+        _gCalibMeanGyro[i] = 0.0;
+
+    for(i=0 ; i<2000 ; i++)
+    {
+        Wire.beginTransmission(0x68);
+        Wire.write(0x43);                                               // starting with register 0x43 (GYRO_XOUT_H)
+        Wire.endTransmission();
+        Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
+
+        _gCalibMeanGyro[X_AXIS] += (Wire.read()<<8 | Wire.read());      // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+        _gCalibMeanGyro[Y_AXIS] += (Wire.read()<<8 | Wire.read());      // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+        _gCalibMeanGyro[Z_AXIS] += (Wire.read()<<8 | Wire.read());      // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+
+        Wire.beginTransmission(0x68);
+        Wire.write(0x3B);                                               // starting with register 0x3B (ACCEL_XOUT_H)
+        Wire.endTransmission();
+        Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
+
+        _gCalibMeanAccel[X_AXIS] += (Wire.read()<<8 | Wire.read());     // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+        _gCalibMeanAccel[Y_AXIS] += (Wire.read()<<8 | Wire.read());     // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+        _gCalibMeanAccel[Z_AXIS] += (Wire.read()<<8 | Wire.read());     // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+
+        if(0 == (i % 20))
+            Serialprint(F("."));
+    }
+
+    for(i=0 ; i<=Z_AXIS ; i++)
+    {
+        _gCalibMeanGyro[i] /= 2000;
+        _gCalibMeanAccel[i] /= 2000;
+    }
+
+    Serialprintln(F("."));
+
+    Serialprintln(F(" *          => Done!!   "));
 }
 
 
