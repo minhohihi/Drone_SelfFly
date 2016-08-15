@@ -65,9 +65,9 @@
 #define INVERSE_RC_YAW                      (0)
 
 #define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_500)           // MPU6050_GYRO_FS_250 / MPU6050_GYRO_FS_500 / MPU6050_GYRO_FS_1000 / MPU6050_GYRO_FS_2000
-#define GYRO_FS                             (65.5f)                         // (2^15 - 1) / (500 * (1 << GYRO_FS_PRECISIOM))
+#define GYRO_FS                             (65.5)                          // (2^15 - 1) / (500 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_8)            // MPU6050_ACCEL_FS_2 / MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
-#define ACCEL_FS                            (16384.0f / (1 << ACCEL_FS_PRECISIOM))
+#define ACCEL_FS                            (16384.0 / (1 << ACCEL_FS_PRECISIOM))
 #define MPU6050_DLP_PRECISION               (MPU6050_DLPF_BW_42)
 
 // Flight parameters
@@ -82,8 +82,8 @@
 #define PITCH_ANG_OFFSET                    (-4)
 #define ROLL_ANG_OFFSET                     (1.6)
 
-#define SAMPLEFREQ                          (133.0f)                        // sample frequency in Hz
-#define BETADEF                             (1.1f)
+#define SAMPLEFREQ                          (133.0)                         // sample frequency in Hz
+#define BETADEF                             (1.1)
 
 // AccelGyro Offset Value
 #define MPU6050_GYRO_OFFSET_X               (65)
@@ -100,8 +100,8 @@
 #define ROUNDING_BASE                       (10)
 #define SAMPLING_TIME                       (0.01)                          // Unit: Seconds
 
-#define RAD_TO_DEG_SCALE                    (57.2958f)                      // = 180 / PI
-#define DEG_TO_RAD_SCALE                    (0.0175f)                       // = PI / 180
+#define RAD_TO_DEG_SCALE                    (57.2958)                       // = 180 / PI
+#define DEG_TO_RAD_SCALE                    (0.0175)                        // = PI / 180
 #define SINGLE_RADIAN                       (3.141592)                      // = PI
 #define DOUBLE_RADIAN                       (6.283184)                      // = 2 * PI
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
@@ -115,7 +115,6 @@
 // Hovering
 #define HOVERING_ALTITUDE                   (150)                           // Unit: Centimeter
 
-#define USE_MPU6050_DMP                     (0)
 #define USE_AUTO_LEVEL                      (1)
 
 

@@ -165,7 +165,7 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
 
     Serialprintln(F(" "));
 
-    nCurrTime = millis() + 5000;
+    nCurrTime = millis() + 10000;
     while(nCurrTime > millis() &&
           (_gAngleRoll > -5)  && (_gAngleRoll < 5) &&
           (_gAnglePitch > -5) && (_gAnglePitch < 5) &&
@@ -175,9 +175,9 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
         _GetRawSensorData();
         
         // Calculate Roll, Pitch, and Yaw by Quaternion
-        _gAngleRoll  += _gRawGyro[X_AXIS] * 0.0000611;                   //Calculate the traveled roll angle and add
+        _gAngleRoll  += _gRawGyro[X_AXIS] * 0.0000611;                  //Calculate the traveled roll angle and add
         _gAnglePitch += _gRawGyro[Y_AXIS] * 0.0000611;                  //Calculate the traveled pitch angle and add this to the angle_pitch variable.
-        _gAngleYaw   += _gRawGyro[Z_AXIS] * 0.0000611;                   //Calculate the traveled roll angle and add
+        _gAngleYaw   += _gRawGyro[Z_AXIS] * 0.0000611;                  //Calculate the traveled roll angle and add
         
         delayMicroseconds(3600);
     }

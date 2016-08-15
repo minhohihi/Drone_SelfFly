@@ -76,16 +76,16 @@ byte                _gEEPROMData[EEPROM_DATA_MAX] = {0, };
 
 // For Accelerator & Gyroscope Sensor
 double              _gRawGyro[3] = {0.0, };
-double              _gRawAccel[3] = {0.0, };
-double              _gAccTotalVector = 0.0;
-double              _gAngleRollAcc = 0.0;
-double              _gAnglePitchAcc = 0.0;
-double              _gAngleYawAcc = 0.0;
-double              _gAngleRoll = 0.0;
-double              _gAnglePitch = 0.0;
-double              _gAngleYaw = 0.0;
-double              _gPitchLevelAdjust = 0.0;
-double              _gRollLevelAdjust = 0.0;
+long                _gRawAccel[3] = {0, };
+long                _gAccTotalVector = 0.0;
+float               _gAngleRollAcc = 0.0;
+float               _gAnglePitchAcc = 0.0;
+float               _gAngleYawAcc = 0.0;
+float               _gAngleRoll = 0.0;
+float               _gAnglePitch = 0.0;
+float               _gAngleYaw = 0.0;
+float               _gPitchLevelAdjust = 0.0;
+float               _gRollLevelAdjust = 0.0;
 double              _gCalibMeanGyro[3] = {0.0, };
 double              _gCalibMeanAccel[3] = {0.0, };
 byte                _gGyroAccelAxis[3] = {0, };
@@ -93,28 +93,28 @@ byte                _gGyroAccelAxis[3] = {0, };
 // For Magnetometer Sensor
 HMC5883L            _gMagHndl;                              // HMC5883 Magnetic Interface
 float               _gRawMag[3] = {0.0f, };
-double              _gMagHeadingRad = 0.0;
-double              _gMagHeadingDeg = 0.0;
-double              _gSmoothHeadingDegrees = 0.0;
-double              _gPrevHeadingDegrees = 0.0;
-double              _gDeclinationAngle = 0.0;
+float               _gMagHeadingRad = 0.0;
+float               _gMagHeadingDeg = 0.0;
+float               _gSmoothHeadingDegrees = 0.0;
+float               _gPrevHeadingDegrees = 0.0;
+float               _gDeclinationAngle = 0.0;
 
 // For Barometer Sensor
 MS561101BA          _gBaroHndl;                             // MS5611 Barometer Interface
-double              _gRawTemp = 0.0;                        // Raw Temperature Data
-double              _gRawPressure = 0.0;                    // Raw Pressure Data
-double              _gRawAbsoluteAltitude = 0.0;            // Estimated Absolute Altitude
-double              _gAvgPressure = 0.0;                    // Average Pressure Data
-double              _gAvgTemp = 0.0;                        // Average Temperature Data
-double              _gAvgAbsoluteAltitude = 0.0;            // Average Absolute Altitude Data
-double              _gRelativeAltitude = 0.0;               // Relative Absolute Altitude Data
-double              _gPrevAvgAbsoluteAltitude = 0.0;        // Average Absolute Altitude Data
-double              _gRefAbsoluteAltitude = 0.0;            // Reference Absolute Altitude Data
-double              _gVerticalSpeed = 0.0;                  // Estimated Vertical Speed
+float               _gRawTemp = 0.0;                        // Raw Temperature Data
+float               _gRawPressure = 0.0;                    // Raw Pressure Data
+float               _gRawAbsoluteAltitude = 0.0;            // Estimated Absolute Altitude
+float               _gAvgPressure = 0.0;                    // Average Pressure Data
+float               _gAvgTemp = 0.0;                        // Average Temperature Data
+float               _gAvgAbsoluteAltitude = 0.0;            // Average Absolute Altitude Data
+float               _gRelativeAltitude = 0.0;               // Relative Absolute Altitude Data
+float               _gPrevAvgAbsoluteAltitude = 0.0;        // Average Absolute Altitude Data
+float               _gRefAbsoluteAltitude = 0.0;            // Reference Absolute Altitude Data
+float               _gVerticalSpeed = 0.0;                  // Estimated Vertical Speed
 
 // For Sonar Sensor
-double              _gRawDist = 0.0;                        // Indicate Distance Calculated From Sensor
-double              _gDistFromGnd = 0.0;                    // Indicate istance from Ground
+float               _gRawDist = 0.0;                        // Indicate Distance Calculated From Sensor
+float               _gDistFromGnd = 0.0;                    // Indicate istance from Ground
 
 // For PID Control
 AxisErrRate_T       _gRPY_PID[3] = {0, };
@@ -149,7 +149,7 @@ unsigned long       _gCurrTime = 0;
 unsigned long       _gProfileStartTime = 0;
 unsigned long       _gProfileEndTime = 0;
 #endif
-double              _gDiffTime = 0;
+float               _gDiffTime = 0;
 
 // For Status of Drone
 DroneStatus         _gDroneStatus = DRONESTATUS_STOP;
