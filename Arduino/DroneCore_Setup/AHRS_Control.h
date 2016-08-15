@@ -47,7 +47,7 @@ void _Get_RollPitchYaw()
     _gPitchLevelAdjust = _gAnglePitch * 15.0;
     _gRollLevelAdjust = _gAngleRoll * 15.0;
     
-    if(1 == USE_AUTO_LEVEL)
+    if(0 == USE_AUTO_LEVEL)
     {
         _gPitchLevelAdjust = 0.0;
         _gRollLevelAdjust = 0.0;
