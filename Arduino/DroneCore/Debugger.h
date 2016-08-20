@@ -8,7 +8,7 @@
 #ifndef __DEBUGGER__
 #define __DEBUGGER__
 
-#if __PRINT_DEBUG__ || __EXTERNAL_READ__
+#if PRINT_SERIAL || USE_EXT_SR_READ
 void _print_EEPRomData()
 {
     int         i = 0;
@@ -40,15 +40,15 @@ void _print_CaturedRC_Signals()
 void _print_CompensatedRC_Signals()
 {
     Serialprint(F("   //   RC_Roll:"));
-    Serialprint(_gCompensatedRCVal[CH_TYPE_ROLL]);
+    Serialprint(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]]);
     Serialprint(F("   RC_Pitch:"));
-    Serialprint(_gCompensatedRCVal[CH_TYPE_PITCH]);
+    Serialprint(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]]);
     Serialprint(F("   RC_Throttle:"));
-    Serialprint(_gCompensatedRCVal[CH_TYPE_THROTTLE]);
+    Serialprint(_gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]);
     Serialprint(F("   RC_Yaw:"));
-    Serialprint(_gCompensatedRCVal[CH_TYPE_YAW]);
+    Serialprint(_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]);
     Serialprint(F("   RC_Gear:"));
-    Serialprint(_gCompensatedRCVal[CH_TYPE_TAKE_LAND]);
+    Serialprint(_gCompensatedRCVal[_gRCChMap[CH_TYPE_TAKE_LAND]]);
 }
 
 
@@ -120,11 +120,11 @@ void _print_SonarData()
 void _print_RPY_Signals()
 {
     Serialprint(F("   //   EstRoll:"));
-    Serialprint(_gEstimatedRPY[X_AXIS]);
+    Serialprint(_gEstRoll);
     Serialprint(F("   EstPitch:"));
-    Serialprint(_gEstimatedRPY[Y_AXIS]);
+    Serialprint(_gEstPitch);
     Serialprint(F("   EstYaw:"));
-    Serialprint(_gEstimatedRPY[Z_AXIS]);
+    Serialprint(_gEstYaw);
 }
 
 
@@ -169,7 +169,7 @@ void _print_Throttle_Signals()
 
 void _print_Profile()
 {
-    #if __PROFILE__
+    #if USE_PROFILE
     _gProfileEndTime = micros();
 
     Serialprint(F("   //   Loop Duration:")); 
@@ -199,5 +199,6 @@ void _print_Data()
 }
 #endif
 #endif /* Debugger */
+
 
 

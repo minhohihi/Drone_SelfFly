@@ -8,11 +8,13 @@
 #ifndef __ESC_CONTROL__
 #define __ESC_CONTROL__
 
+void _ESC_DispStatus(int nCase);
+
 void _ESC_Initialize()
 {
     int                     i = 0;
 
-    Serialprintln(F(" *      3. Start ESC Module Initialization   "));
+    _ESC_DispStatus(0);
 
     // Set Digital Port 8, 9, 10, and 11 as Output
     DDRB |= B00001111;
@@ -25,6 +27,9 @@ void _ESC_Initialize()
     // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC For Two Seconds
     for(i=0 ; i<500 ; i++)
     {
+        if(0 == (i % 100))
+            _ESC_DispStatus(1);
+        
         // Set Digital Port 8, 9, 10, and 11 as high.
         PORTB |= B00001111;
         delayMicroseconds(1000);
@@ -36,21 +41,15 @@ void _ESC_Initialize()
     
     delay(300);
     
-    Serialprintln(F(" *            => Done!!   "));
+    _ESC_DispStatus(2);
 }
 
 
-void _UpdateESCs()
+void _ESC_Update()
 {
     unsigned long           nESCOut[4] = {0, };
     int                     i = 0;
     
-    // Wait Until Passing 4ms.
-    while(micros() - _gESCLoopTimer < 4000);
-
-    // Set the timer for the next loop.
-    _gESCLoopTimer = micros();
-
     // Set Digital Port 8, 9, 10, and 11 as high.
     PORTB |= B00001111;
 
@@ -78,5 +77,55 @@ void _UpdateESCs()
     }
 }
 
+
+void _ESC_DispStatus(int nCase)
+{
+    #if PRINT_SERIAL
+        if(0 == nCase)
+        {
+            Serialprint(F(" *      "));
+            Serialprint(_gDroneInitStep++);
+            Serialprintln(F(". Start ESC Module Initialization   "));
+        }
+        else if(1 == nCase)
+          Serialprint(F("."));
+        else if(2 == nCase)
+          Serialprintln(F(" Done!!"));
+    #elif USE_LCD_DISPLAY
+    {
+        static int nCnt = 0;
+
+        if(0 == nCase)
+        {
+            delay(500);
+            _gLCDHndl.clear();
+
+            _gLCDHndl.setCursor(0, 0);
+            _gLCDHndl.print(_gDroneInitStep++);
+            _gLCDHndl.setCursor(1, 0);
+            _gLCDHndl.print(".Init ESC");
+        }
+        else if(1 == nCase)
+        {
+            _gLCDHndl.setCursor(nCnt++, 1);
+            if(1 == nCnt)
+            {
+                delay(500);              
+                _gLCDHndl.print("Calib:");
+                nCnt += 5;
+            }
+            else
+                _gLCDHndl.print(".");
+        }
+        else if(2 == nCase)
+        {
+            _gLCDHndl.setCursor(nCnt, 1);
+            _gLCDHndl.print("Done!");
+            delay(1000);
+        }
+    }
+    #endif
+}
 #endif /* ESC_Controller_h */
+
 

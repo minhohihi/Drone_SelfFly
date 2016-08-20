@@ -20,7 +20,7 @@ void _CalculatePID()
     float                   nCurrErrRate;
     int                     i = 0, j = 0;
 
-    #if __EXTERNAL_READ__
+    #if USE_EXT_SR_READ
     {
         if(Serial.available())
         {
@@ -60,34 +60,34 @@ void _CalculatePID()
     }
     #endif
     
-    if(_gCompensatedRCVal[CH_TYPE_ROLL] > 1508)
-        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[CH_TYPE_ROLL] - 1508);
-    else if(_gCompensatedRCVal[CH_TYPE_ROLL] < 1492)
-        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[CH_TYPE_ROLL] - 1492);
+    if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] > 1508)
+        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] - 1508);
+    else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] < 1492)
+        nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] - 1492);
     
     nEstimatedRCVal[CH_TYPE_ROLL] -= _gRollLevelAdjust;                         //Subtract the angle correction from the standardized receiver roll input value.
     nEstimatedRCVal[CH_TYPE_ROLL] /= 3.0;                                       //Divide the setpoint for the PID roll controller by 3 to get angles in degrees.
 
-    if(_gCompensatedRCVal[CH_TYPE_PITCH] > 1508)
-        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[CH_TYPE_PITCH] - 1508);
-    else if(_gCompensatedRCVal[CH_TYPE_PITCH] < 1492)
-        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[CH_TYPE_PITCH] - 1492);
+    if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] > 1508)
+        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] - 1508);
+    else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] < 1492)
+        nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] - 1492);
 
     nEstimatedRCVal[CH_TYPE_PITCH] -= _gPitchLevelAdjust;                       //Subtract the angle correction from the standardized receiver pitch input value.
     nEstimatedRCVal[CH_TYPE_PITCH] /= 3.0;                                      //Divide the setpoint for the PID pitch controller by 3 to get angles in degrees.
 
-    if(_gCompensatedRCVal[CH_TYPE_THROTTLE] > 1050)
+    if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]] > 1050)
     {
-        if(_gCompensatedRCVal[CH_TYPE_YAW] > 1508)
-            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[CH_TYPE_YAW] - 1508) / 3.0;
-        else if(_gCompensatedRCVal[CH_TYPE_YAW] < 1492)
-            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[CH_TYPE_YAW] - 1492) / 3.0;
+        if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]] > 1508)
+            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]] - 1508) / 3.0;
+        else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]] < 1492)
+            nEstimatedRCVal[CH_TYPE_YAW] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]] - 1492) / 3.0;
     }
 
     // PID configuration
     // Roll
     {
-        nCurrErrRate = _gEstimatedRPY[1] - nEstimatedRCVal[CH_TYPE_ROLL];
+        nCurrErrRate = _gEstRoll - nEstimatedRCVal[CH_TYPE_ROLL];
         
         _gRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
         _gRPY_PID[0].nI_ErrRate += nPIDGainTable[0][1] * nCurrErrRate;
@@ -102,7 +102,7 @@ void _CalculatePID()
 
     // Picth
     {
-        nCurrErrRate = _gEstimatedRPY[0] - nEstimatedRCVal[CH_TYPE_PITCH];
+        nCurrErrRate = _gEstPitch - nEstimatedRCVal[CH_TYPE_PITCH];
         
         _gRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
         _gRPY_PID[1].nI_ErrRate += nPIDGainTable[1][1] * nCurrErrRate;
@@ -117,7 +117,7 @@ void _CalculatePID()
 
     // Yaw
     {
-        nCurrErrRate = _gEstimatedRPY[2] - nEstimatedRCVal[CH_TYPE_YAW];
+        nCurrErrRate = _gEstYaw - nEstimatedRCVal[CH_TYPE_YAW];
         
         _gRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;
         _gRPY_PID[2].nI_ErrRate += nPIDGainTable[2][1] * nCurrErrRate;
@@ -134,7 +134,7 @@ void _CalculatePID()
 
 void _CalculateThrottleVal()
 {
-    int                     nThrottle = _gCompensatedRCVal[CH_TYPE_THROTTLE];
+    int                     nThrottle = _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]];
     int                     i = 0;
     
     if(DRONESTATUS_START == _gDroneStatus)
@@ -171,12 +171,13 @@ void _CalculateThrottleVal()
 
 void _Calculate_Altitude(float *pEstimatedThrottle)
 {
-    if(1500 < _gCompensatedRCVal[CH_TYPE_TAKE_LAND])
+    if(1500 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_TAKE_LAND]])
     {
         //(_gDistFromGnd - HOVERING_ALTITUDE)
     }
 }
 
 #endif /* PID_Controller_h */
+
 
 

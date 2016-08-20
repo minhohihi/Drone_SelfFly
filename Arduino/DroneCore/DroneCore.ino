@@ -1,16 +1,4 @@
 
-#define __DEBUG__                           (0)
-#if (__DEBUG__)
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (1)
-    #define __EXTERNAL_READ__               (0)
-    #define SERIAL_BAUDRATE                 (115200)
-#else
-    #define __PRINT_DEBUG__                 (1)
-    #define __PROFILE__                     (0)
-#endif
-
-
 /*----------------------------------------------------------------------------------------
  File Inclusions
  ----------------------------------------------------------------------------------------*/
@@ -18,13 +6,12 @@
 #include <EEPROM.h>
 #include <I2Cdev.h>
 #include <Wire.h>
-#if USE_MPU6050_DMP
-    #include <MPU6050_6Axis_MotionApps20.h>
-#endif
 #include <HMC5883L.h>
 #include <MS561101BA.h>
 #include <math.h>
-
+#if USE_LCD_DISPLAY
+    #include <LiquidCrystal_I2C.h>
+#endif
 
 /*----------------------------------------------------------------------------------------
  Constant Definitions
@@ -34,7 +21,7 @@
 /*----------------------------------------------------------------------------------------
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
-#if __DEBUG__
+#if USE_PRINT
     #define Serialprint(...)                Serial.print(__VA_ARGS__)
     #define Serialprintln(...)              Serial.println(__VA_ARGS__)
 #else
@@ -78,17 +65,14 @@ byte                _gEEPROMData[EEPROM_DATA_MAX] = {0, };
 double              _gRawGyro[3] = {0.0, };
 long                _gRawAccel[3] = {0, };
 long                _gAccTotalVector = 0.0;
-float               _gAngleRollAcc = 0.0;
-float               _gAnglePitchAcc = 0.0;
-float               _gAngleYawAcc = 0.0;
-float               _gAngleRoll = 0.0;
-float               _gAnglePitch = 0.0;
-float               _gAngleYaw = 0.0;
-float               _gPitchLevelAdjust = 0.0;
-float               _gRollLevelAdjust = 0.0;
+float               _gAngleRollAcc = 0.0, _gAnglePitchAcc = 0.0 ,_gAngleYawAcc = 0.0;
+float               _gAngleRoll = 0.0, _gAnglePitch = 0.0 ,_gAngleYaw = 0.0;
+float               _gAngleRollOut = 0.0, _gAnglePitchOut = 0.0, _gAngleYawOut = 0.0;
+float               _gRollLevelAdjust = 0.0, _gPitchLevelAdjust = 0.0, _gYawLevelAdjust = 0.0;
 double              _gCalibMeanGyro[3] = {0.0, };
 double              _gCalibMeanAccel[3] = {0.0, };
 byte                _gGyroAccelAxis[3] = {0, };
+int                 _gbAngleSet = false;
 
 // For Magnetometer Sensor
 HMC5883L            _gMagHndl;                              // HMC5883 Magnetic Interface
@@ -123,17 +107,17 @@ AxisErrRate_T       _gRPY_PID[3] = {0, };
 int                 _gRCSignal_L[CH_TYPE_MAX] = {0, };
 int                 _gRCSignal_M[CH_TYPE_MAX] = {0, };
 int                 _gRCSignal_H[CH_TYPE_MAX] = {0, };
-byte                _gRCReverseFlag[CH_TYPE_MAX] = {0, };
+byte                _gRCRvrsFlag[CH_TYPE_MAX] = {0, };
 int                 _gESCOutput[MAX_CH_ESC] = {0, };
-int                 _gAxisReverseFlag[3] = {0, };
+int                 _gMPUAxisRvrsFlag[3] = {0, };
 byte                _gRCRisingFlag = 0;
 unsigned long       _gRCChRisingTime[CH_TYPE_MAX] = {0, };
 int                 _gRCSignalVal[CH_TYPE_MAX] = {0, };
-byte                _gRCChAxis[CH_TYPE_MAX] = {0, };
+byte                _gRCChMap[CH_TYPE_MAX] = {0, };
 int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 
 // For Estimated Status of Drone
-float               _gEstimatedRPY[3] = {0, };
+float               _gEstRoll = 0, _gEstPitch = 0, _gEstYaw = 0;
 //float               _gFineGyro[3] = {0.0, };
 //float               _gQuat[4] = {0.0, };                  // quaternion
 //float               _gEstGravity[3] = {0.0, };            // estimated gravity direction
@@ -145,7 +129,7 @@ unsigned long       _gESCLoopTimer = 0;
 unsigned long       _gPrevSensorCapTime = 0;
 unsigned long       _gCurrSensorCapTime = 0;
 unsigned long       _gCurrTime = 0;
-#if __PROFILE__
+#if USE_PROFILE
 unsigned long       _gProfileStartTime = 0;
 unsigned long       _gProfileEndTime = 0;
 #endif
@@ -161,6 +145,12 @@ int                 _gCurrBatteryVolt = 0;
 int                 _gLED_Status = 0;
 unsigned long       _gPrevBlinkTime = 0;
 
+// For LCD Control
+#if USE_LCD_DISPLAY
+    LiquidCrystal_I2C   _gLCDHndl(0x3F,16,2);
+#endif
+
+int                 _gDroneInitStep = 1;
 
 /*----------------------------------------------------------------------------------------
  Static Function
@@ -181,6 +171,7 @@ unsigned long       _gPrevBlinkTime = 0;
  Function Implementation
  ----------------------------------------------------------------------------------------*/
 #include "CommHeader.h"
+#include "LCD_Control.h"
 #include "LED_Control.h"
 #include "RC_Control.h"
 #include "ESC_Control.h"
@@ -195,6 +186,7 @@ unsigned long       _gPrevBlinkTime = 0;
 #include "Debugger.h"
 
 
+#if !USE_SETUP_MODE
 void setup()
 {
     int                 i;
@@ -206,13 +198,18 @@ void setup()
     // Set I2C Enable
     Wire.begin();
     
-    #if __DEBUG__
+    #if USE_PRINT
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
     #endif
 
     // Read EEPROM Data
-    _Read_EEPROM();
+    _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
+    _EEPROM_Read(EEPROM_DATA_RC_TYPE, 0);
+    _EEPROM_Read(EEPROM_DATA_RC_RANGE, 0);
+    _EEPROM_Read(EEPROM_DATA_SIGN, 0);
+
+    _LCD_Initialize();
 
     // Initialize LED
     _LED_Initialize();
@@ -273,13 +270,206 @@ void loop()
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    // Update BLDCs
-    _UpdateESCs();
+    // Wait Until Passing 4ms.
+    _Wait(4000);
 
-    #if __PRINT_DEBUG__ || __EXTERNAL_READ__
+    // Update ESC
+    _ESC_Update();
+
+    #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
     #endif
 }
+#else
+void setup()
+{
+    int                 i;
+
+    Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . ")); Serialprintln(F(" . "));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+
+    // Set I2C Enable
+    Wire.begin();
+
+    #if USE_PRINT
+    Serial.begin(SERIAL_BAUDRATE);
+    Serial.flush();
+    #endif
+
+    _LCD_Initialize();
+
+    // Initialize RemoteController
+    _RC_Initialize();
+
+    // Initialize Gyro_Accel
+    _AccelGyro_Initialize();
+
+    // Initialize Magnetic
+    //_Mag_Initialize();
+
+    // Initialize Barometer
+    //_Barometer_Initialize();
+
+    // Initialize Sonar Sensor
+    //_Sonar_Initialize();
+
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("********************************************************************"));
+    Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+
+    _LCD_Clear();
+
+    _gESCLoopTimer = micros();
+}
+
+
+void loop()
+{
+    static int bAllProcessDone = 0;
+    static unsigned long cnt = 0;
+    
+    if(!bAllProcessDone)
+    {
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("   Step 0. Please Set a RemoteController Stick to Center"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        _RC_Wait_CenterPos();
+        Serialprintln(F(""));
+
+        // Get Asix of Each RC Channel
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("   Step 1. Get Axis Type of RC Channel"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        _RC_CheckAxis(0);
+        _RC_CheckAxis(1);
+        _RC_CheckAxis(2);
+        _RC_CheckAxis(3);
+        _RC_CheckAxis(4);
+        Serialprintln(F(""));
+
+        // Get Range of RC Signal
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("   Step 2. Get Range of Each RC Channel"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        _RC_GetRCRange();
+        Serialprintln(F(""));
+
+        // Calibration Gyro
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("   Step 3. Gyro & Accel Calibration"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F(""));
+        //_AccelGyro_Calibration();
+        Serialprintln(F(""));
+
+        // Get Axis Type of Gyro & Accel
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("   Step 4. Get Axis Type of Gyro & Accel"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F(""));
+        _AccelGyro_CheckAxis(0);
+        _AccelGyro_CheckAxis(1);
+        _AccelGyro_CheckAxis(2);
+
+        Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F(" *         Writing Drone Setting to EEPROM          "));
+        Serialprintln(F("********************************************************************"));
+        _EEPROM_Write(EEPROM_DATA_SIGN);
+        _EEPROM_Write(EEPROM_DATA_MPU_AXIS);
+        _EEPROM_Write(EEPROM_DATA_RC_TYPE);
+        _EEPROM_Write(EEPROM_DATA_RC_RANGE);
+
+        Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+        Serialprintln(F("********************************************************************"));
+        Serialprintln(F(" *         Reading Drone Setting to EEPROM          "));
+        Serialprintln(F("********************************************************************"));
+        {
+            int         nValidationChk = 0;
+            if((0 != _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 1)) ||
+               (0 != _EEPROM_Read(EEPROM_DATA_RC_TYPE, 1)) ||
+               (0 != _EEPROM_Read(EEPROM_DATA_RC_RANGE, 1)) ||
+               (0 != _EEPROM_Read(EEPROM_DATA_SIGN, 1)))
+            {
+                Serialprintln(F(" * "));
+                Serialprintln(F(" *    !!!  There are Invalid Data in EEPROM."));
+                Serialprintln(F(" *    !!!  Clear EEPROM"));
+                Serialprintln(F(" * "));
+                Serialprintln(F(" *    !!!  Please Setup Again"));
+                _EEPROM_Clear();
+            }
+        }
+    }
+
+    delay(1000);
+
+    bAllProcessDone = 1;
+}
+
+#if USE_LCD_DISPLAY
+void write_LCD()
+{
+    static int angle_pitch_buffer, angle_roll_buffer;
+    static unsigned int lcd_loop_counter = 0;
+  
+    //Subroutine for writing the LCD
+    //To get a 250Hz program loop (4us) it's only possible to write one character per loop
+    //Writing multiple characters is taking to much time
+
+    //Reset the counter after 14 characters
+    if(lcd_loop_counter == 14)
+        lcd_loop_counter = 0;
+    
+    lcd_loop_counter ++;
+    if(lcd_loop_counter == 1)
+    {
+        angle_pitch_buffer = _gAnglePitchOut * 10;                          //Buffer the pitch angle because it will change
+        _gLCDHndl.setCursor(6,0);                                           //Set the LCD cursor to position to position 0,0
+    }
+
+    if(lcd_loop_counter == 2)
+    {
+        if(angle_pitch_buffer < 0) _gLCDHndl.print("-");
+        else _gLCDHndl.print("+");
+    }
+
+    if(lcd_loop_counter == 3)_gLCDHndl.print(abs(angle_pitch_buffer) / 1000);
+    if(lcd_loop_counter == 4)_gLCDHndl.print((abs(angle_pitch_buffer) / 100) % 10);
+    if(lcd_loop_counter == 5)_gLCDHndl.print((abs(angle_pitch_buffer) / 10) % 10);
+    if(lcd_loop_counter == 6)_gLCDHndl.print(".");
+    if(lcd_loop_counter == 7)_gLCDHndl.print(abs(angle_pitch_buffer) % 10);
+
+    if(lcd_loop_counter == 8)
+    {
+        angle_roll_buffer = _gAngleRollOut * 10;
+        _gLCDHndl.setCursor(6,1);
+    }
+
+    if(lcd_loop_counter == 9)
+    {
+        if(angle_roll_buffer < 0) _gLCDHndl.print("-");
+        else _gLCDHndl.print("+");
+    }
+
+    if(lcd_loop_counter == 10)_gLCDHndl.print(abs(angle_roll_buffer) / 1000);
+    if(lcd_loop_counter == 11)_gLCDHndl.print((abs(angle_roll_buffer) / 100) % 10);
+    if(lcd_loop_counter == 12)_gLCDHndl.print((abs(angle_roll_buffer) / 10) % 10);
+    if(lcd_loop_counter == 13)_gLCDHndl.print(".");
+    if(lcd_loop_counter == 14)_gLCDHndl.print(abs(angle_roll_buffer)%10);
+}
+#endif
+#endif
 
 
 

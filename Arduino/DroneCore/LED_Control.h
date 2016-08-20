@@ -10,12 +10,13 @@
 
 void _LED_SetColor(int nRed, int nGreen, int nBlue);
 void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod);
+void _LED_DispStatus(int nCase);
 
 void _LED_Initialize()
 {
     int             i = 0;
 
-    Serialprintln(F(" *      2. Start LED Module Initialization   "));
+    _LED_DispStatus(0);
     
     // Set Digital Port 7, 12, and 13 as Output
     DDRB |= B00110000;
@@ -29,14 +30,16 @@ void _LED_Initialize()
     
     delay(1000);
 
-    for(i=0 ; i<3 ; i++)
+    for(i=0 ; i<5 ; i++)
     {
         _LED_Blink(1, 0, 0, 0);
-        delay(200);
+        delay(120);
         _LED_Blink(0, 1, 0, 0);
-        delay(200);
+        delay(120);
         _LED_Blink(0, 0, 1, 0);
-        delay(200);
+        delay(120);
+        
+        _LED_DispStatus(1);
     }
 
     // Set RED Led as Init Color
@@ -46,7 +49,7 @@ void _LED_Initialize()
     
     delay(300);
     
-    Serialprintln(F(" *            => Done!!   "));
+    _LED_DispStatus(2);
 }
 
 
@@ -91,7 +94,58 @@ void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod)
     }
 }
 
+
+void _LED_DispStatus(int nCase)
+{
+    #if PRINT_SERIAL
+        if(0 == nCase)
+        {
+            Serialprint(F(" *      "));
+            Serialprint(_gDroneInitStep++);
+            Serialprintln(F(". Start LED Module Initialization   "));
+        }
+        else if(1 == nCase)
+            Serialprint(F("."));
+        else if(2 == nCase)
+            Serialprintln(F(" Done!!"));
+    #elif USE_LCD_DISPLAY
+        {
+            static int nCnt = 0;
+            
+            if(0 == nCase)
+            {
+                delay(500);
+                _gLCDHndl.clear();
+                
+                _gLCDHndl.setCursor(0, 0);
+                _gLCDHndl.print(_gDroneInitStep++);
+                _gLCDHndl.setCursor(1, 0);
+                _gLCDHndl.print(".Init LED");
+            }
+            else if(1 == nCase)
+            {
+                _gLCDHndl.setCursor(nCnt++, 1);
+                if(1 == nCnt)
+                {
+                    delay(500);                  
+                    _gLCDHndl.print("Test:");
+                    nCnt += 4;
+                }
+                else
+                    _gLCDHndl.print(".");
+            }
+            else if(2 == nCase)
+            {
+                _gLCDHndl.setCursor(nCnt, 1);
+                _gLCDHndl.print("Done!");
+                delay(1000);
+            }
+        }
+    #endif
+}
+
 #endif /* LED_Controller_h */
+
 
 
 

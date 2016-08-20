@@ -20,7 +20,7 @@ unsigned long       _gCurrTime = 0;
 int                 _gRCSignal_L[CH_TYPE_MAX] = {0, };
 int                 _gRCSignal_M[CH_TYPE_MAX] = {0, };
 int                 _gRCSignal_H[CH_TYPE_MAX] = {0, };
-byte                _gRCReverseFlag[CH_TYPE_MAX] = {0, };
+byte                _gRCRvrsFlag[CH_TYPE_MAX] = {0, };
 byte                _gRCRisingFlag = 0;
 unsigned long       _gRCChRisingTime[CH_TYPE_MAX] = {0, };
 int                 _gRCSignalVal[CH_TYPE_MAX] = {0, };
@@ -113,7 +113,7 @@ void loop()
 
             nEEPRomAddress = EEPROM_DATA_RC_CH0_REVERSE;
             for(i=0 ; i<CH_TYPE_MAX ; i++, nEEPRomAddress++)
-                if(_gEEPROMData[nEEPRomAddress] != _gRCReverseFlag[i])
+                if(_gEEPROMData[nEEPRomAddress] != _gRCRvrsFlag[i])
                     nError = 1;
         }
 
@@ -250,7 +250,7 @@ void _RC_EstimateRCRange()
 //The stored data in the EEPROM is used.
 void _RC_Compensate(byte nRCCh)
 {
-    byte                    nReverse = _gRCReverseFlag[nRCCh];
+    byte                    nReverse = _gRCRvrsFlag[nRCCh];
     int                     nLow = _gRCSignal_L[nRCCh];
     int                     nCenter = _gRCSignal_M[nRCCh];
     int                     nHigh = _gRCSignal_H[nRCCh];
@@ -356,7 +356,7 @@ void _RC_CheckStickType(int nStickType)
     }
         
     _gRCStickChMapTable[nStickType] = nRCChNum;
-    _gRCReverseFlag[nStickType] = nReverseFlag;
+    _gRCRvrsFlag[nStickType] = nReverseFlag;
 
     if(CH_TYPE_ROLL == nStickType)
         Serialprint(F(" *        => Roll Stick is Mapped to Ch"));
@@ -370,7 +370,7 @@ void _RC_CheckStickType(int nStickType)
         Serialprint(F(" *        => Take & Land Stick is Mapped to Ch"));
 
     Serialprint(_gRCStickChMapTable[nStickType]);
-    Serialprintln(_gRCReverseFlag[nStickType] ? F("  [Reversed]") : F(" "));
+    Serialprintln(_gRCRvrsFlag[nStickType] ? F("  [Reversed]") : F(" "));
 
     _RC_Wait_Signal();
 }
@@ -460,7 +460,7 @@ void _Write_RCData_To_EEPROM()
 
     nEEPRomAddress = EEPROM_DATA_RC_CH0_REVERSE;
     for(i=0 ; i<CH_TYPE_MAX ; i++, nEEPRomAddress++)
-        EEPROM.write(nEEPRomAddress, _gRCReverseFlag[i]);
+        EEPROM.write(nEEPRomAddress, _gRCRvrsFlag[i]);
 
     delay(300);
 

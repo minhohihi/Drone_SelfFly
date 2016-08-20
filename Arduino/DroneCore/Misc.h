@@ -13,12 +13,12 @@ void _Check_Drone_Status()
 {
     int32_t                 nLEDPeriod = 500000;
     
-    if((1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1050 > _gCompensatedRCVal[CH_TYPE_YAW]))
+    if((1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_READY;
     
     //When yaw stick is back in the center position start the motors (step 2).
     if((DRONESTATUS_READY == _gDroneStatus) &&
-       (1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1400 < _gCompensatedRCVal[CH_TYPE_YAW]))
+       (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1400 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
     {
         int         i = 0;
         
@@ -37,7 +37,7 @@ void _Check_Drone_Status()
     
     //Stopping the motors: throttle low and yaw right.
     if((DRONESTATUS_START == _gDroneStatus) &&
-       (1050 > _gCompensatedRCVal[CH_TYPE_THROTTLE]) && (1950 < _gCompensatedRCVal[CH_TYPE_YAW]))
+       (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1950 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_STOP;
     
     // Set LED Period as 200ms When Low Voltage
@@ -80,111 +80,14 @@ void _GetRawSensorData()
 }
 
 
-void _AccelGyro_CheckAxis(int nAxisIdx)
+void _Wait(unsigned long nMicroTime)
 {
-    unsigned long           nCurrTime;
-    byte                    nTmpAxis;
-
-    _gAngleRoll = 0;
-    _gAnglePitch = 0;
-    _gAngleYaw = 0;
-    
-    if(0 == nAxisIdx)
-        Serialprintln(F("1. Please Lift the Left Wing to 30 degree for 10 seconds"));
-    else if(1 == nAxisIdx)
-        Serialprintln(F("2. Please Lift the Nose to 30 degree for 10 seconds"));
-    else if(2 == nAxisIdx)
-        Serialprintln(F("3. Please Rotate the Nose to the right to 30 degree for 10 seconds"));
-    
-    nCurrTime = millis() + 10000;
-    
-    while(nCurrTime > millis() &&
-          (_gAngleRoll > -30)  && (_gAngleRoll < 30) &&
-          (_gAnglePitch > -30) && (_gAnglePitch < 30) &&
-          (_gAngleYaw > -30)   && (_gAngleYaw < 30))
-    {
-        // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-        _GetRawSensorData();
-        
-        // Calculate Roll, Pitch, and Yaw by Quaternion
-        _gAngleRoll  += _gRawGyro[X_AXIS] * 0.0000611;                   //Calculate the traveled roll angle and add
-        _gAnglePitch += _gRawGyro[Y_AXIS] * 0.0000611;                  //Calculate the traveled pitch angle and add this to the angle_pitch variable.
-        _gAngleYaw   += _gRawGyro[Z_AXIS] * 0.0000611;                   //Calculate the traveled roll angle and add
-        
-        delayMicroseconds(3600);
-    }
-    
-    //Assign the moved axis to the orresponding function (pitch, roll, yaw)
-    if(((_gAngleRoll < -30) || (_gAngleRoll > 30)) && (_gAnglePitch > -30) && (_gAnglePitch < 30) && (_gAngleYaw > -30) && (_gAngleYaw < 30))
-    {
-        nTmpAxis = B00000000;
-        if(_gAngleRoll < 0)
-            nTmpAxis |= B10000000;
-    }
-    
-    if((_gAngleRoll > -30) && (_gAngleRoll < 30) && ((_gAnglePitch < -30) || (_gAnglePitch > 30)) && (_gAngleYaw > -30) && (_gAngleYaw < 30))
-    {
-        nTmpAxis = B00000001;
-        if(_gAnglePitch < 0)
-            nTmpAxis |= B10000000;
-    }
-    
-    if((_gAngleRoll > -30) && (_gAngleRoll < 30) && (_gAnglePitch > -30) && (_gAnglePitch < 30) && ((_gAngleYaw < -30) || (_gAngleYaw > 30)))
-    {
-        nTmpAxis = B00000010;
-        if(_gAngleYaw < 0)
-            nTmpAxis |= B10000000;
-    }
-   
-    if(0 == nAxisIdx)
-        _gGyroAccelAxis[X_AXIS] = nTmpAxis;
-    else if(1 == nAxisIdx)
-        _gGyroAccelAxis[Y_AXIS] = nTmpAxis;
-    else if(2 == nAxisIdx)
-        _gGyroAccelAxis[Z_AXIS] = nTmpAxis;
-    
-    Serialprint(F("      Gyro "));
-    if(0 == nAxisIdx)
-    {
-        Serialprint(F("Roll Axis is Detected...   "));
-        Serialprint(_gAngleRoll);
-    }
-    else if(1 == nAxisIdx)
-    {
-        Serialprint(F("Pitch Axis is Detected...   "));
-        Serialprint(_gAnglePitch);
-    }
-    else if(2 == nAxisIdx)
-    {
-         Serialprint(F("Yaw Axis is Detected...   "));
-         Serialprint(_gAngleYaw);
-    }
-
-    if(B10000000 & nTmpAxis)
-        Serialprint(F("(Reversed!!!)"));
-
-    Serialprintln(F(" "));
-
-    nCurrTime = millis() + 10000;
-    while(nCurrTime > millis() &&
-          (_gAngleRoll > -5)  && (_gAngleRoll < 5) &&
-          (_gAnglePitch > -5) && (_gAnglePitch < 5) &&
-          (_gAngleYaw > -5)   && (_gAngleYaw < 5))
-    {
-        // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-        _GetRawSensorData();
-        
-        // Calculate Roll, Pitch, and Yaw by Quaternion
-        _gAngleRoll  += _gRawGyro[X_AXIS] * 0.0000611;                  //Calculate the traveled roll angle and add
-        _gAnglePitch += _gRawGyro[Y_AXIS] * 0.0000611;                  //Calculate the traveled pitch angle and add this to the angle_pitch variable.
-        _gAngleYaw   += _gRawGyro[Z_AXIS] * 0.0000611;                  //Calculate the traveled roll angle and add
-        
-        delayMicroseconds(3600);
-    }
+    while(micros() - _gESCLoopTimer < nMicroTime);
+    _gESCLoopTimer = micros();
 }
 
        
-void _Read_EEPROM()
+void _EEPROM_Read_Tmp()
 {
     byte                nEEPRomData[EEPROM_SIZE];                // EEPROM Data
     int                 i = 0;
@@ -198,14 +101,14 @@ void _Read_EEPROM()
     {
         const int           nChannel = i + 1;
         
-        _gRCSignal_L[i]    = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
-        _gRCSignal_M[i]    = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
-        _gRCSignal_H[i]    = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
-        _gRCReverseFlag[i] = !(!(nEEPRomData[nChannel + 23] & B10000000));
+        _gRCSignal_L[i] = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
+        _gRCSignal_M[i] = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
+        _gRCSignal_H[i] = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
+        _gRCRvrsFlag[i] = !(!(nEEPRomData[nChannel + 23] & B10000000));
     }
     
     for(i=0 ; i<3 ; i++)
-        _gAxisReverseFlag[i] = !(!(nEEPRomData[28 + i] & B10000000));
+        _gMPUAxisRvrsFlag[i] = !(!(nEEPRomData[28 + i] & B10000000));
     
     delay(300);
     
@@ -213,18 +116,196 @@ void _Read_EEPROM()
 }
 
 
-void _Write_EEPROM(int nStartAddress)
+int _EEPROM_Read(int nStartAddress, int nValidMode)
+{
+    byte                nEEPRomData[EEPROM_SIZE];                // EEPROM Data
+    int                 i = 0;
+    int                 nValidationChk = 0;
+    int                 nEEPRomAddress = 0;
+    
+    // Write Range of Transmitter
+    if(EEPROM_DATA_SIGN == nStartAddress)
+    {
+        Serialprintln(F(" *            => Read Drone Signiture   "));
+        
+        nEEPRomAddress = EEPROM_DATA_SIGN;
+        
+        if('M' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('a' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('v' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('e' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('r' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('i' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('c' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        if('k' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
+        
+        if(0 == nValidationChk)
+            Serialprint(F(" *                Verified!! You can Fly, Maverick!!     "));
+    }
+    else if(EEPROM_DATA_MPU_AXIS == nStartAddress)
+    {
+        Serialprint(F(" *            => Read MPU Type   "));
+        
+        nEEPRomAddress = EEPROM_DATA_MPU_AXIS0_TYPE;
+        
+        for(i=0 ; i<3 ; i++)
+        {
+            byte            nTmpAccelGyroAxis;
+
+            nTmpAccelGyroAxis = EEPROM.read(nEEPRomAddress++);
+            if((1 == nValidMode) && (_gGyroAccelAxis[i] != nTmpAccelGyroAxis))
+                nValidationChk = -1;
+            else
+            {
+                _gGyroAccelAxis[i] = nTmpAccelGyroAxis;
+                _gMPUAxisRvrsFlag[i] = !(!(_gGyroAccelAxis[i] & B10000000));
+                _gGyroAccelAxis[i] &= B01111111;
+                
+                if((0 > _gGyroAccelAxis[i]) || (3 <= _gGyroAccelAxis[i]))
+                    nValidationChk = -1;
+                
+                Serialprintln(F(" "));
+                Serialprint(F("                  "));
+                Serialprint(_gGyroAccelAxis[i]);
+                Serialprint(F(" / "));
+                Serialprint(_gMPUAxisRvrsFlag[i]);
+            }
+        }
+        Serialprintln(F(" ")); Serialprintln(F(" "));
+    }
+    else if(EEPROM_DATA_RC_TYPE == nStartAddress)
+    {
+        Serialprint(F(" *            => Read Transmitter Type   "));
+        
+        nEEPRomAddress = EEPROM_DATA_RC_CH0_TYPE;
+        
+        for(i=0 ; i<5 ; i++)
+        {
+            byte            nTmpRCChAxis;
+
+            nTmpRCChAxis = EEPROM.read(nEEPRomAddress++);
+            if((1 == nValidMode) && (_gRCChMap[i] != nTmpRCChAxis))
+                nValidationChk = -1;
+            else
+            {
+                _gRCChMap[i] = nTmpRCChAxis;
+                _gRCRvrsFlag[i] = (!(!(_gRCChMap[i] & B10000000)));
+                _gRCChMap[i] &= B01111111;
+                
+                if((0 > _gRCChMap[i]) || (5 <= _gRCChMap[i]))
+                    nValidationChk = -1;
+
+                Serialprintln(F(" "));
+                Serialprint(F("                  "));
+                Serialprint(_gRCChMap[i]);
+                Serialprint(F(" / "));
+                Serialprint(_gRCRvrsFlag[i]);
+            }
+        }
+        Serialprintln(F(" ")); Serialprintln(F(" "));
+    }
+    else if(EEPROM_DATA_RC_RANGE == nStartAddress)
+    {
+        Serialprint(F(" *            => Read Transmitter Range   "));
+        
+        nEEPRomAddress = EEPROM_DATA_RC_CH0_LOW_H;
+        
+        for(i=0 ; i<4 ; i++)
+        {
+            int             nTmpL, nTmpM, nTmpH;
+            
+            nTmpL = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
+            nTmpM = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
+            nTmpH = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
+            if((1 == nValidMode) &&
+               ((_gRCSignal_L[i] != nTmpL) || (_gRCSignal_M[i] != nTmpM) || (_gRCSignal_H[i] != nTmpH)))
+                nValidationChk = -1;
+            else
+            {
+                _gRCSignal_L[i] = nTmpL;
+                _gRCSignal_M[i] = nTmpM;
+                _gRCSignal_H[i] = nTmpH;
+
+                if((500 > _gRCSignal_L[i]) || (2100 <= _gRCSignal_L[i])) nValidationChk = -1;
+                if((500 > _gRCSignal_M[i]) || (2100 <= _gRCSignal_M[i])) nValidationChk = -1;
+                if((500 > _gRCSignal_H[i]) || (2100 <= _gRCSignal_H[i])) nValidationChk = -1;
+
+                Serialprintln(F(" "));
+                Serialprint(F("                  "));
+                Serialprint(_gRCSignal_L[i]);
+                Serialprint(F(" / "));
+                Serialprint(_gRCSignal_M[i]);
+                Serialprint(F(" / "));
+                Serialprint(_gRCSignal_H[i]);
+            }
+        }
+        Serialprintln(F(" ")); Serialprintln(F(" "));
+    }
+    
+    delay(300);
+    
+    if(0 != nValidationChk)
+        Serialprintln(F(" *              => Error! Invalid ROM Data!!   "));
+    
+    return nValidationChk;
+}
+
+
+void _EEPROM_Write(int nStartAddress)
 {
     int                 i = 0;
     int                 nEEPRomAddress = 0;
     
-    Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
-    Serialprintln(F("********************************************************************"));
-    Serialprintln(F(" *         Writing Drone Setting to EEPROM          "));
-    Serialprintln(F("********************************************************************"));
-
     // Write Range of Transmitter
-    if(EEPROM_DATA_RC_CH0_LOW_H == nStartAddress)
+    if(EEPROM_DATA_SIGN == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write Drone Signiture   "));
+        
+        nEEPRomAddress = EEPROM_DATA_SIGN;
+        EEPROM.write(nEEPRomAddress++, 'M');
+        EEPROM.write(nEEPRomAddress++, 'a');
+        EEPROM.write(nEEPRomAddress++, 'v');
+        EEPROM.write(nEEPRomAddress++, 'e');
+        EEPROM.write(nEEPRomAddress++, 'r');
+        EEPROM.write(nEEPRomAddress++, 'i');
+        EEPROM.write(nEEPRomAddress++, 'c');
+        EEPROM.write(nEEPRomAddress++, 'k');
+    }
+    else if(EEPROM_DATA_MPU_AXIS == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write MPU Type   "));
+        
+        nEEPRomAddress = EEPROM_DATA_MPU_AXIS0_TYPE;
+
+        Serialprint(F("                  "));
+        for(i=0 ; i<3 ; i++)
+        {
+            EEPROM.write(nEEPRomAddress++, _gGyroAccelAxis[i]);
+            
+            Serialprint(_gGyroAccelAxis[i]);
+            Serialprint(F(" / "));
+        }
+        Serialprintln(F(" "));
+
+    }
+    else if(EEPROM_DATA_RC_TYPE == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write Transmitter Type   "));
+        
+        nEEPRomAddress = EEPROM_DATA_RC_CH0_TYPE;
+        
+        Serialprint(F("                  "));
+        for(i=0 ; i<5 ; i++)
+        {
+            EEPROM.write(nEEPRomAddress++, _gRCChMap[i]);
+            
+            Serialprint(_gRCChMap[i]);
+            Serialprint(F(" / "));
+        }
+        Serialprintln(F(" "));
+        
+    }
+    else if(EEPROM_DATA_RC_RANGE == nStartAddress)
     {
         Serialprintln(F(" *            => Write Transmitter Range   "));
         
@@ -232,36 +313,36 @@ void _Write_EEPROM(int nStartAddress)
         
         for(i=0 ; i<4 ; i++)
         {
-            EEPROM.write(nEEPRomAddress,   _gRCSignal_L[i] >> 8);
-            EEPROM.write(nEEPRomAddress+1, _gRCSignal_L[i] & B11111111);
-            EEPROM.write(nEEPRomAddress+2, _gRCSignal_M[i] >> 8);
-            EEPROM.write(nEEPRomAddress+3, _gRCSignal_M[i] & B11111111);
-            EEPROM.write(nEEPRomAddress+4, _gRCSignal_H[i] >> 8);
-            EEPROM.write(nEEPRomAddress+5, _gRCSignal_H[i] & B11111111);
-            
-            nEEPRomAddress += 6;
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_L[i] >> 8);
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_L[i] & B11111111);
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_M[i] >> 8);
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_M[i] & B11111111);
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_H[i] >> 8);
+            EEPROM.write(nEEPRomAddress++, _gRCSignal_H[i] & B11111111);
+
+            Serialprint(F("                  "));
+            Serialprint(_gRCSignal_L[i]);
+            Serialprint(F(" / "));
+            Serialprint(_gRCSignal_M[i]);
+            Serialprint(F(" / "));
+            Serialprintln(_gRCSignal_H[i]);
         }
+        Serialprintln(F(" "));
     }
-    else if(EEPROM_DATA_GYRO_OFFSET_X == nStartAddress)
-    {
-        Serialprintln(F(" *            => Write Accel &Gyro Offset  "));
-        
-        nEEPRomAddress = EEPROM_DATA_GYRO_OFFSET_X;
-        
-        EEPROM.write(nEEPRomAddress,   _gRCSignal_L[i] >> 8);
-        EEPROM.write(nEEPRomAddress+1, _gRCSignal_L[i] & B11111111);
-        EEPROM.write(nEEPRomAddress+2, _gRCSignal_M[i] >> 8);
-        EEPROM.write(nEEPRomAddress+3, _gRCSignal_M[i] & B11111111);
-        EEPROM.write(nEEPRomAddress+4, _gRCSignal_H[i] >> 8);
-        EEPROM.write(nEEPRomAddress+5, _gRCSignal_H[i] & B11111111);
-    }
-    
     
     delay(300);
     
     Serialprintln(F(" *            => Done!!   "));
 }
 
+
+void _EEPROM_Clear()
+{
+    int                 i = 0;
+    
+    for(i=EEPROM_DATA_RESERVED ; i<EEPROM_DATA_MAX ; i++)
+        EEPROM.write(i, 0);
+}
 
 void _Check_BatteryVolt()
 {
@@ -318,4 +399,5 @@ float _InvSqrt(float nNumber)
 }
 
 #endif /* Misc_h */
+
 

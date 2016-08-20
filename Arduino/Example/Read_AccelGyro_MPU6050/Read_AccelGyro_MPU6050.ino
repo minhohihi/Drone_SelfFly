@@ -238,7 +238,7 @@ void _AccelGyro_Initialize()
     }
     #endif
 
-    _gEstimatedRPY[0] = _gEstimatedRPY[1] = _gEstimatedRPY[2] = 0.0;
+    _gEstRollPY[0] = _gEstRollPY[1] = _gEstRollPY[2] = 0.0;
 
     delay(300);
 
@@ -260,11 +260,11 @@ void _AccelGyro_GetGyroData()
     _gRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
 
     _gRawGyro[X_AXIS] -= _gCalibMeanGyro[X_AXIS];
-    if(1 == _gAxisReverseFlag[X_AXIS]) _gRawGyro[X_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[X_AXIS]) _gRawGyro[X_AXIS] *= -1;
     _gRawGyro[Y_AXIS] -= _gCalibMeanGyro[Y_AXIS];
-    if(1 == _gAxisReverseFlag[Y_AXIS]) _gRawGyro[Y_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[Y_AXIS]) _gRawGyro[Y_AXIS] *= -1;
     _gRawGyro[Z_AXIS] -= _gCalibMeanGyro[Z_AXIS];
-    if(1 == _gAxisReverseFlag[Z_AXIS]) _gRawGyro[Z_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[Z_AXIS]) _gRawGyro[Z_AXIS] *= -1;
 }
 
 
@@ -280,11 +280,11 @@ void _AccelGyro_GetAccelData()
     _gRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());              // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
 
     _gRawAccel[X_AXIS] -= _gCalibMeanAccel[X_AXIS];
-    if(1 == _gAxisReverseFlag[X_AXIS]) _gRawAccel[X_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[X_AXIS]) _gRawAccel[X_AXIS] *= -1;
     _gRawAccel[Y_AXIS] -= _gCalibMeanAccel[Y_AXIS];
-    if(1 == _gAxisReverseFlag[Y_AXIS]) _gRawAccel[Y_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[Y_AXIS]) _gRawAccel[Y_AXIS] *= -1;
     _gRawAccel[Z_AXIS] -= _gCalibMeanAccel[Z_AXIS];
-    if(1 == _gAxisReverseFlag[Z_AXIS]) _gRawAccel[Z_AXIS] *= -1;
+    if(1 == _gMPUAxisRvrsFlag[Z_AXIS]) _gRawAccel[Z_AXIS] *= -1;
 }
 
 

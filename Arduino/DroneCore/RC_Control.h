@@ -10,10 +10,11 @@
 
 void _RC_Wait_Signal();
 void _RC_GetRCRange();
+void _RC_DispStatus(int nCase);
 
 void _RC_Initialize()
 {
-    Serialprintln(F(" *      4. Start Receiver Module Initialization   "));
+    _RC_DispStatus(0);
 
     PCICR |= (1 << PCIE2);                // Set PCIE2 to Enable Scan ISR
     PCMSK2 |= (1 << PCINT18);             // Set Digital Input 2 as RC Input (Roll)
@@ -24,9 +25,13 @@ void _RC_Initialize()
 
     _RC_Wait_Signal();
     
-    delay(300);
+    delay(300); _RC_DispStatus(1);
+    delay(300); _RC_DispStatus(1);
+    delay(300); _RC_DispStatus(1);
+    delay(300); _RC_DispStatus(1);
+    delay(300); _RC_DispStatus(1);
     
-    Serialprintln(F(" *            => Done!!   "));
+    _RC_DispStatus(2);
 }
 
 
@@ -45,9 +50,6 @@ void _Read_RCData_From_EEPROM()
     for(i=EEPROM_DATA_RC_CH0_TYPE ; i<=EEPROM_DATA_RC_CH4_TYPE ; i++)
         _gEEPROMData[i] = EEPROM.read(i);
     
-    for(i=EEPROM_DATA_RC_CH0_REVERSE ; i<=EEPROM_DATA_RC_CH4_REVERSE ; i++)
-        _gEEPROMData[i] = EEPROM.read(i);
-    
     for(i=EEPROM_DATA_RC_CH0_LOW_H ; i<=EEPROM_DATA_RC_CH4_HIG_L ; i++)
         _gEEPROMData[i] = EEPROM.read(i);
     
@@ -61,14 +63,14 @@ void _Read_RCData_From_EEPROM()
 //The stored data in the EEPROM is used.
 void _RC_Compensate(byte nRCCh)
 {
-    byte                    nReverse = _gRCReverseFlag[nRCCh];
-    int                     nLow = _gRCSignal_L[nRCCh];
-    int                     nCenter = _gRCSignal_M[nRCCh];
-    int                     nHigh = _gRCSignal_H[nRCCh];
-    int                     nActualRC = _gRCSignalVal[nRCCh];
     int                     nDiff = 0;
     int                     nCompensatedRC = 0;
-  
+    const int               nLow        = _gRCSignal_L[nRCCh];
+    const int               nCenter     = _gRCSignal_M[nRCCh];
+    const int               nHigh       = _gRCSignal_H[nRCCh];
+    const byte              nReverse    = _gRCRvrsFlag[nRCCh];
+    int                     nActualRC   = _gRCSignalVal[nRCCh];
+    
     if(nActualRC < nCenter)
     {
         //The actual receiver value is lower than the center value
@@ -111,19 +113,21 @@ void _RC_Compensate(byte nRCCh)
 void _RC_Wait_Signal()
 {
     byte                nFlag = 0;
+    const int           nOffsetH = 2100;
+    const int           nOffsetL = 900;
     
     while(nFlag < 15)
     {
-        if(_gRCSignalVal[CH_TYPE_ROLL] < 2100 && _gRCSignalVal[CH_TYPE_ROLL] > 900)
+        if((_gRCSignalVal[0] > nOffsetL) && (_gRCSignalVal[0] < nOffsetH))
             nFlag |= B00000001;
         
-        if(_gRCSignalVal[CH_TYPE_PITCH] < 2100 && _gRCSignalVal[CH_TYPE_PITCH] > 900)
+        if((_gRCSignalVal[1] > nOffsetL) && (_gRCSignalVal[1] < nOffsetH))
             nFlag |= B00000010;
         
-        if(_gRCSignalVal[CH_TYPE_THROTTLE] < 2100 && _gRCSignalVal[CH_TYPE_THROTTLE] > 900)
+        if((_gRCSignalVal[2] > nOffsetL) && (_gRCSignalVal[2] < nOffsetH))
             nFlag |= B00000100;
         
-        if(_gRCSignalVal[CH_TYPE_YAW] < 2100 && _gRCSignalVal[CH_TYPE_YAW] > 900)
+        if((_gRCSignalVal[3] > nOffsetL) && (_gRCSignalVal[3] < nOffsetH))
             nFlag |= B00001000;
         
         delay(500);
@@ -140,62 +144,82 @@ void _RC_Wait_CenterPos()
     
     while(nFlag < 15)
     {
-        if(_gRCSignalVal[CH_TYPE_ROLL] < nCneterOffsetH && _gRCSignalVal[CH_TYPE_ROLL] > nCneterOffsetL)
+        if((_gRCSignalVal[0] > nCneterOffsetL) && (_gRCSignalVal[0] < nCneterOffsetH))
             nFlag |= B00000001;
         
-        if(_gRCSignalVal[CH_TYPE_PITCH] < nCneterOffsetH && _gRCSignalVal[CH_TYPE_PITCH] > nCneterOffsetL)
+        if((_gRCSignalVal[1] > nCneterOffsetL) && (_gRCSignalVal[1] < nCneterOffsetH))
             nFlag |= B00000010;
         
-        if(_gRCSignalVal[CH_TYPE_THROTTLE] < nCneterOffsetH && _gRCSignalVal[CH_TYPE_THROTTLE] > nCneterOffsetL)
+        if((_gRCSignalVal[2] > nCneterOffsetL) && (_gRCSignalVal[2] < nCneterOffsetH))
             nFlag |= B00000100;
         
-        if(_gRCSignalVal[CH_TYPE_YAW] < nCneterOffsetH && _gRCSignalVal[CH_TYPE_YAW] > nCneterOffsetL)
+        if((_gRCSignalVal[3] > nCneterOffsetL) && (_gRCSignalVal[3] < nCneterOffsetH))
             nFlag |= B00001000;
-        
+
         delay(500);
     }
+    
+    Serialprintln(F(" *    Sticks are Aligned to Center"));
 }
 
 
 void _RC_CheckAxis(int nAxisIdx)
 {
-    int                     nChNum = 0;
+    unsigned long           nCurrTime;
+    int                     nChNum = -1;
     
     if(0 == nAxisIdx)
-        Serialprintln(F("1. Please Throttle Up and Back to Center"));
+    {
+        Serialprintln(F(" *      Please Move Roll Stick to Left Wing Up and Back to Center"));
+        Serialprint(F("                Roll Channel is ["));
+    }
     else if(1 == nAxisIdx)
-        Serialprintln(F("2. Please Roll to Left Wing Up and Back to Center"));
+    {
+        Serialprintln(F(" *      Please Move Pitch Stick to Nose Up and Back to Center"));
+        Serialprint(F("                Pitch Channel is ["));
+    }
     else if(2 == nAxisIdx)
-        Serialprintln(F("3. Please Pitch to Nose Up and Back to Center"));
+    {
+        Serialprintln(F(" *      Please Move Throttle Stick Up and Back to Center"));
+        Serialprint(F("                Throttle Channel is ["));
+    }
     else if(3 == nAxisIdx)
-        Serialprintln(F("4. Please Yaw to Nose Right and Back to Center"));
+    {
+        Serialprintln(F(" *      Please Move Yaw Stick to Nose Right and Back to Center"));
+        Serialprint(F("                Yaw Channel is ["));
+    }
+    else if(4 == nAxisIdx)
+    {
+        Serialprintln(F("4. Please Move Gear Stick to Up and Back to Center"));
+        Serialprint(F("                Gear Channel is ["));
+    }
     
-    if((_gRCSignalVal[0] < 1200) || (_gRCSignalVal[0] > 1700)) nChNum = 0;
-    if((_gRCSignalVal[1] < 1200) || (_gRCSignalVal[1] > 1700)) nChNum = 1;
-    if((_gRCSignalVal[2] < 1200) || (_gRCSignalVal[2] > 1700)) nChNum = 2;
-    if((_gRCSignalVal[3] < 1200) || (_gRCSignalVal[3] > 1700)) nChNum = 3;
-
-    if(0 == nAxisIdx)
-        _gRCChAxis[nChNum] = CH_TYPE_THROTTLE;
-    else if(1 == nAxisIdx)
-        _gRCChAxis[nChNum] = CH_TYPE_ROLL;
-    else if(2 == nAxisIdx)
-        _gRCChAxis[nChNum] = CH_TYPE_PITCH;
-    else if(3 == nAxisIdx)
-        _gRCChAxis[nChNum] = CH_TYPE_YAW;
+    delay(2000);
+    
+    nCurrTime = millis() + 10000;
+    while(nCurrTime > millis() && (-1 == nChNum))
+    {
+        if((_gRCSignalVal[0] < 1200) || (_gRCSignalVal[0] > 1700)) nChNum = B00000000;
+        if((_gRCSignalVal[1] < 1200) || (_gRCSignalVal[1] > 1700)) nChNum = B00000001;
+        if((_gRCSignalVal[2] < 1200) || (_gRCSignalVal[2] > 1700)) nChNum = B00000010;
+        if((_gRCSignalVal[3] < 1200) || (_gRCSignalVal[3] > 1700)) nChNum = B00000011;
+        if((_gRCSignalVal[4] > 1700)) nChNum = B00000100;
+    }
+    _gRCChMap[nAxisIdx] = nChNum;
     
     // Check RC Signal is Inverse of Not
-    Serialprint(F("       This Channel ["));
     Serialprint(nChNum);
-    if((_gRCSignalVal[0] < 1200) || (_gRCSignalVal[1] < 1200) || (_gRCSignalVal[2] < 1200) || (_gRCSignalVal[3] < 1200))
+    if((_gRCSignalVal[0] < 1200) || (_gRCSignalVal[1] < 1200) ||
+       (_gRCSignalVal[2] < 1200) || (_gRCSignalVal[3] < 1200))
     {
-        _gRCChAxis[nChNum] |= B10000000;
-        Serialprint(F("] is Inverted"));
+        _gRCChMap[nAxisIdx] |= B10000000;
+        Serialprint(F("] and Reversed"));
     }
     else
-        Serialprint(F("] is Not Inverted"));
+        Serialprint(F("] and Not Reversed"));
     
     Serialprintln(F(" "));
+    
     _RC_Wait_CenterPos();
 }
 
@@ -203,8 +227,9 @@ void _RC_CheckAxis(int nAxisIdx)
 void _RC_GetRCRange()
 {
     int                     i = 0;
-    int                     nOffset = 100;
+    const int               nOffset = 100;
     byte                    nFlag = 0;
+    unsigned long           nCurrTime;
     
     for(i=0 ; i<5 ; i++)
     {
@@ -215,37 +240,35 @@ void _RC_GetRCRange()
     
     Serialprintln(F(" *      Start Receiver Range Check   "));
     Serialprintln(F(" *      Please Keep Moving Remote Controller   "));
-    Serialprint(F(" *      "));
+    Serialprint(F("          "));
     
-    while(nFlag < 15)
+    i = 0;
+    nCurrTime = millis() + 7000;
+    while(nCurrTime > millis())
     {
         // Set Min & Max Range
-        if(_gRCSignalVal[0] < _gRCSignal_L[0])  _gRCSignal_L[0]  = _gRCSignalVal[0];
+        if(_gRCSignalVal[0] < _gRCSignal_L[0]) _gRCSignal_L[0] = _gRCSignalVal[0];
         if(_gRCSignalVal[0] > _gRCSignal_H[0]) _gRCSignal_H[0] = _gRCSignalVal[0];
-        if(_gRCSignalVal[1] < _gRCSignal_L[1])  _gRCSignal_L[1]  = _gRCSignalVal[1];
+        if(_gRCSignalVal[1] < _gRCSignal_L[1]) _gRCSignal_L[1] = _gRCSignalVal[1];
         if(_gRCSignalVal[1] > _gRCSignal_H[1]) _gRCSignal_H[1] = _gRCSignalVal[1];
-        if(_gRCSignalVal[2] < _gRCSignal_L[2])  _gRCSignal_L[2]  = _gRCSignalVal[2];
+        if(_gRCSignalVal[2] < _gRCSignal_L[2]) _gRCSignal_L[2] = _gRCSignalVal[2];
         if(_gRCSignalVal[2] > _gRCSignal_H[2]) _gRCSignal_H[2] = _gRCSignalVal[2];
-        if(_gRCSignalVal[3] < _gRCSignal_L[3])  _gRCSignal_L[3]  = _gRCSignalVal[3];
+        if(_gRCSignalVal[3] < _gRCSignal_L[3]) _gRCSignal_L[3] = _gRCSignalVal[3];
         if(_gRCSignalVal[3] > _gRCSignal_H[3]) _gRCSignal_H[3] = _gRCSignalVal[3];
+        if(_gRCSignalVal[4] < _gRCSignal_L[4]) _gRCSignal_L[4] = _gRCSignalVal[4];
+        if(_gRCSignalVal[4] > _gRCSignal_H[4]) _gRCSignal_H[4] = _gRCSignalVal[4];
         
-        // Check Center Position
-        if((_gRCSignalVal[0] > (_gRCSignal_M[0] - nOffset)) && (_gRCSignalVal[0] < (_gRCSignal_M[0] + nOffset)))  nFlag |= B00000001;
-        if((_gRCSignalVal[1] > (_gRCSignal_M[1] - nOffset)) && (_gRCSignalVal[1] < (_gRCSignal_M[1] + nOffset)))  nFlag |= B00000010;
-        if((_gRCSignalVal[2] > (_gRCSignal_M[2] - nOffset)) && (_gRCSignalVal[2] < (_gRCSignal_M[2] + nOffset)))  nFlag |= B00000100;
-        if((_gRCSignalVal[3] > (_gRCSignal_M[3] - nOffset)) && (_gRCSignalVal[3] < (_gRCSignal_M[3] + nOffset)))  nFlag |= B00001000;
-        
-        Serialprint(F("."));
+        if(0 == (i++ % 10))
+            Serialprint(F("."));
         
         delay(50);
     }
+    Serialprint(F(" "));
     
-    Serialprintln(F(" *            => Done!!   "));
-    
-    for(i=0 ; i<4 ; i++)
+    for(i=0 ; i<5 ; i++)
         _gRCSignal_M[i] = (_gRCSignal_H[i] + _gRCSignal_L[i]) / 2;
     
-    for(i=0 ; i<4 ; i++)
+    for(i=0 ; i<5 ; i++)
     {
         Serialprint(F(" *              Ch"));
         Serialprint(i);
@@ -257,9 +280,11 @@ void _RC_GetRCRange()
         Serialprintln(_gRCSignal_H[i]);
     }
     
-    Serialprintln(F(" "));
+    Serialprintln(F(" *            => Done!!   "));
     
     _RC_Wait_CenterPos();
+
+    Serialprintln(F(" "));
 }
 
 
@@ -344,5 +369,56 @@ ISR(PCINT2_vect)
     }
 }
 
+
+void _RC_DispStatus(int nCase)
+{
+    #if PRINT_SERIAL
+        if(0 == nCase)
+        {
+            Serialprint(F(" *      "));
+            Serialprint(_gDroneInitStep++);        
+            Serialprintln(F(". Start Receiver Module Initialization   "));
+        }
+        else if(1 == nCase)
+            Serialprint(F("."));
+        else if(2 == nCase)
+            Serialprintln(F(" Done!!"));
+    #elif USE_LCD_DISPLAY
+        {
+            static int nCnt = 0;
+            
+            if(0 == nCase)
+            {
+                delay(500);
+                _gLCDHndl.clear();
+                
+                _gLCDHndl.setCursor(0, 0);
+                _gLCDHndl.print(_gDroneInitStep++);
+                _gLCDHndl.setCursor(1, 0);
+                _gLCDHndl.print(".Init RadioCtrl");
+            }
+            else if(1 == nCase)
+            {
+                _gLCDHndl.setCursor(nCnt++, 1);
+                if(1 == nCnt)
+                {
+                    delay(500);                  
+                    _gLCDHndl.print("Calib:");
+                    nCnt += 5;
+                }
+                else
+                    _gLCDHndl.print(".");
+            }
+            else if(2 == nCase)
+            {
+                _gLCDHndl.setCursor(nCnt, 1);
+                _gLCDHndl.print("Done!");
+                delay(1000);
+            }
+        }
+    #endif
+}
+
 #endif /* RC_Controller_h */
+
 
