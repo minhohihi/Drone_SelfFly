@@ -19,13 +19,13 @@ void _Get_RollPitchYaw()
         // Reverse MPU Data If Needed
         if(1 == _gMPUAxisRvrsFlag[_gGyroAccelAxis[i]])
         {
-            _gRawGyro[_gGyroAccelAxis[i]] *= -1;
-            _gRawAccel[_gGyroAccelAxis[i]] *= -1;
+            _gRawGyro[_gGyroAccelAxis[i]] *= -1.0;
+            _gRawAccel[_gGyroAccelAxis[i]] *= -1.0;
         }
     }
     
-    _gEstRoll  = (_gEstRoll * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[0]] / GYRO_FS) * nOffset1);    //Gyro pid input is deg/sec.
-    _gEstPitch = (_gEstPitch * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[1]] / GYRO_FS) * nOffset1);    //Gyro pid input is deg/sec.
+    _gEstRoll  = (_gEstRoll * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[0]] / GYRO_FS) * nOffset1);   //Gyro pid input is deg/sec.
+    _gEstPitch = (_gEstPitch * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[1]] / GYRO_FS) * nOffset1);  //Gyro pid input is deg/sec.
     _gEstYaw   = (_gEstYaw * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[2]] / GYRO_FS) * nOffset1);    //Gyro pid input is deg/sec.
     
     // Gyro angle calculations

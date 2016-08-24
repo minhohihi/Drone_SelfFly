@@ -8,9 +8,9 @@
 #ifndef __PID_CONTROL__
 #define __PID_CONTROL__
 
-float             nPIDGainTable[3][4] = {{1.52, 0.01, 15.40, 400},     // Roll's P, I, D
-                                         {1.52, 0.01, 15.40, 400},     // Pitch's P, I, D
-                                         {4.00, 0.02, 00.00, 400}};    // Yaw's P, I, D
+float             nPIDGainTable[3][4] = {{1.52, 0.01, 15.40, 400.0},     // Roll's P, I, D
+                                         {1.52, 0.01, 15.40, 400.0},     // Pitch's P, I, D
+                                         {4.00, 0.02, 00.00, 400.0}};    // Yaw's P, I, D
         
 void _Calculate_Altitude(float *pEstimatedThrottle);
 
@@ -94,8 +94,8 @@ void _CalculatePID()
         _gRPY_PID[0].nI_ErrRate = _Clip3Float(_gRPY_PID[0].nI_ErrRate, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
         _gRPY_PID[0].nD_ErrRate = nPIDGainTable[0][2] * (nCurrErrRate - _gRPY_PID[0].nPrevErrRate);
         
-        _gRPY_PID[0].nBalance = _gRPY_PID[0].nP_ErrRate + _gRPY_PID[0].nI_ErrRate + _gRPY_PID[0].nD_ErrRate;
-        _gRPY_PID[0].nBalance = _Clip3Float(_gRPY_PID[0].nBalance, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
+        _gRPY_PID[0].nBalance   = _gRPY_PID[0].nP_ErrRate + _gRPY_PID[0].nI_ErrRate + _gRPY_PID[0].nD_ErrRate;
+        _gRPY_PID[0].nBalance   = _Clip3Float(_gRPY_PID[0].nBalance, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
         
         _gRPY_PID[0].nPrevErrRate = nCurrErrRate;
     }
@@ -109,8 +109,8 @@ void _CalculatePID()
         _gRPY_PID[1].nI_ErrRate = _Clip3Float(_gRPY_PID[1].nI_ErrRate, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
         _gRPY_PID[1].nD_ErrRate = nPIDGainTable[1][2] * (nCurrErrRate - _gRPY_PID[1].nPrevErrRate);
         
-        _gRPY_PID[1].nBalance = _gRPY_PID[1].nP_ErrRate + _gRPY_PID[1].nI_ErrRate + _gRPY_PID[1].nD_ErrRate;
-        _gRPY_PID[1].nBalance = _Clip3Float(_gRPY_PID[1].nBalance, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
+        _gRPY_PID[1].nBalance   = _gRPY_PID[1].nP_ErrRate + _gRPY_PID[1].nI_ErrRate + _gRPY_PID[1].nD_ErrRate;
+        _gRPY_PID[1].nBalance   = _Clip3Float(_gRPY_PID[1].nBalance, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
         
         _gRPY_PID[1].nPrevErrRate = nCurrErrRate;
     }
@@ -124,8 +124,8 @@ void _CalculatePID()
         _gRPY_PID[2].nI_ErrRate = _Clip3Float(_gRPY_PID[2].nI_ErrRate, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
         _gRPY_PID[2].nD_ErrRate = nPIDGainTable[2][2] * (nCurrErrRate - _gRPY_PID[2].nPrevErrRate);
         
-        _gRPY_PID[2].nBalance = _gRPY_PID[2].nP_ErrRate + _gRPY_PID[2].nI_ErrRate + _gRPY_PID[2].nD_ErrRate;
-        _gRPY_PID[2].nBalance = _Clip3Float(_gRPY_PID[2].nBalance, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
+        _gRPY_PID[2].nBalance   = _gRPY_PID[2].nP_ErrRate + _gRPY_PID[2].nI_ErrRate + _gRPY_PID[2].nD_ErrRate;
+        _gRPY_PID[2].nBalance   = _Clip3Float(_gRPY_PID[2].nBalance, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
         
         _gRPY_PID[2].nPrevErrRate = nCurrErrRate;
     }
@@ -152,13 +152,7 @@ void _CalculateThrottleVal()
         _gESCOutput[3] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
 
         for(i=0 ; i<4 ; i++)
-        {
-            if(_gESCOutput[i] < ESC_ACTUAL_MIN)
-                _gESCOutput[i] = ESC_ACTUAL_MIN;
-
-            if(_gESCOutput[i] > ESC_ACTUAL_MAX)
-                _gESCOutput[i] = ESC_ACTUAL_MAX;
-        }
+            _gESCOutput[i] = _Clip3Float(_gESCOutput[i], ESC_ACTUAL_MIN, ESC_ACTUAL_MAX);
     }
     else
     {

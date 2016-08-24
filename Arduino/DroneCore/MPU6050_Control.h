@@ -158,6 +158,7 @@ void _AccelGyro_Calibration()
         Wire.endTransmission();
         Wire.requestFrom(0x68, 14);                                     // request a total of 14 registers
 
+        // Read 14 Bytes (6Btye as Accel, 2Bytes as Temp, 6Bytes as Gyro)
         for(j=0 ; j<3 ; j++)
             nRawAccel[j] = (Wire.read()<<8 | Wire.read());
         Wire.read(); Wire.read();
@@ -165,10 +166,10 @@ void _AccelGyro_Calibration()
             nRawGyro[j] = (Wire.read()<<8 | Wire.read());
         
         for(j=0 ; j<3 ; j++)
+        {
             _gCalibMeanAccel[j] += nRawAccel[j];
-        
-        for(j=0 ; j<3 ; j++)
             _gCalibMeanGyro[j] += nRawGyro[j];
+        }
         
         if(0 == (i % 20))
             _LED_Blink(1, 0, 0, 100000);                                    // Blink LED with Period as 100ms

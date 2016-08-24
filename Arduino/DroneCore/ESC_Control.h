@@ -8,6 +8,8 @@
 #ifndef __ESC_CONTROL__
 #define __ESC_CONTROL__
 
+void _ESC_Update();
+void _ESC_SetDefault();
 void _ESC_DispStatus(int nCase);
 
 void _ESC_Initialize()
@@ -27,16 +29,7 @@ void _ESC_Initialize()
     // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC For Two Seconds
     for(i=0 ; i<500 ; i++)
     {
-        if(0 == (i % 100))
-            _ESC_DispStatus(1);
-        
-        // Set Digital Port 8, 9, 10, and 11 as high.
-        PORTB |= B00001111;
-        delayMicroseconds(1000);
-
-        //Set digital poort 8, 9, 10, and 11 low.
-        PORTB &= B11110000;
-        delayMicroseconds(3000);
+        _ESC_SetDefault();
     }
     
     delay(300);
@@ -48,33 +41,46 @@ void _ESC_Initialize()
 void _ESC_Update()
 {
     unsigned long           nESCOut[4] = {0, };
+    unsigned long           nCurrTime = micros();
     int                     i = 0;
     
     // Set Digital Port 8, 9, 10, and 11 as high.
     PORTB |= B00001111;
 
     // Set Relative Throttle Value by Adding Current Time
-    nESCOut[0] = _gESCOutput[0] + _gESCLoopTimer;
-    nESCOut[1] = _gESCOutput[1] + _gESCLoopTimer;
-    nESCOut[2] = _gESCOutput[2] + _gESCLoopTimer;
-    nESCOut[3] = _gESCOutput[3] + _gESCLoopTimer;
+    nESCOut[0] = _gESCOutput[0] + nCurrTime;
+    nESCOut[1] = _gESCOutput[1] + nCurrTime;
+    nESCOut[2] = _gESCOutput[2] + nCurrTime;
+    nESCOut[3] = _gESCOutput[3] + nCurrTime;
     
     while(PORTB & B00001111)
     {
-        _gCurrTime = micros();
+        nCurrTime = micros();
 
-        if(nESCOut[0] <= _gCurrTime)
+        if(nESCOut[0] <= nCurrTime)
             PORTB &= B11111110;
 
-        if(nESCOut[1] <= _gCurrTime)
+        if(nESCOut[1] <= nCurrTime)
             PORTB &= B11111101;
 
-        if(nESCOut[2] <= _gCurrTime)
+        if(nESCOut[2] <= nCurrTime)
             PORTB &= B11111011;
 
-        if(nESCOut[3] <= _gCurrTime)
+        if(nESCOut[3] <= nCurrTime)
             PORTB &= B11110111;
     }
+}
+
+
+void _ESC_SetDefault()
+{
+    // Set Digital Port 8, 9, 10, and 11 as high.
+    PORTB |= B00001111;
+    delayMicroseconds(1000);
+    
+    //Set digital poort 8, 9, 10, and 11 low.
+    PORTB &= B11110000;
+    delayMicroseconds(3000);
 }
 
 
@@ -90,7 +96,7 @@ void _ESC_DispStatus(int nCase)
         else if(1 == nCase)
           Serialprint(F("."));
         else if(2 == nCase)
-          Serialprintln(F(" Done!!"));
+          Serialprintln(F(" *          => Done!!   "));
     #elif USE_LCD_DISPLAY
     {
         static int nCnt = 0;

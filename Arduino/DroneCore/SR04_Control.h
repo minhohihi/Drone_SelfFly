@@ -50,15 +50,14 @@ void _Sonar_GetData()
 
 void _Sonar_GetData_WithPeriod()
 {
+    const unsigned long     nCurrTime = micros();
     static unsigned long    nPrevTime = 0;
     
-    _gCurrTime = micros();
-
-    if((_gCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
+    if((nCurrTime - nPrevTime) > SONAR_GETDATA_PERIOD)
     {
         _Sonar_GetData();
 
-        nPrevTime = _gCurrTime;
+        nPrevTime = nCurrTime;
     }
 }
 

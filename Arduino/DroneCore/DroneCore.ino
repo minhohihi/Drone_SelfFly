@@ -125,7 +125,7 @@ float               _gEstRoll = 0, _gEstPitch = 0, _gEstYaw = 0;
 //float               _gRPYOffset[3] = {0.0, };
 
 // For Control Interval
-unsigned long       _gESCLoopTimer = 0;
+unsigned long       _gLoopTimer = 0;
 unsigned long       _gPrevSensorCapTime = 0;
 unsigned long       _gCurrSensorCapTime = 0;
 unsigned long       _gCurrTime = 0;
@@ -232,7 +232,7 @@ void setup()
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
 
-    _gESCLoopTimer = 0;
+    _gLoopTimer = micros();
     _gDroneStatus = DRONESTATUS_STOP;
     _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
     _gLED_Status = 0;
@@ -247,10 +247,8 @@ void loop()
 {
     int                     i = 0;
 
-    // Get Receiver Input
-    // Then Mapping Actual Reciever Value to 1000 ~ 2000
-    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
-        _RC_Compensate(i);
+    // Check Drone Status
+    _Check_Drone_Status();
 
     // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
     _GetRawSensorData();
@@ -261,9 +259,6 @@ void loop()
     // Check Battery Voltage Status
     _Check_BatteryVolt();
 
-    // Check Drone Status
-    _Check_Drone_Status();
-
     // PID Computation
     _CalculatePID();
 
@@ -273,8 +268,46 @@ void loop()
     // Wait Until Passing 4ms.
     _Wait(4000);
 
-    // Update ESC
-    _ESC_Update();
+    {
+        unsigned long           nESCOut[4] = {0, };
+        unsigned long           nCurrTime = micros();
+        int                     i = 0;
+
+        // Update ESC
+        // Set Digital Port 8, 9, 10, and 11 as high.
+        PORTB |= B00001111;
+
+        // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
+        _GetRawSensorData();
+
+        // Get Receiver Input
+        // Then Mapping Actual Reciever Value to 1000 ~ 2000
+        for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
+            _RC_Compensate(i);
+
+        // Set Relative Throttle Value by Adding Current Time
+        nESCOut[0] = _gESCOutput[0] + nCurrTime;
+        nESCOut[1] = _gESCOutput[1] + nCurrTime;
+        nESCOut[2] = _gESCOutput[2] + nCurrTime;
+        nESCOut[3] = _gESCOutput[3] + nCurrTime;
+
+        while(PORTB & B00001111)
+        {
+            nCurrTime = micros();
+
+            if(nESCOut[0] <= nCurrTime)
+                PORTB &= B11111110;
+
+            if(nESCOut[1] <= nCurrTime)
+                PORTB &= B11111101;
+
+            if(nESCOut[2] <= nCurrTime)
+                PORTB &= B11111011;
+
+            if(nESCOut[3] <= nCurrTime)
+                PORTB &= B11110111;
+        }
+    }
 
     #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
@@ -320,7 +353,7 @@ void setup()
 
     _LCD_Clear();
 
-    _gESCLoopTimer = micros();
+    _gLoopTimer = micros();
 }
 
 

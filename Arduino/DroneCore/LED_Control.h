@@ -26,6 +26,7 @@ void _LED_Initialize()
     PORTB &= B11001111;
     PORTD &= B01111111;
 
+    // Set Color to White
     _LED_Blink(1, 1, 1, 0);
     
     delay(1000);
@@ -42,7 +43,7 @@ void _LED_Initialize()
         _LED_DispStatus(1);
     }
 
-    // Set RED Led as Init Color
+    // Set Color to RED as Init Color
     _LED_Blink(1, 0, 0, 0);
 
     _gPrevBlinkTime = micros();
@@ -77,11 +78,11 @@ void _LED_SetColor(int nRed, int nGreen, int nBlue)
 
 void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod)
 {
-    _gCurrTime = micros();
-
+    const unsigned long     nCurrTime = micros();
+    
     if(0 == nLinkPeriod)
         _LED_SetColor(nRed, nGreen, nBlue);
-    else if((_gCurrTime - _gPrevBlinkTime) > nLinkPeriod)
+    else if((nCurrTime - _gPrevBlinkTime) > nLinkPeriod)
     {
         if(0 == _gLED_Status)
             _LED_SetColor(nRed, nGreen, nBlue);
@@ -90,7 +91,7 @@ void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod)
 
         _gLED_Status = !(_gLED_Status);
 
-        _gPrevBlinkTime = _gCurrTime;
+        _gPrevBlinkTime = nCurrTime;
     }
 }
 

@@ -22,8 +22,15 @@ void _Check_Drone_Status()
     {
         int         i = 0;
         
-        _gDroneStatus = DRONESTATUS_START;
-        
+        _gEstRoll       = 0.0;
+        _gEstPitch      = 0.0;
+        _gEstYaw        = 0.0;
+        _gAngleRoll     = 0.0;
+        _gAnglePitch    = 0.0;
+        _gAnglePitchOut = 0.0;
+        _gAngleRollOut  = 0.0;
+        _gbAngleSet     = false;
+
         //Reset the pid controllers for a bumpless start.
         for(i=0 ; i<3 ; i++)
         {
@@ -33,10 +40,12 @@ void _Check_Drone_Status()
             _gRPY_PID[i].nPrevErrRate = 0.0;
             _gRPY_PID[i].nBalance = 0.0;
         }
+        
+        _gDroneStatus = DRONESTATUS_START;
     }
     
     //Stopping the motors: throttle low and yaw right.
-    if((DRONESTATUS_START == _gDroneStatus) &&
+    if(((DRONESTATUS_START == _gDroneStatus) || (DRONESTATUS_READY == _gDroneStatus)) &&
        (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1950 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_STOP;
     
@@ -45,9 +54,9 @@ void _Check_Drone_Status()
     //    nLEDPeriod = 200000;
 
     if(DRONESTATUS_STOP == _gDroneStatus)
-        _LED_Blink(1, 0, 0, nLEDPeriod);                                 // Turn On a Red Light
+        _LED_Blink(1, 1, 0, nLEDPeriod);                                 // Turn On a Red Light
     else if(DRONESTATUS_READY == _gDroneStatus)
-        _LED_Blink(0, 1, 0, nLEDPeriod);                                 // Turn On a Green Light
+        _LED_Blink(0, 1, 1, nLEDPeriod);                                 // Turn On a Green Light
     else if(DRONESTATUS_START == _gDroneStatus)
         _LED_Blink(0, 0, 1, nLEDPeriod);                                 // Turn On a Blue Light
     
@@ -82,37 +91,8 @@ void _GetRawSensorData()
 
 void _Wait(unsigned long nMicroTime)
 {
-    while(micros() - _gESCLoopTimer < nMicroTime);
-    _gESCLoopTimer = micros();
-}
-
-       
-void _EEPROM_Read_Tmp()
-{
-    byte                nEEPRomData[EEPROM_SIZE];                // EEPROM Data
-    int                 i = 0;
-    
-    Serialprintln(F(" *      1. Start Reading EEPROOM Data   "));
-    
-    for(i=0 ; i<EEPROM_SIZE ; i++)
-        nEEPRomData[i] = EEPROM.read(i);
-
-    for(i=0 ; i<CH_TYPE_MAX ; i++)
-    {
-        const int           nChannel = i + 1;
-        
-        _gRCSignal_L[i] = (nEEPRomData[nChannel * 2 + 15] << 8) | nEEPRomData[nChannel * 2 + 14];
-        _gRCSignal_M[i] = (nEEPRomData[nChannel * 2 - 1] << 8) | nEEPRomData[nChannel * 2 - 2];
-        _gRCSignal_H[i] = (nEEPRomData[nChannel * 2 + 7] << 8) | nEEPRomData[nChannel * 2 + 6];
-        _gRCRvrsFlag[i] = !(!(nEEPRomData[nChannel + 23] & B10000000));
-    }
-    
-    for(i=0 ; i<3 ; i++)
-        _gMPUAxisRvrsFlag[i] = !(!(nEEPRomData[28 + i] & B10000000));
-    
-    delay(300);
-    
-    Serialprintln(F(" *            => Done!!   "));
+    while(micros() - _gLoopTimer < nMicroTime);
+    _gLoopTimer = micros();
 }
 
 
@@ -158,7 +138,7 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
             else
             {
                 _gGyroAccelAxis[i] = nTmpAccelGyroAxis;
-                _gMPUAxisRvrsFlag[i] = !(!(_gGyroAccelAxis[i] & B10000000));
+                _gMPUAxisRvrsFlag[i] = (!(!(_gGyroAccelAxis[i] & B10000000)));
                 _gGyroAccelAxis[i] &= B01111111;
                 
                 if((0 > _gGyroAccelAxis[i]) || (3 <= _gGyroAccelAxis[i]))
@@ -352,7 +332,7 @@ void _Check_BatteryVolt()
 }
 
 
-float _Clip3Float(float nValue, float nMIN, float nMAX)
+float _Clip3Float(const float nValue, const float nMIN, const float nMAX)
 {
     float               nClipVal = nValue;
 
@@ -365,7 +345,7 @@ float _Clip3Float(float nValue, float nMIN, float nMAX)
 }
 
 
-int _Clip3Int(int nValue, int nMIN, int nMAX)
+int _Clip3Int(const int nValue, const int nMIN, const int nMAX)
 {
     int                 nClipVal = nValue;
 

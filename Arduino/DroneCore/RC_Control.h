@@ -291,7 +291,7 @@ void _RC_GetRCRange()
 // Get Transmitter Signal From Digital Pin 2, 3, 4, 5, and 6 by HW Interrupt
 ISR(PCINT2_vect)
 {
-    _gCurrTime = micros();
+    const unsigned long     nCurrTime = micros();
     
     // Check Status of Digital Pin 2
     if(PIND & B00000100)
@@ -299,13 +299,13 @@ ISR(PCINT2_vect)
         if(0 == (_gRCRisingFlag & B00000001))
         {
             _gRCRisingFlag |= B00000001;
-            _gRCChRisingTime[0] = _gCurrTime;
+            _gRCChRisingTime[0] = nCurrTime;
         }
     }
     else if(_gRCRisingFlag & B00000001)
     {
         _gRCRisingFlag &= B11111110;
-        _gRCSignalVal[0] = _gCurrTime - _gRCChRisingTime[0];
+        _gRCSignalVal[0] = nCurrTime - _gRCChRisingTime[0];
     }
 
     // Check Status of Digital Pin 3
@@ -314,13 +314,13 @@ ISR(PCINT2_vect)
         if(0 == (_gRCRisingFlag & B00000010))
         {
             _gRCRisingFlag |= B00000010;
-            _gRCChRisingTime[1] = _gCurrTime;
+            _gRCChRisingTime[1] = nCurrTime;
         }
     }
     else if(_gRCRisingFlag & B00000010)
     {
         _gRCRisingFlag &= B11111101;
-        _gRCSignalVal[1] = _gCurrTime - _gRCChRisingTime[1];
+        _gRCSignalVal[1] = nCurrTime - _gRCChRisingTime[1];
     }
 
     // Check Status of Digital Pin 4
@@ -329,13 +329,13 @@ ISR(PCINT2_vect)
         if(0 == (_gRCRisingFlag & B00000100))
         {
             _gRCRisingFlag |= B00000100;
-            _gRCChRisingTime[2] = _gCurrTime;
+            _gRCChRisingTime[2] = nCurrTime;
         }
     }
     else if(_gRCRisingFlag & B00000100)
     {
         _gRCRisingFlag &= B11111011;
-        _gRCSignalVal[2] = _gCurrTime - _gRCChRisingTime[2];
+        _gRCSignalVal[2] = nCurrTime - _gRCChRisingTime[2];
     }
 
     // Check Status of Digital Pin 5
@@ -344,13 +344,13 @@ ISR(PCINT2_vect)
         if(0 == (_gRCRisingFlag & B00001000))
         {
             _gRCRisingFlag |= B00001000;
-            _gRCChRisingTime[3] = _gCurrTime;
+            _gRCChRisingTime[3] = nCurrTime;
         }
     }
     else if(_gRCRisingFlag & B00001000)
     {
         _gRCRisingFlag &= B11110111;
-        _gRCSignalVal[3] = _gCurrTime - _gRCChRisingTime[3];
+        _gRCSignalVal[3] = nCurrTime - _gRCChRisingTime[3];
     }
     
     // Check Status of Digital Pin 6
@@ -359,13 +359,13 @@ ISR(PCINT2_vect)
         if(0 == (_gRCRisingFlag & B00010000))
         {
             _gRCRisingFlag |= B00010000;
-            _gRCChRisingTime[4] = _gCurrTime;
+            _gRCChRisingTime[4] = nCurrTime;
         }
     }
     else if(_gRCRisingFlag & B00010000)
     {
         _gRCRisingFlag &= B11101111;
-        _gRCSignalVal[4] = _gCurrTime - _gRCChRisingTime[4];
+        _gRCSignalVal[4] = nCurrTime - _gRCChRisingTime[4];
     }
 }
 
@@ -382,7 +382,7 @@ void _RC_DispStatus(int nCase)
         else if(1 == nCase)
             Serialprint(F("."));
         else if(2 == nCase)
-            Serialprintln(F(" Done!!"));
+            Serialprintln(F(" *          => Done!!   "));
     #elif USE_LCD_DISPLAY
         {
             static int nCnt = 0;
