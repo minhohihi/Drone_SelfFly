@@ -234,6 +234,9 @@ void setup()
     // Initialize Sonar Sensor
     //_Sonar_Initialize();
 
+    // Get Initial Accel & Gyro Value
+    _GetRawSensorData();
+
     _gLoopTimer = micros();
     _gDroneStatus = DRONESTATUS_STOP;
     _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
@@ -242,6 +245,11 @@ void setup()
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
+
+    #if USE_LCD_DISPLAY
+          delay(1500);
+        _gLCDHndl.clear();
+    #endif
 }
 
 
@@ -313,7 +321,7 @@ void loop()
     #endif
 
     #if USE_LCD_DISPLAY
-        write_LCD();
+        _LCD_DispInfo();
     #endif
 }
 #else
@@ -451,97 +459,6 @@ void loop()
     delay(1000);
 
     bAllProcessDone = 1;
-}
-#endif
-
-#if USE_LCD_DISPLAY
-#define LCD_MAX_LOOP_CNT    (28) 
-int angle_pitch_buffer, angle_roll_buffer;
-unsigned int lcd_loop_counter = 0;
-int nVal[4];
-void write_LCD()
-{
-    //Subroutine for writing the LCD
-    //To get a 250Hz program loop (4us) it's only possible to write one character per loop
-    //Writing multiple characters is taking to much time
-
-    //Reset the counter after 14 characters
-    if(lcd_loop_counter == LCD_MAX_LOOP_CNT)
-        lcd_loop_counter = 0;
-
-    lcd_loop_counter ++;
-
-    if(lcd_loop_counter == 1)
-    {
-        nVal[0] = _gAnglePitch * 10;
-        _gLCDHndl.setCursor(0, 0);
-    }
-
-    if(lcd_loop_counter == 2)
-    {
-        if(nVal[0] < 0) _gLCDHndl.print("-");
-        else _gLCDHndl.print("+");
-    }
-
-    if(lcd_loop_counter == 3)_gLCDHndl.print(abs(nVal[0]) / 1000);
-    if(lcd_loop_counter == 4)_gLCDHndl.print((abs(nVal[0]) / 100) % 10);
-    if(lcd_loop_counter == 5)_gLCDHndl.print((abs(nVal[0]) / 10) % 10);
-    if(lcd_loop_counter == 6)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 7)_gLCDHndl.print(abs(nVal[0]) % 10);
-
-    if(lcd_loop_counter == 8)
-    {
-        nVal[1] = _gAnglePitchOut * 10;
-        _gLCDHndl.setCursor(8, 0);
-    }
-
-    if(lcd_loop_counter == 9)
-    {
-        if(nVal[1] < 0) _gLCDHndl.print("-");
-        else _gLCDHndl.print("+");
-    }
-
-    if(lcd_loop_counter == 10)_gLCDHndl.print(abs(nVal[1]) / 1000);
-    if(lcd_loop_counter == 11)_gLCDHndl.print((abs(nVal[1]) / 100) % 10);
-    if(lcd_loop_counter == 12)_gLCDHndl.print((abs(nVal[1]) / 10) % 10);
-    if(lcd_loop_counter == 13)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 14)_gLCDHndl.print(abs(nVal[1]) % 10);
-
-    if(lcd_loop_counter == 15)
-    {
-        nVal[2] = _gPitchLevelAdjust * 10;
-        _gLCDHndl.setCursor(0, 1);
-    }
-
-    if(lcd_loop_counter == 16)
-    {
-        if(nVal[2] < 0) _gLCDHndl.print("-");
-        else _gLCDHndl.print("+");
-    }
-
-    if(lcd_loop_counter == 17)_gLCDHndl.print(abs(nVal[2]) / 1000);
-    if(lcd_loop_counter == 18)_gLCDHndl.print((abs(nVal[2]) / 100) % 10);
-    if(lcd_loop_counter == 19)_gLCDHndl.print((abs(nVal[2]) / 10) % 10);
-    if(lcd_loop_counter == 20)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 21)_gLCDHndl.print(abs(nVal[2]) % 10);
-
-    if(lcd_loop_counter == 22)
-    {
-        nVal[3] = _gEstPitch * 10;
-        _gLCDHndl.setCursor(8, 1);
-    }
-
-    if(lcd_loop_counter == 23)
-    {
-        if(nVal[3] < 0) _gLCDHndl.print("-");
-        else _gLCDHndl.print("+");
-    }
-
-    if(lcd_loop_counter == 24)_gLCDHndl.print(abs(nVal[3]) / 1000);
-    if(lcd_loop_counter == 25)_gLCDHndl.print((abs(nVal[3]) / 100) % 10);
-    if(lcd_loop_counter == 26)_gLCDHndl.print((abs(nVal[3]) / 10) % 10);
-    if(lcd_loop_counter == 27)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 28)_gLCDHndl.print(abs(nVal[3]) % 10);
 }
 #endif
 

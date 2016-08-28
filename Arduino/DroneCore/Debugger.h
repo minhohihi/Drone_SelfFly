@@ -193,9 +193,9 @@ void _print_Data()
     //_print_RPY_Signals();
     //_print_PIDGain();
     //_print_PIDBalance();
-    _print_Throttle_Signals();
-    _print_Profile();
-    Serialprintln(F("  "));
+    //_print_Throttle_Signals();
+    //_print_Profile();
+    //Serialprintln(F("  "));
 }
 #endif
 #endif /* Debugger */
