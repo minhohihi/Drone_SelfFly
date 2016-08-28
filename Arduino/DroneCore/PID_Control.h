@@ -65,16 +65,16 @@ void _CalculatePID()
     else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] < 1492)
         nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] - 1492);
     
-    nEstimatedRCVal[CH_TYPE_ROLL] -= _gRollLevelAdjust;                         //Subtract the angle correction from the standardized receiver roll input value.
-    nEstimatedRCVal[CH_TYPE_ROLL] /= 3.0;                                       //Divide the setpoint for the PID roll controller by 3 to get angles in degrees.
+    nEstimatedRCVal[CH_TYPE_ROLL] -= _gRollLevelAdjust;
+    nEstimatedRCVal[CH_TYPE_ROLL] /= 3.0;
 
     if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] > 1508)
         nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] - 1508);
     else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] < 1492)
         nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] - 1492);
 
-    nEstimatedRCVal[CH_TYPE_PITCH] -= _gPitchLevelAdjust;                       //Subtract the angle correction from the standardized receiver pitch input value.
-    nEstimatedRCVal[CH_TYPE_PITCH] /= 3.0;                                      //Divide the setpoint for the PID pitch controller by 3 to get angles in degrees.
+    nEstimatedRCVal[CH_TYPE_PITCH] -= _gPitchLevelAdjust;
+    nEstimatedRCVal[CH_TYPE_PITCH] /= 3.0;
 
     if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]] > 1050)
     {
@@ -85,8 +85,8 @@ void _CalculatePID()
     }
 
     // PID configuration
-    // Roll
     {
+        // Roll
         nCurrErrRate = _gEstRoll - nEstimatedRCVal[CH_TYPE_ROLL];
         
         _gRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
@@ -100,8 +100,8 @@ void _CalculatePID()
         _gRPY_PID[0].nPrevErrRate = nCurrErrRate;
     }
 
-    // Picth
     {
+        // Picth
         nCurrErrRate = _gEstPitch - nEstimatedRCVal[CH_TYPE_PITCH];
         
         _gRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
@@ -115,8 +115,8 @@ void _CalculatePID()
         _gRPY_PID[1].nPrevErrRate = nCurrErrRate;
     }
 
-    // Yaw
     {
+        // Yaw
         nCurrErrRate = _gEstYaw - nEstimatedRCVal[CH_TYPE_YAW];
         
         _gRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;

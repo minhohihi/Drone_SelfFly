@@ -70,17 +70,17 @@ void _AccelGyro_GetGyroData()
     int               nRawGyro[3];
   
     Wire.beginTransmission(0x68);
-    Wire.write(0x43);                                               // starting with register 0x43 (GYRO_XOUT_H)
+    Wire.write(0x43);                                                           // starting with register 0x43 (GYRO_XOUT_H)
     Wire.endTransmission();
-    Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
+    Wire.requestFrom(0x68, 6);                                                  // request a total of 6 registers
 
-    nRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-    nRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    nRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    nRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+    nRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    nRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
     
-    _gRawGyro[X_AXIS] = nRawGyro[X_AXIS] - _gCalibMeanGyro[X_AXIS];
-    _gRawGyro[Y_AXIS] = nRawGyro[Y_AXIS] - _gCalibMeanGyro[Y_AXIS];
-    _gRawGyro[Z_AXIS] = nRawGyro[Z_AXIS] - _gCalibMeanGyro[Z_AXIS];
+    _gRawGyro[X_AXIS] = (float)nRawGyro[X_AXIS] - _gCalibMeanGyro[X_AXIS];
+    _gRawGyro[Y_AXIS] = (float)nRawGyro[Y_AXIS] - _gCalibMeanGyro[Y_AXIS];
+    _gRawGyro[Z_AXIS] = (float)nRawGyro[Z_AXIS] - _gCalibMeanGyro[Z_AXIS];
 }
 
                    
@@ -89,57 +89,59 @@ void _AccelGyro_GetAccelData()
     int               nRawAccel[3];
 
     Wire.beginTransmission(0x68);
-    Wire.write(0x3B);                                               // starting with register 0x3B (ACCEL_XOUT_H)
+    Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
     Wire.endTransmission();
-    Wire.requestFrom(0x68, 6);                                      // request a total of 6 registers
+    Wire.requestFrom(0x68, 6);                                                  // request a total of 6 registers
     
-    nRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    nRawAccel[Y_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    nRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+    nRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+    nRawAccel[Y_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+    nRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
     
-    _gRawAccel[X_AXIS] = nRawAccel[X_AXIS];// - _gCalibMeanAccel[X_AXIS];
-    _gRawAccel[Y_AXIS] = nRawAccel[Y_AXIS];// - _gCalibMeanAccel[Y_AXIS];
-    _gRawAccel[Z_AXIS] = nRawAccel[Z_AXIS];// - _gCalibMeanAccel[Z_AXIS];
+    _gRawAccel[X_AXIS] = (float)nRawAccel[X_AXIS] - _gCalibMeanAccel[X_AXIS];
+    _gRawAccel[Y_AXIS] = (float)nRawAccel[Y_AXIS] - _gCalibMeanAccel[Y_AXIS];
+    _gRawAccel[Z_AXIS] = (float)nRawAccel[Z_AXIS];// - _gCalibMeanAccel[Z_AXIS];
 }
 
 void _AccelGyro_GetGyroAccelData()
 {
     int                     nRawGyro[3];
     int                     nRawAccel[3];
+    int                     nTemperature = 0;
 
     Wire.beginTransmission(0x68);
-    Wire.write(0x3B);                                               // starting with register 0x3B (ACCEL_XOUT_H)
+    Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
     Wire.endTransmission();
-    Wire.requestFrom(0x68, 14);                                     // request a total of 14 registers
+    Wire.requestFrom(0x68, 14);                                                 // request a total of 14 registers
     
-    nRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
-    nRawAccel[Y_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
-    nRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());                    // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
-    Wire.read(); Wire.read();
-    nRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
-    nRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
-    nRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());                     // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
+    nRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
+    nRawAccel[Y_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3D (ACCEL_YOUT_H) & 0x3E (ACCEL_YOUT_L)
+    nRawAccel[Z_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3F (ACCEL_ZOUT_H) & 0x40 (ACCEL_ZOUT_L)
+    nTemperature = (Wire.read()<<8 | Wire.read());
+    nRawGyro[X_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x43 (GYRO_XOUT_H) & 0x44 (GYRO_XOUT_L)
+    nRawGyro[Y_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x45 (GYRO_YOUT_H) & 0x46 (GYRO_YOUT_L)
+    nRawGyro[Z_AXIS] = (Wire.read()<<8 | Wire.read());                          // 0x47 (GYRO_ZOUT_H) & 0x48 (GYRO_ZOUT_L)
   
-    _gRawAccel[X_AXIS] = nRawAccel[X_AXIS];// - _gCalibMeanAccel[X_AXIS];
-    _gRawAccel[Y_AXIS] = nRawAccel[Y_AXIS];// - _gCalibMeanAccel[Y_AXIS];
-    _gRawAccel[Z_AXIS] = nRawAccel[Z_AXIS];// - _gCalibMeanAccel[Z_AXIS];
-
-    _gRawGyro[X_AXIS] = nRawGyro[X_AXIS] - _gCalibMeanGyro[X_AXIS];
-    _gRawGyro[Y_AXIS] = nRawGyro[Y_AXIS] - _gCalibMeanGyro[Y_AXIS];
-    _gRawGyro[Z_AXIS] = nRawGyro[Z_AXIS] - _gCalibMeanGyro[Z_AXIS];
+    _gRawAccel[X_AXIS] = (float)nRawAccel[X_AXIS] - _gCalibMeanAccel[X_AXIS];
+    _gRawAccel[Y_AXIS] = (float)nRawAccel[Y_AXIS] - _gCalibMeanAccel[Y_AXIS];
+    _gRawAccel[Z_AXIS] = (float)nRawAccel[Z_AXIS];// - _gCalibMeanAccel[Z_AXIS];
+    _gTemperature = (float)nTemperature;
+    _gRawGyro[X_AXIS] = (float)nRawGyro[X_AXIS] - _gCalibMeanGyro[X_AXIS];
+    _gRawGyro[Y_AXIS] = (float)nRawGyro[Y_AXIS] - _gCalibMeanGyro[Y_AXIS];
+    _gRawGyro[Z_AXIS] = (float)nRawGyro[Z_AXIS] - _gCalibMeanGyro[Z_AXIS];
 }
 
 
 void _AccelGyro_Calibration()
 {
     int                     i = 0, j = 0;
-    int                     nRawGyro[3];
-    int                     nRawAccel[3];
+    int                     nRawGyro[3] = {0, };
+    int                     nRawAccel[3] = {0, };
+    int                     nTemperature = 0;
 
     _AccelGyro_DispStatus(1);
     
     for(i=0 ; i<=Z_AXIS ; i++)
-        _gCalibMeanGyro[i] = 0.0;
+        _gCalibMeanGyro[i] = 0;
     
     for(i=0 ; i<2000 ; i++)
     {
@@ -154,25 +156,26 @@ void _AccelGyro_Calibration()
         delayMicroseconds(3000);
 
         Wire.beginTransmission(0x68);
-        Wire.write(0x3B);                                               // starting with register 0x3B (ACCEL_XOUT_H)
+        Wire.write(0x3B);                                                       // starting with register 0x3B (ACCEL_XOUT_H)
         Wire.endTransmission();
-        Wire.requestFrom(0x68, 14);                                     // request a total of 14 registers
+        Wire.requestFrom(0x68, 14);                                             // request a total of 14 registers
 
         // Read 14 Bytes (6Btye as Accel, 2Bytes as Temp, 6Bytes as Gyro)
         for(j=0 ; j<3 ; j++)
             nRawAccel[j] = (Wire.read()<<8 | Wire.read());
-        Wire.read(); Wire.read();
+        nTemperature = (Wire.read()<<8 | Wire.read());
         for(j=0 ; j<3 ; j++)
             nRawGyro[j] = (Wire.read()<<8 | Wire.read());
         
         for(j=0 ; j<3 ; j++)
         {
-            _gCalibMeanAccel[j] += nRawAccel[j];
-            _gCalibMeanGyro[j] += nRawGyro[j];
+            _gCalibMeanAccel[j] += (float)nRawAccel[j];
+            _gCalibMeanGyro[j] += (float)nRawGyro[j];
         }
+        _gCalibMeanTemp += (float)nTemperature;
         
         if(0 == (i % 20))
-            _LED_Blink(1, 0, 0, 100000);                                    // Blink LED with Period as 100ms
+            _LED_Blink(1, 0, 0, 100000);                                        // Blink LED with Period as 100ms
 
         if(0 == (i % 400))
             _AccelGyro_DispStatus(1);
@@ -180,9 +183,10 @@ void _AccelGyro_Calibration()
     
     for(i=0 ; i<=Z_AXIS ; i++)
     {
-        _gCalibMeanGyro[i] /= 2000;
-        _gCalibMeanAccel[i] /= 2000;
+        _gCalibMeanGyro[i] /= 2000.0;
+        _gCalibMeanAccel[i] /= 2000.0;
     }
+    _gCalibMeanTemp /= 2000.0;
     
     _AccelGyro_DispStatus(2);
 }
@@ -196,17 +200,20 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
     
     if(0 == nAxisIdx)
     {
-        Serialprintln(F("1. Please Lift the Left Wing to 30 degree for 10 seconds"));               // Check a Roll Axis
+       // Check a Roll Axis
+        Serialprintln(F("1. Please Lift the Left Wing to 30 degree for 10 seconds"));
         Serialprint(F("             Roll Axis is ["));
     }
     else if(1 == nAxisIdx)
     {
-        Serialprintln(F("2. Please Lift the Nose to 30 degree for 10 seconds"));                    // Check a Pitch Axis
+        // Check a Pitch Axis
+        Serialprintln(F("2. Please Lift the Nose to 30 degree for 10 seconds"));
         Serialprint(F("             Picth Axis is ["));
     }
     else if(2 == nAxisIdx)
     {
-        Serialprintln(F("3. Please Rotate the Nose to the right to 30 degree for 10 seconds"));     // Check a Yaw Axis
+        // Check a Yaw Axis
+        Serialprintln(F("3. Please Rotate the Nose to the right to 30 degree for 10 seconds"));
         Serialprint(F("             Yaw Axis is ["));
     }
     

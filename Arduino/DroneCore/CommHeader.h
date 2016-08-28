@@ -118,9 +118,9 @@
 #define USE_AUTO_LEVEL                      (1)
 #define USE_SETUP_MODE                      (0)
 
-#define USE_PRINT                           (1)
+#define USE_PRINT                           (0)
 #if USE_PRINT
-    #define PRINT_SERIAL                    (1)
+    #define PRINT_SERIAL                    (0)
     #define USE_LCD_DISPLAY                 (!PRINT_SERIAL)
     #define USE_PROFILE                     (1)
     #define USE_EXT_SR_READ                 (0)

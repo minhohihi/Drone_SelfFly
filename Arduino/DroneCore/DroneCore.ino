@@ -62,21 +62,23 @@ typedef struct _AxisErrRate_T
 byte                _gEEPROMData[EEPROM_DATA_MAX] = {0, };
 
 // For Accelerator & Gyroscope Sensor
-double              _gRawGyro[3] = {0.0, };
-long                _gRawAccel[3] = {0, };
-long                _gAccTotalVector = 0.0;
+float               _gRawGyro[3] = {0.0, 0.0, 0.0};
+float               _gRawAccel[3] = {0.0, 0.0, 0.0};
+float               _gTemperature = 0.0;
+float               _gAccTotalVector = 0.0;
 float               _gAngleRollAcc = 0.0, _gAnglePitchAcc = 0.0 ,_gAngleYawAcc = 0.0;
 float               _gAngleRoll = 0.0, _gAnglePitch = 0.0 ,_gAngleYaw = 0.0;
 float               _gAngleRollOut = 0.0, _gAnglePitchOut = 0.0, _gAngleYawOut = 0.0;
 float               _gRollLevelAdjust = 0.0, _gPitchLevelAdjust = 0.0, _gYawLevelAdjust = 0.0;
-double              _gCalibMeanGyro[3] = {0.0, };
-double              _gCalibMeanAccel[3] = {0.0, };
-byte                _gGyroAccelAxis[3] = {0, };
+float               _gCalibMeanGyro[3] = {0.0, 0.0, 0.0};
+float               _gCalibMeanAccel[3] = {0.0, 0.0, 0.0};
+float               _gCalibMeanTemp = 0.0;
+byte                _gGyroAccelAxis[3] = {0.0, 0.0, 0.0};
 int                 _gbAngleSet = false;
 
 // For Magnetometer Sensor
 HMC5883L            _gMagHndl;                              // HMC5883 Magnetic Interface
-float               _gRawMag[3] = {0.0f, };
+float               _gRawMag[3] = {0.0, 0.0, 0.0};
 float               _gMagHeadingRad = 0.0;
 float               _gMagHeadingDeg = 0.0;
 float               _gSmoothHeadingDegrees = 0.0;
@@ -117,7 +119,7 @@ byte                _gRCChMap[CH_TYPE_MAX] = {0, };
 int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 
 // For Estimated Status of Drone
-float               _gEstRoll = 0, _gEstPitch = 0, _gEstYaw = 0;
+float               _gEstRoll = 0.0, _gEstPitch = 0.0, _gEstYaw = 0.0;
 //float               _gFineGyro[3] = {0.0, };
 //float               _gQuat[4] = {0.0, };                  // quaternion
 //float               _gEstGravity[3] = {0.0, };            // estimated gravity direction
@@ -133,7 +135,7 @@ unsigned long       _gCurrTime = 0;
 unsigned long       _gProfileStartTime = 0;
 unsigned long       _gProfileEndTime = 0;
 #endif
-float               _gDiffTime = 0;
+float               _gDiffTime = 0.0;
 
 // For Status of Drone
 DroneStatus         _gDroneStatus = DRONESTATUS_STOP;
@@ -247,11 +249,13 @@ void loop()
 {
     int                     i = 0;
 
+    // Get Receiver Input
+    // Then Mapping Actual Reciever Value to 1000 ~ 2000
+    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
+        _RC_Compensate(i);
+
     // Check Drone Status
     _Check_Drone_Status();
-
-    // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-    _GetRawSensorData();
 
     // Calculate Roll, Pitch, and Yaw by Quaternion
     _Get_RollPitchYaw();
@@ -280,11 +284,6 @@ void loop()
         // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
         _GetRawSensorData();
 
-        // Get Receiver Input
-        // Then Mapping Actual Reciever Value to 1000 ~ 2000
-        for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
-            _RC_Compensate(i);
-
         // Set Relative Throttle Value by Adding Current Time
         nESCOut[0] = _gESCOutput[0] + nCurrTime;
         nESCOut[1] = _gESCOutput[1] + nCurrTime;
@@ -311,6 +310,10 @@ void loop()
 
     #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
+    #endif
+
+    #if USE_LCD_DISPLAY
+        write_LCD();
     #endif
 }
 #else
@@ -449,60 +452,100 @@ void loop()
 
     bAllProcessDone = 1;
 }
+#endif
 
 #if USE_LCD_DISPLAY
+#define LCD_MAX_LOOP_CNT    (28) 
+int angle_pitch_buffer, angle_roll_buffer;
+unsigned int lcd_loop_counter = 0;
+int nVal[4];
 void write_LCD()
 {
-    static int angle_pitch_buffer, angle_roll_buffer;
-    static unsigned int lcd_loop_counter = 0;
-  
     //Subroutine for writing the LCD
     //To get a 250Hz program loop (4us) it's only possible to write one character per loop
     //Writing multiple characters is taking to much time
 
     //Reset the counter after 14 characters
-    if(lcd_loop_counter == 14)
+    if(lcd_loop_counter == LCD_MAX_LOOP_CNT)
         lcd_loop_counter = 0;
-    
+
     lcd_loop_counter ++;
+
     if(lcd_loop_counter == 1)
     {
-        angle_pitch_buffer = _gAnglePitchOut * 10;                          //Buffer the pitch angle because it will change
-        _gLCDHndl.setCursor(6,0);                                           //Set the LCD cursor to position to position 0,0
+        nVal[0] = _gAnglePitch * 10;
+        _gLCDHndl.setCursor(0, 0);
     }
 
     if(lcd_loop_counter == 2)
     {
-        if(angle_pitch_buffer < 0) _gLCDHndl.print("-");
+        if(nVal[0] < 0) _gLCDHndl.print("-");
         else _gLCDHndl.print("+");
     }
 
-    if(lcd_loop_counter == 3)_gLCDHndl.print(abs(angle_pitch_buffer) / 1000);
-    if(lcd_loop_counter == 4)_gLCDHndl.print((abs(angle_pitch_buffer) / 100) % 10);
-    if(lcd_loop_counter == 5)_gLCDHndl.print((abs(angle_pitch_buffer) / 10) % 10);
+    if(lcd_loop_counter == 3)_gLCDHndl.print(abs(nVal[0]) / 1000);
+    if(lcd_loop_counter == 4)_gLCDHndl.print((abs(nVal[0]) / 100) % 10);
+    if(lcd_loop_counter == 5)_gLCDHndl.print((abs(nVal[0]) / 10) % 10);
     if(lcd_loop_counter == 6)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 7)_gLCDHndl.print(abs(angle_pitch_buffer) % 10);
+    if(lcd_loop_counter == 7)_gLCDHndl.print(abs(nVal[0]) % 10);
 
     if(lcd_loop_counter == 8)
     {
-        angle_roll_buffer = _gAngleRollOut * 10;
-        _gLCDHndl.setCursor(6,1);
+        nVal[1] = _gAnglePitchOut * 10;
+        _gLCDHndl.setCursor(8, 0);
     }
 
     if(lcd_loop_counter == 9)
     {
-        if(angle_roll_buffer < 0) _gLCDHndl.print("-");
+        if(nVal[1] < 0) _gLCDHndl.print("-");
         else _gLCDHndl.print("+");
     }
 
-    if(lcd_loop_counter == 10)_gLCDHndl.print(abs(angle_roll_buffer) / 1000);
-    if(lcd_loop_counter == 11)_gLCDHndl.print((abs(angle_roll_buffer) / 100) % 10);
-    if(lcd_loop_counter == 12)_gLCDHndl.print((abs(angle_roll_buffer) / 10) % 10);
+    if(lcd_loop_counter == 10)_gLCDHndl.print(abs(nVal[1]) / 1000);
+    if(lcd_loop_counter == 11)_gLCDHndl.print((abs(nVal[1]) / 100) % 10);
+    if(lcd_loop_counter == 12)_gLCDHndl.print((abs(nVal[1]) / 10) % 10);
     if(lcd_loop_counter == 13)_gLCDHndl.print(".");
-    if(lcd_loop_counter == 14)_gLCDHndl.print(abs(angle_roll_buffer)%10);
+    if(lcd_loop_counter == 14)_gLCDHndl.print(abs(nVal[1]) % 10);
+
+    if(lcd_loop_counter == 15)
+    {
+        nVal[2] = _gPitchLevelAdjust * 10;
+        _gLCDHndl.setCursor(0, 1);
+    }
+
+    if(lcd_loop_counter == 16)
+    {
+        if(nVal[2] < 0) _gLCDHndl.print("-");
+        else _gLCDHndl.print("+");
+    }
+
+    if(lcd_loop_counter == 17)_gLCDHndl.print(abs(nVal[2]) / 1000);
+    if(lcd_loop_counter == 18)_gLCDHndl.print((abs(nVal[2]) / 100) % 10);
+    if(lcd_loop_counter == 19)_gLCDHndl.print((abs(nVal[2]) / 10) % 10);
+    if(lcd_loop_counter == 20)_gLCDHndl.print(".");
+    if(lcd_loop_counter == 21)_gLCDHndl.print(abs(nVal[2]) % 10);
+
+    if(lcd_loop_counter == 22)
+    {
+        nVal[3] = _gEstPitch * 10;
+        _gLCDHndl.setCursor(8, 1);
+    }
+
+    if(lcd_loop_counter == 23)
+    {
+        if(nVal[3] < 0) _gLCDHndl.print("-");
+        else _gLCDHndl.print("+");
+    }
+
+    if(lcd_loop_counter == 24)_gLCDHndl.print(abs(nVal[3]) / 1000);
+    if(lcd_loop_counter == 25)_gLCDHndl.print((abs(nVal[3]) / 100) % 10);
+    if(lcd_loop_counter == 26)_gLCDHndl.print((abs(nVal[3]) / 10) % 10);
+    if(lcd_loop_counter == 27)_gLCDHndl.print(".");
+    if(lcd_loop_counter == 28)_gLCDHndl.print(abs(nVal[3]) % 10);
 }
 #endif
-#endif
+
+
 
 
 
