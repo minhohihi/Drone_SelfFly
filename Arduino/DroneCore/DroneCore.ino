@@ -178,7 +178,7 @@ int                 _gDroneInitStep = 1;
 #include "RC_Control.h"
 #include "ESC_Control.h"
 #include "MPU6050_Control.h"
-//#include "HMC5883L_Control.h"
+#include "HMC5883L_Control.h"
 //#include "HS5611_Control.h"
 //#include "SR04_Control.h"
 #include "Misc.h"
@@ -226,7 +226,7 @@ void setup()
     _AccelGyro_Initialize();
 
     // Initialize Magnetic
-    //_Mag_Initialize();
+    _Mag_Initialize();
 
     // Initialize Barometer
     //_Barometer_Initialize();
@@ -247,7 +247,7 @@ void setup()
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
 
     #if USE_LCD_DISPLAY
-          delay(1500);
+        delay(1500);
         _gLCDHndl.clear();
     #endif
 }

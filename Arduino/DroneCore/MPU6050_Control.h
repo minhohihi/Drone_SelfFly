@@ -52,6 +52,11 @@ void _AccelGyro_Initialize()
     Wire.write(0x03);                    
     Wire.endTransmission();
 
+    // For Magnetic Sensor
+    I2Cdev::writeBit(0x68, 0x6A, 5, false);
+    I2Cdev::writeBit(0x68, 0x37, 1, true);
+    I2Cdev::writeBit(0x68, 0x6B, 6, false);
+
     delay(300);
     
     // Calibration

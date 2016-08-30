@@ -71,14 +71,11 @@ void _GetRawSensorData()
 
     _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     
-    // Get Gyro Raw Data
-    _AccelGyro_GetGyroData();
-
-    // Get Accel Raw Data
-    _AccelGyro_GetAccelData();
+    // Get Gyro Raw Data && Accel Raw Data
+    _AccelGyro_GetGyroAccelData();
 
     // Get Magnetic Raw Data
-    //_Mag_GetData();
+    _Mag_GetData();
 
     // Get Barometer Raw Data
     //_Barometer_GetData();
