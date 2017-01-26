@@ -91,6 +91,9 @@
 		8B0F2CEF1BF57A7F0044F792 /* SSD1308.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B0F2C931BF57A7F0044F792 /* SSD1308.h */; };
 		8B0F2CF01BF57A7F0044F792 /* TCA6424A.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B0F2C961BF57A7F0044F792 /* TCA6424A.cpp */; };
 		8B0F2CF11BF57A7F0044F792 /* TCA6424A.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B0F2C971BF57A7F0044F792 /* TCA6424A.h */; };
+		8B6108911DA236CE000EBE05 /* GPS_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B6108901DA236CE000EBE05 /* GPS_Control.h */; };
+		8B61089D1DA23A4D000EBE05 /* TinyGPS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8B61089B1DA23A4D000EBE05 /* TinyGPS.cpp */; };
+		8B61089E1DA23A4D000EBE05 /* TinyGPS.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B61089C1DA23A4D000EBE05 /* TinyGPS.h */; };
 		8B9BF6071D65FE620077876F /* LCD_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8B9BF6061D65FE620077876F /* LCD_Control.h */; };
 		8BF96BD11C50DACE005A028B /* AHRS_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC41C50DACE005A028B /* AHRS_Control.h */; };
 		8BF96BD21C50DACE005A028B /* CommHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BC51C50DACE005A028B /* CommHeader.h */; };
@@ -438,6 +441,13 @@
 		8B0F2C971BF57A7F0044F792 /* TCA6424A.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TCA6424A.h; sourceTree = "<group>"; };
 		8B31B8561BEAE0F1005634F8 /* libSelfFly.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSelfFly.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = DroneCore.ino; path = ../Arduino/DroneCore/DroneCore.ino; sourceTree = "<group>"; };
+		8B6108901DA236CE000EBE05 /* GPS_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GPS_Control.h; path = ../Arduino/DroneCore/GPS_Control.h; sourceTree = "<group>"; };
+		8B6108951DA23A4D000EBE05 /* simple_test.pde */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = simple_test.pde; sourceTree = "<group>"; };
+		8B6108971DA23A4D000EBE05 /* static_test.pde */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = static_test.pde; sourceTree = "<group>"; };
+		8B6108991DA23A4D000EBE05 /* test_with_gps_device.pde */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = test_with_gps_device.pde; sourceTree = "<group>"; };
+		8B61089A1DA23A4D000EBE05 /* keywords.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
+		8B61089B1DA23A4D000EBE05 /* TinyGPS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TinyGPS.cpp; sourceTree = "<group>"; };
+		8B61089C1DA23A4D000EBE05 /* TinyGPS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TinyGPS.h; sourceTree = "<group>"; };
 		8B79A1A71D11415C008F38B9 /* Read_Receiver.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = Read_Receiver.ino; path = ../Arduino/Example/Read_Receiver/Read_Receiver.ino; sourceTree = "<group>"; };
 		8B9BF6061D65FE620077876F /* LCD_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LCD_Control.h; path = ../Arduino/DroneCore/LCD_Control.h; sourceTree = "<group>"; };
 		8BCB60D01D0FDE2D00515379 /* ESC_Calibration.ino */ = {isa = PBXFileReference; lastKnownFileType = text; name = ESC_Calibration.ino; path = ../Arduino/Example/ESC_Calibration/ESC_Calibration.ino; sourceTree = "<group>"; };
@@ -1749,6 +1759,7 @@
 				8BF96BC41C50DACE005A028B /* AHRS_Control.h */,
 				8BF96BC51C50DACE005A028B /* CommHeader.h */,
 				8BF96BC61C50DACE005A028B /* Debugger.h */,
+				8B6108901DA236CE000EBE05 /* GPS_Control.h */,
 				8BF96BC71C50DACE005A028B /* ESC_Control.h */,
 				8BF96BC81C50DACE005A028B /* ExtComm_Control.h */,
 				8BF96BC91C50DACE005A028B /* HMC5883L_Control.h */,
@@ -1766,6 +1777,7 @@
 				8BCB60D31D0FDE4A00515379 /* Read_Magnetic_HMC5883L.ino */,
 				8B79A1A71D11415C008F38B9 /* Read_Receiver.ino */,
 				8BCB60D41D0FDE5200515379 /* ReadGPS.ino */,
+				8B6108921DA23A4D000EBE05 /* TinyGPS */,
 				8B0F2ABE1BF57A7E0044F792 /* _Stub */,
 				8B0F2AC11BF57A7E0044F792 /* AD7746 */,
 				8B0F2AC51BF57A7E0044F792 /* ADS1115 */,
@@ -1812,6 +1824,52 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8B6108921DA23A4D000EBE05 /* TinyGPS */ = {
+			isa = PBXGroup;
+			children = (
+				8B6108931DA23A4D000EBE05 /* examples */,
+				8B61089A1DA23A4D000EBE05 /* keywords.txt */,
+				8B61089B1DA23A4D000EBE05 /* TinyGPS.cpp */,
+				8B61089C1DA23A4D000EBE05 /* TinyGPS.h */,
+			);
+			name = TinyGPS;
+			path = ../Arduino/libraries/TinyGPS;
+			sourceTree = "<group>";
+		};
+		8B6108931DA23A4D000EBE05 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				8B6108941DA23A4D000EBE05 /* simple_test */,
+				8B6108961DA23A4D000EBE05 /* static_test */,
+				8B6108981DA23A4D000EBE05 /* test_with_gps_device */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		8B6108941DA23A4D000EBE05 /* simple_test */ = {
+			isa = PBXGroup;
+			children = (
+				8B6108951DA23A4D000EBE05 /* simple_test.pde */,
+			);
+			path = simple_test;
+			sourceTree = "<group>";
+		};
+		8B6108961DA23A4D000EBE05 /* static_test */ = {
+			isa = PBXGroup;
+			children = (
+				8B6108971DA23A4D000EBE05 /* static_test.pde */,
+			);
+			path = static_test;
+			sourceTree = "<group>";
+		};
+		8B6108981DA23A4D000EBE05 /* test_with_gps_device */ = {
+			isa = PBXGroup;
+			children = (
+				8B6108991DA23A4D000EBE05 /* test_with_gps_device.pde */,
+			);
+			path = test_with_gps_device;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1834,6 +1892,7 @@
 				8B0F2C9F1BF57A7F0044F792 /* ADXL345.h in Headers */,
 				8B0F2CBC1BF57A7F0044F792 /* HMC5843.h in Headers */,
 				8B0F2CD91BF57A7F0044F792 /* MPU6050_9Axis_MotionApps41.h in Headers */,
+				8B61089E1DA23A4D000EBE05 /* TinyGPS.h in Headers */,
 				8B0F2CE21BF57A7F0044F792 /* MS561101BA.h in Headers */,
 				8B0F2CF11BF57A7F0044F792 /* TCA6424A.h in Headers */,
 				8BF96BDC1C50DACE005A028B /* RC_Control.h in Headers */,
@@ -1846,6 +1905,7 @@
 				8B0F2CB41BF57A7F0044F792 /* CommunicationUtils.h in Headers */,
 				8BF96BDB1C50DACE005A028B /* PID_Control.h in Headers */,
 				8B0F2CA51BF57A7F0044F792 /* BMA150.h in Headers */,
+				8B6108911DA236CE000EBE05 /* GPS_Control.h in Headers */,
 				8B0F2CDD1BF57A7F0044F792 /* MPU9150_9Axis_MotionApps41.h in Headers */,
 				8B0F2CC21BF57A7F0044F792 /* IAQ2000.h in Headers */,
 				8B0F2CE51BF57A7F0044F792 /* PinChangeInt.h in Headers */,
@@ -1973,6 +2033,7 @@
 				8B0F2CB61BF57A7F0044F792 /* FreeIMU.cpp in Sources */,
 				8B0F2CEA1BF57A7F0044F792 /* Servo.cpp in Sources */,
 				8B0F2CBB1BF57A7F0044F792 /* HMC5843.cpp in Sources */,
+				8B61089D1DA23A4D000EBE05 /* TinyGPS.cpp in Sources */,
 				8B0F2CDB1BF57A7F0044F792 /* MPU9150.cpp in Sources */,
 				8B0F2CD61BF57A7F0044F792 /* MPU6050.cpp in Sources */,
 				8B0F2CA21BF57A7F0044F792 /* AK8975.cpp in Sources */,

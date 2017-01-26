@@ -5,12 +5,13 @@ SoftwareSerial mySerial(10, 11); // RX, TX
 TinyGPS gps;
 
 void gpsdump(TinyGPS &gps);
+void gpsdump1(TinyGPS &gps);
 void printFloat(double f, int digits = 2);
 
 void setup()  
 {
   // Open serial communications and wait for port to open:
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // set the data rate for the SoftwareSerial port
   mySerial.begin(9600);
@@ -31,7 +32,7 @@ void loop() // run over and over
   unsigned long start = millis();
 
   // Every 5 seconds we print an update
-  while (millis() - start < 5000) {
+  while (millis() - start < 3000) {
     if (mySerial.available()) {
       char c = mySerial.read();
       // Serial.print(c);  // uncomment to see raw GPS data
@@ -43,11 +44,11 @@ void loop() // run over and over
   }
 
   if (newdata) {
-    Serial.println("Acquired Data");
-    Serial.println("-------------");
-    gpsdump(gps);
-    Serial.println("-------------");
-    Serial.println();
+    //Serial.println("Acquired Data");
+    //Serial.println("-------------");
+    gpsdump1(gps);
+    //Serial.println("-------------");
+    //Serial.println();
   }
 
 }
@@ -100,6 +101,28 @@ void gpsdump(TinyGPS &gps)
   Serial.print("Stats: characters: "); Serial.print(chars); Serial.print(" sentences: ");
     Serial.print(sentences); Serial.print(" failed checksum: "); Serial.println(failed);
 }
+
+
+void gpsdump1(TinyGPS &gps)
+{
+  float flat, flon;
+  unsigned long age;
+  int year;
+  byte month, day, hour, minute, second, hundredths;
+
+  gps.f_get_position(&flat, &flon, &age);
+  gps.crack_datetime(&year, &month, &day, &hour, &minute, &second, &hundredths, &age);
+  
+  printFloat(flat, 5);  Serial.print(",      "); 
+  printFloat(flon, 5);  Serial.print(",      "); 
+  Serial.print(static_cast<int>(hour)); Serial.print(":"); 
+  Serial.print(static_cast<int>(minute)); Serial.print(":"); 
+  Serial.print(static_cast<int>(second)); Serial.print(",      ");
+  printFloat(gps.f_altitude());  Serial.print(",      ");
+  printFloat(gps.f_speed_mps()); Serial.print(",      ");
+  printFloat(gps.f_course()); Serial.println(" ");
+}
+
 
 void printFloat(double number, int digits)
 {

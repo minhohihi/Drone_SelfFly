@@ -88,7 +88,13 @@ void _GetRawSensorData()
 
 void _Wait(unsigned long nMicroTime)
 {
-    while(micros() - _gLoopTimer < nMicroTime);
+    while(micros() - _gLoopTimer < nMicroTime)
+    {
+        // Get Magnetic Raw Data
+        // Read Magnitude   : 0.44ms -+0.01ms  
+        _Mag_GetData();
+    }
+    
     _gLoopTimer = micros();
 }
 

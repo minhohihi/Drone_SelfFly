@@ -3,38 +3,51 @@
 Servo nServo0;
 Servo nServo1;
 
+int nServoPin0 = 9;
+int nServoPin1 = 10;
+
 void setup() {
     Serial.begin(115200);
     
-    nServo0.attach(8);
-    nServo1.attach(9);
+    nServo0.attach(nServoPin0, 600, 2400);
+    nServo1.attach(nServoPin1, 600, 2400);
+
+    delay(1000); 
+    nServo0.writeMicroseconds(1000); 
+    delay(10); 
+    nServo1.writeMicroseconds(1000); 
+    delay(1000); 
+
+    delay(1000); 
+    nServo0.writeMicroseconds(1500); 
+    delay(10); 
+    nServo1.writeMicroseconds(1500); 
+    delay(1000); 
+
+    delay(1000); 
+    nServo0.writeMicroseconds(2000); 
+    delay(10); 
+    nServo1.writeMicroseconds(2000); 
+    delay(1000); 
 }
 
-unsigned int a = 0;
-int nAngleH = 0;
-int nAngleV = 0;
 
-void loop() {
-    //Serial.write(((a++) % 255));
-    //Serial.write("a");
-
+void loop() 
+{
     if(Serial.available())
     {
-        nAngleH = Serial.read();
-        nAngleV = Serial.read();
+        int nAngleH = Serial.read();
+        int nAngleV = Serial.read();
 
         if('\n' == Serial.read())
         {          
-            //nServo0.write(nAngleH);
-            //nServo1.write(nAngleV);
+            nAngleH = (int)(map(nAngleH, 0, 180, 600, 2400));
+            nAngleV = (int)(map(nAngleV, 0, 180, 600, 2400));
 
-            nAngleH = (int)(map(nAngleH, -45, 45, 1250, 1750));
-            nAngleV = (int)(map(nAngleV, -45, 45, 1250, 1750));
-            //nAngleH = (int)(map(nAngleH, -45, 45, 1100, 1900));
-            //nAngleV = (int)(map(nAngleV, -45, 45, 1100, 1900));
             nServo0.writeMicroseconds(nAngleH);
+            delay(2);            
             nServo1.writeMicroseconds(nAngleV);
-            delay(1);
+            delay(2);
         }
     }
     

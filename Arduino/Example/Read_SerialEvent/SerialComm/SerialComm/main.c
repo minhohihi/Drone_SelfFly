@@ -24,12 +24,13 @@ int main()
     int nSerialPort0 = 0, nSerialPort1 = 0;
     int nReadMsgSize = 0;
     int nRunOtherSerial = 0;
-    int nAngle = 60;
+    int nAngle = 10;
+    int nSignFlag = 0;
     unsigned char nDataBuf[50] = {0, };
     
     pthread_t   nThread;
     
-    nSerialPort0 = OpenSerialPort("/dev/tty.wchusbserial1410");
+    nSerialPort0 = OpenSerialPort("/dev/cu.wchusbserial1410");
     //nSerialPort1 = OpenSerialPort("/dev/tty.wchusbserial1410");
     
     memset(nDataBuf, 0, 50 * sizeof(unsigned char));
@@ -43,13 +44,16 @@ int main()
         {
             printf("WiFi Module: %02x %02x %d-Byte  Angle:%d\n", nDataBuf[0], nDataBuf[1], nReadMsgSize, nAngle);
         
-            nDataBuf[0] = nAngle++;
+            if((nAngle < 10) || (nAngle > 170))
+                nSignFlag = !nSignFlag;
+            
+            nDataBuf[0] = nAngle;
             write(nSerialPort0, nDataBuf, 1);
             write(nSerialPort0, nDataBuf, 1);
             write(nSerialPort0, "\n", 1);
             //write(nSerialPort0, "\n", 1);
-            if(nAngle > 120)
-                nAngle = 60;
+            
+            nAngle = nAngle + (0 == nSignFlag ? 1 : -1);
         }
         
         usleep(20000);

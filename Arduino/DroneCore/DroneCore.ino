@@ -131,6 +131,9 @@ unsigned long       _gLoopTimer = 0;
 unsigned long       _gPrevSensorCapTime = 0;
 unsigned long       _gCurrSensorCapTime = 0;
 unsigned long       _gCurrTime = 0;
+unsigned long       _gLoopStartTime = 0;
+unsigned long       _gLoopEndTime = 0;
+
 #if USE_PROFILE
 unsigned long       _gProfileStartTime = 0;
 unsigned long       _gProfileEndTime = 0;
@@ -149,8 +152,12 @@ unsigned long       _gPrevBlinkTime = 0;
 
 // For LCD Control
 #if USE_LCD_DISPLAY
+    //LiquidCrystal_I2C   _gLCDHndl(0x27,16,2);
     LiquidCrystal_I2C   _gLCDHndl(0x3F,16,2);
 #endif
+
+String _gInputFromHost = "";
+boolean _gInputFromHostComplete = false;
 
 int                 _gDroneInitStep = 1;
 
@@ -220,7 +227,7 @@ void setup()
     _ESC_Initialize();
 
     // Initialize RemoteController
-    _RC_Initialize();
+    //_RC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
@@ -237,11 +244,12 @@ void setup()
     // Get Initial Accel & Gyro Value
     _GetRawSensorData();
 
-    _gLoopTimer = micros();
+    _gInputFromHost.reserve(200);
+
     _gDroneStatus = DRONESTATUS_STOP;
     _gCurrBatteryVolt = (analogRead(PIN_CHECK_POWER_STAT) + 65) * 1.2317;
     _gLED_Status = 0;
-
+    
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("********************************************************************"));
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
@@ -250,12 +258,17 @@ void setup()
         delay(1500);
         _gLCDHndl.clear();
     #endif
+
+    // Initialize Loop Timer
+    _gLoopTimer = micros();
 }
 
 
 void loop()
 {
     int                     i = 0;
+
+    _gLoopStartTime = micros();
 
     // Get Receiver Input
     // Then Mapping Actual Reciever Value to 1000 ~ 2000
@@ -290,7 +303,9 @@ void loop()
         PORTB |= B00001111;
 
         // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-        _GetRawSensorData();
+        // Time Comsumtion
+        // Read Gyro & Accel: 0.67ms -+0.01ms
+         _AccelGyro_GetGyroAccelData();
 
         // Set Relative Throttle Value by Adding Current Time
         nESCOut[0] = _gESCOutput[0] + nCurrTime;
@@ -316,9 +331,13 @@ void loop()
         }
     }
 
+    _Mag_GetData();
+
     #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
     #endif
+
+    _gLoopEndTime = micros();
 
     #if USE_LCD_DISPLAY
         _LCD_DispInfo();
@@ -341,10 +360,12 @@ void setup()
     Serial.flush();
     #endif
 
+    _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
+
     _LCD_Initialize();
 
     // Initialize RemoteController
-    _RC_Initialize();
+    //_RC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
@@ -373,7 +394,7 @@ void loop()
     static int bAllProcessDone = 0;
     static unsigned long cnt = 0;
     
-    if(!bAllProcessDone)
+    if(0)//(!bAllProcessDone)
     {
         Serialprintln(F("********************************************************************"));
         Serialprintln(F("********************************************************************"));
@@ -456,13 +477,73 @@ void loop()
         }
     }
 
-    delay(1000);
+    {
+        static unsigned long           nStart = 0;
+        static unsigned long           nEnd = 0;
+        static unsigned int            nCnt = 0;
+
+        nStart = micros();
+
+        _GetRawSensorData();
+        //_Get_RollPitchYaw();
+        nEnd = micros();
+
+        if(1)
+        {
+            static int nVal;
+
+            if(20 == nCnt)
+                nCnt = 0;
+            
+                 if( 0 == nCnt){nVal = nEnd - nStart; _gLCDHndl.setCursor(0, 0);}
+            else if( 1 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
+            else if( 2 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
+            else if( 3 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
+            else if( 4 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
+
+            else if( 5 == nCnt){nVal = (int)(_gRawMag[X_AXIS]); _gLCDHndl.setCursor(8, 0);}
+            else if( 6 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
+            else if( 7 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
+            else if( 8 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
+            else if( 9 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
+
+            else if(10 == nCnt){nVal = (int)(_gRawMag[Y_AXIS]); _gLCDHndl.setCursor(0, 1);}
+            else if(11 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
+            else if(12 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
+            else if(13 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
+            else if(14 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
+
+            else if(15 == nCnt){nVal = (int)(_gRawMag[Z_AXIS]); _gLCDHndl.setCursor(8, 1);}
+            else if(16 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
+            else if(17 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
+            else if(18 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
+            else if(19 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
+
+            nCnt++;
+        }
+        else
+            _LCD_DispInfo();
+    }
+
+    //_Wait(4000);
 
     bAllProcessDone = 1;
 }
 #endif
 
 
+void serialEvent() 
+{
+    while(Serial.available()) 
+    {
+        char inChar = (char)Serial.read();
+        
+        _gInputFromHost += inChar;
+        
+        if(inChar == '\n') 
+            _gInputFromHostComplete = true;
+    }
+}
 
 
 
