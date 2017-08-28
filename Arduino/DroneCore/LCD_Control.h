@@ -13,7 +13,7 @@ void _LCD_Initialize()
 {
     Serialprintln(F(" *      2. Start LCD Module Initialization   "));
     
-    _gLCDHndl.begin(16, 2, 0);                                                 //Initialize the LCD
+    _gLCDHndl.begin();                                                 //Initialize the LCD
     _gLCDHndl.backlight();                                                     //Activate backlight
     _gLCDHndl.clear();                                                         //Clear the LCD
     
@@ -248,6 +248,8 @@ void _LCD_DispInfo()
     nDispCnt++;
 }
 #endif /* LCD_Controller_h */
+
+
 
 
 

@@ -213,11 +213,13 @@ void setup()
     #endif
 
     // Read EEPROM Data
-    _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
-    _EEPROM_Read(EEPROM_DATA_RC_TYPE, 0);
-    _EEPROM_Read(EEPROM_DATA_RC_RANGE, 0);
     _EEPROM_Read(EEPROM_DATA_SIGN, 0);
+    _EEPROM_Read(EEPROM_DATA_RC_TYPE, 0);
+    _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
+    _EEPROM_Read(EEPROM_DATA_MPU_CALIMEAN, 0);
+    _EEPROM_Read(EEPROM_DATA_RC_RANGE, 0);
 
+    // Initialize LCD
     _LCD_Initialize();
 
     // Initialize LED
@@ -227,7 +229,7 @@ void setup()
     _ESC_Initialize();
 
     // Initialize RemoteController
-    //_RC_Initialize();
+    _RC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
@@ -331,7 +333,7 @@ void loop()
         }
     }
 
-    _Mag_GetData();
+    //_Mag_GetData();
 
     #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
@@ -362,10 +364,11 @@ void setup()
 
     _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
 
+    // Initialize LCD
     _LCD_Initialize();
 
     // Initialize RemoteController
-    //_RC_Initialize();
+    _RC_Initialize();
 
     // Initialize Gyro_Accel
     _AccelGyro_Initialize();
@@ -394,7 +397,7 @@ void loop()
     static int bAllProcessDone = 0;
     static unsigned long cnt = 0;
     
-    if(0)//(!bAllProcessDone)
+    if(!bAllProcessDone)
     {
         Serialprintln(F("********************************************************************"));
         Serialprintln(F("********************************************************************"));
@@ -433,7 +436,7 @@ void loop()
         Serialprintln(F("********************************************************************"));
         Serialprintln(F("********************************************************************"));
         Serialprintln(F(""));
-        //_AccelGyro_Calibration();
+        _AccelGyro_Calibration();
         Serialprintln(F(""));
 
         // Get Axis Type of Gyro & Accel
@@ -453,6 +456,7 @@ void loop()
         Serialprintln(F("********************************************************************"));
         _EEPROM_Write(EEPROM_DATA_SIGN);
         _EEPROM_Write(EEPROM_DATA_MPU_AXIS);
+        _EEPROM_Write(EEPROM_DATA_MPU_CALIMEAN);
         _EEPROM_Write(EEPROM_DATA_RC_TYPE);
         _EEPROM_Write(EEPROM_DATA_RC_RANGE);
 
@@ -462,10 +466,11 @@ void loop()
         Serialprintln(F("********************************************************************"));
         {
             int         nValidationChk = 0;
-            if((0 != _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 1)) ||
+            if((0 != _EEPROM_Read(EEPROM_DATA_SIGN, 1)) || 
+               (0 != _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 1)) ||
+               (0 != _EEPROM_Read(EEPROM_DATA_MPU_CALIMEAN, 1)) ||
                (0 != _EEPROM_Read(EEPROM_DATA_RC_TYPE, 1)) ||
-               (0 != _EEPROM_Read(EEPROM_DATA_RC_RANGE, 1)) ||
-               (0 != _EEPROM_Read(EEPROM_DATA_SIGN, 1)))
+               (0 != _EEPROM_Read(EEPROM_DATA_RC_RANGE, 1)))
             {
                 Serialprintln(F(" * "));
                 Serialprintln(F(" *    !!!  There are Invalid Data in EEPROM."));
@@ -474,58 +479,12 @@ void loop()
                 Serialprintln(F(" *    !!!  Please Setup Again"));
                 _EEPROM_Clear();
             }
+            else
+                Serialprintln(F(" *    Drone setting Done!!!! Let's go Fly~"));
         }
     }
 
-    {
-        static unsigned long           nStart = 0;
-        static unsigned long           nEnd = 0;
-        static unsigned int            nCnt = 0;
-
-        nStart = micros();
-
-        _GetRawSensorData();
-        //_Get_RollPitchYaw();
-        nEnd = micros();
-
-        if(1)
-        {
-            static int nVal;
-
-            if(20 == nCnt)
-                nCnt = 0;
-            
-                 if( 0 == nCnt){nVal = nEnd - nStart; _gLCDHndl.setCursor(0, 0);}
-            else if( 1 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
-            else if( 2 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
-            else if( 3 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
-            else if( 4 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
-
-            else if( 5 == nCnt){nVal = (int)(_gRawMag[X_AXIS]); _gLCDHndl.setCursor(8, 0);}
-            else if( 6 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
-            else if( 7 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
-            else if( 8 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
-            else if( 9 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
-
-            else if(10 == nCnt){nVal = (int)(_gRawMag[Y_AXIS]); _gLCDHndl.setCursor(0, 1);}
-            else if(11 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
-            else if(12 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
-            else if(13 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
-            else if(14 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
-
-            else if(15 == nCnt){nVal = (int)(_gRawMag[Z_AXIS]); _gLCDHndl.setCursor(8, 1);}
-            else if(16 == nCnt)_gLCDHndl.print(abs(nVal) / 1000);
-            else if(17 == nCnt)_gLCDHndl.print((abs(nVal) / 100) % 10);
-            else if(18 == nCnt)_gLCDHndl.print((abs(nVal) / 10) % 10);
-            else if(19 == nCnt)_gLCDHndl.print(abs(nVal) % 10);
-
-            nCnt++;
-        }
-        else
-            _LCD_DispInfo();
-    }
-
-    //_Wait(4000);
+    _Wait(4000);
 
     bAllProcessDone = 1;
 }
@@ -544,6 +503,8 @@ void serialEvent()
             _gInputFromHostComplete = true;
     }
 }
+
+
 
 
 

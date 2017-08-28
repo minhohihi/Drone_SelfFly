@@ -60,7 +60,7 @@ void _AccelGyro_Initialize()
     delay(300);
     
     // Calibration
-    _AccelGyro_Calibration();
+    //_AccelGyro_Calibration();
     
     delay(300);
     
@@ -143,6 +143,9 @@ void _AccelGyro_Calibration()
     int                     nRawAccel[3] = {0, };
     int                     nTemperature = 0;
 
+    Serialprintln(F(" * Please wait for 10 seconds"));
+    Serialprintln(F(" "));
+        
     _AccelGyro_DispStatus(1);
     
     for(i=0 ; i<=Z_AXIS ; i++)
@@ -235,7 +238,7 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
 
         for(i=0 ; i<3 ; i++)
         {
-            if((nAngle[i] < -30) || (nAngle[i] > 30))
+            if((nAngle[i] < -15) || (nAngle[i] > 15))
             {
                 nTmpAxis = i;
                 if(nAngle[i] < 0)
@@ -349,7 +352,5 @@ void _AccelGyro_DispStatus(int nCase)
 }
 
 #endif /* MPU6050_Controller_h */
-
-
 
 

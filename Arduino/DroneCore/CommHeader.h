@@ -118,12 +118,17 @@
 #define USE_AUTO_LEVEL                      (1)
 #define USE_SETUP_MODE                      (0)
 
-#define USE_PRINT                           (0)
+#if USE_SETUP_MODE
+    #define USE_PRINT                       (1)
+#else
+    #define USE_PRINT                       (0)
+#endif
+    
 #if USE_PRINT
     #define PRINT_SERIAL                    (0)
     #define USE_LCD_DISPLAY                 (!PRINT_SERIAL)
-    #define USE_PROFILE                     (1)
-    #define USE_EXT_SR_READ                 (0)
+    #define USE_PROFILE                     (0)
+    #define USE_EXT_SR_READ                 (1)
     #define SERIAL_BAUDRATE                 (115200)
 #else
     #define PRINT_SERIAL                    (0)
@@ -168,7 +173,33 @@ typedef enum _EEPROM_DataMap
     EEPROM_DATA_MPU_AXIS0_TYPE = EEPROM_DATA_MPU_AXIS,
     EEPROM_DATA_MPU_AXIS1_TYPE,
     EEPROM_DATA_MPU_AXIS2_TYPE,
-
+    
+    EEPROM_DATA_MPU_CALIMEAN,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS0_0 = EEPROM_DATA_MPU_CALIMEAN,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS0_1,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS0_2,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS0_3,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS1_0,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS1_1,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS1_2,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS1_3,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS2_0,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS2_1,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS2_2,
+    EEPROM_DATA_MPU_CALIMEAN_G_AXIS2_3,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS0_0,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS0_1,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS0_2,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS0_3,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS1_0,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS1_1,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS1_2,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS1_3,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS2_0,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS2_1,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS2_2,
+    EEPROM_DATA_MPU_CALIMEAN_A_AXIS2_3,
+    
     // For Type of Transmitter Stick & Indicatinf Whether Transmitter Value is Reverse or Not
     EEPROM_DATA_RC_TYPE,
     EEPROM_DATA_RC_CH0_TYPE = EEPROM_DATA_RC_TYPE,
@@ -215,5 +246,7 @@ typedef enum _EEPROM_DataMap
 
 
 #endif /* CommHeader_h */
+
+
 
 

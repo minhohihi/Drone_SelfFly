@@ -190,7 +190,7 @@ void _RC_CheckAxis(int nAxisIdx)
     }
     else if(4 == nAxisIdx)
     {
-        Serialprintln(F("4. Please Move Gear Stick to Up and Back to Center"));
+        Serialprintln(F("        Please Move Gear Stick to Up and Back to Center"));
         Serialprint(F("                Gear Channel is ["));
     }
     
@@ -200,10 +200,10 @@ void _RC_CheckAxis(int nAxisIdx)
     while(nCurrTime > millis() && (-1 == nChNum))
     {
         if((_gRCSignalVal[0] < 1200) || (_gRCSignalVal[0] > 1700)) nChNum = B00000000;
-        if((_gRCSignalVal[1] < 1200) || (_gRCSignalVal[1] > 1700)) nChNum = B00000001;
-        if((_gRCSignalVal[2] < 1200) || (_gRCSignalVal[2] > 1700)) nChNum = B00000010;
-        if((_gRCSignalVal[3] < 1200) || (_gRCSignalVal[3] > 1700)) nChNum = B00000011;
-        if((_gRCSignalVal[4] > 1700)) nChNum = B00000100;
+        else if((_gRCSignalVal[1] < 1200) || (_gRCSignalVal[1] > 1700)) nChNum = B00000001;
+        else if((_gRCSignalVal[2] < 1200) || (_gRCSignalVal[2] > 1700)) nChNum = B00000010;
+        else if((_gRCSignalVal[3] < 1200) || (_gRCSignalVal[3] > 1700)) nChNum = B00000011;
+        else if((_gRCSignalVal[4] > 1700)) nChNum = B00000100;
     }
     _gRCChMap[nAxisIdx] = nChNum;
     
@@ -243,7 +243,7 @@ void _RC_GetRCRange()
     Serialprint(F("          "));
     
     i = 0;
-    nCurrTime = millis() + 7000;
+    nCurrTime = millis() + 20000;
     while(nCurrTime > millis())
     {
         // Set Min & Max Range
@@ -263,7 +263,7 @@ void _RC_GetRCRange()
         
         delay(50);
     }
-    Serialprint(F(" "));
+    Serialprintln(F(" "));
     
     for(i=0 ; i<5 ; i++)
         _gRCSignal_M[i] = (_gRCSignal_H[i] + _gRCSignal_L[i]) / 2;
@@ -420,5 +420,7 @@ void _RC_DispStatus(int nCase)
 }
 
 #endif /* RC_Controller_h */
+
+
 
 

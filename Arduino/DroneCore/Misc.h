@@ -13,12 +13,15 @@ void _Check_Drone_Status()
 {
     int32_t                 nLEDPeriod = 500000;
     
-    if((1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
+    if(((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && 
+       ((_gRCSignal_L[_gRCChMap[CH_TYPE_YAW]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_READY;
     
     //When yaw stick is back in the center position start the motors (step 2).
     if((DRONESTATUS_READY == _gDroneStatus) &&
-       (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1400 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
+       ((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && 
+       ((_gRCSignal_M[_gRCChMap[CH_TYPE_YAW]] - 50) < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]) &&
+       ((_gRCSignal_M[_gRCChMap[CH_TYPE_YAW]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
     {
         int         i = 0;
         
@@ -46,7 +49,8 @@ void _Check_Drone_Status()
     
     //Stopping the motors: throttle low and yaw right.
     if(((DRONESTATUS_START == _gDroneStatus) || (DRONESTATUS_READY == _gDroneStatus)) &&
-       (1050 > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && (1950 < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
+       ((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && 
+       ((_gRCSignal_H[_gRCChMap[CH_TYPE_YAW]] - 50) < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_STOP;
     
     // Set LED Period as 200ms When Low Voltage
@@ -123,7 +127,9 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
         if('k' != EEPROM.read(nEEPRomAddress++)) nValidationChk = -1;
         
         if(0 == nValidationChk)
-            Serialprint(F(" *                Verified!! You can Fly, Maverick!!     "));
+            Serialprintln(F(" *                Verified!! You can Fly, Maverick!!     "));
+        else
+            Serialprintln(F(" *                Verification Failed!!"));
     }
     else if(EEPROM_DATA_MPU_AXIS == nStartAddress)
     {
@@ -131,7 +137,7 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
         
         nEEPRomAddress = EEPROM_DATA_MPU_AXIS0_TYPE;
         
-        for(i=0 ; i<3 ; i++)
+        for(i=0 ; i<=Z_AXIS ; i++)
         {
             byte            nTmpAccelGyroAxis;
 
@@ -152,6 +158,50 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
                 Serialprint(_gGyroAccelAxis[i]);
                 Serialprint(F(" / "));
                 Serialprint(_gMPUAxisRvrsFlag[i]);
+            }
+        }
+        Serialprintln(F(" ")); Serialprintln(F(" "));
+    }
+    else if(EEPROM_DATA_MPU_CALIMEAN == nStartAddress)
+    {
+        Serialprintln(F(" *            => Read Calibrated MPU   "));
+        
+        nEEPRomAddress = EEPROM_DATA_MPU_CALIMEAN;
+
+        Serialprint(F("                  "));
+        for(i=0 ; i<=Z_AXIS ; i++)
+        {
+            float nTmpVal;
+            EEPROM.get(nEEPRomAddress, nTmpVal);
+            nEEPRomAddress += sizeof(float);
+        
+            if((1 == nValidMode) && (_gCalibMeanGyro[i] != nTmpVal))
+                nValidationChk = -1;
+            else
+            {
+                _gCalibMeanGyro[i] = nTmpVal;
+                
+                Serialprint(_gCalibMeanGyro[i]);
+                Serialprint(F(" / "));
+            }
+        }
+        Serialprintln(F(" "));
+
+        Serialprint(F("                  "));
+        for(i=0 ; i<=Z_AXIS ; i++)
+        {
+            float nTmpVal;
+            EEPROM.get(nEEPRomAddress, nTmpVal);
+            nEEPRomAddress += sizeof(float);
+            
+            if((1 == nValidMode) && (_gCalibMeanAccel[i] != nTmpVal))
+                nValidationChk = -1;
+            else
+            {
+                _gCalibMeanAccel[i] = nTmpVal;
+                
+                Serialprint(_gCalibMeanAccel[i]);
+                Serialprint(F(" / "));
             }
         }
         Serialprintln(F(" ")); Serialprintln(F(" "));
@@ -197,9 +247,10 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
         {
             int             nTmpL, nTmpM, nTmpH;
             
-            nTmpL = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
-            nTmpM = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
-            nTmpH = (EEPROM.read(nEEPRomAddress++) << 8) | EEPROM.read(nEEPRomAddress++);
+            EEPROM.get(nEEPRomAddress, nTmpL);     nEEPRomAddress += sizeof(int);
+            EEPROM.get(nEEPRomAddress, nTmpM);     nEEPRomAddress += sizeof(int);
+            EEPROM.get(nEEPRomAddress, nTmpH);     nEEPRomAddress += sizeof(int);
+            
             if((1 == nValidMode) &&
                ((_gRCSignal_L[i] != nTmpL) || (_gRCSignal_M[i] != nTmpM) || (_gRCSignal_H[i] != nTmpH)))
                 nValidationChk = -1;
@@ -261,7 +312,7 @@ void _EEPROM_Write(int nStartAddress)
         nEEPRomAddress = EEPROM_DATA_MPU_AXIS0_TYPE;
 
         Serialprint(F("                  "));
-        for(i=0 ; i<3 ; i++)
+        for(i=0 ; i<=Z_AXIS ; i++)
         {
             EEPROM.write(nEEPRomAddress++, _gGyroAccelAxis[i]);
             
@@ -269,7 +320,34 @@ void _EEPROM_Write(int nStartAddress)
             Serialprint(F(" / "));
         }
         Serialprintln(F(" "));
-
+    }
+    else if(EEPROM_DATA_MPU_CALIMEAN == nStartAddress)
+    {
+        Serialprintln(F(" *            => Write Calibrated MPU   "));
+        
+        nEEPRomAddress = EEPROM_DATA_MPU_CALIMEAN;
+        
+        Serialprint(F("                  "));
+        for(i=0 ; i<=Z_AXIS ; i++)
+        {
+            EEPROM.put(nEEPRomAddress, _gCalibMeanGyro[i]);
+            nEEPRomAddress += sizeof(float);
+            
+            Serialprint(_gCalibMeanGyro[i]);
+            Serialprint(F(" / "));
+        }
+        Serialprintln(F(""));
+        
+        Serialprint(F("                  "));
+        for(i=0 ; i<=Z_AXIS ; i++)
+        {
+            EEPROM.put(nEEPRomAddress, _gCalibMeanAccel[i]);
+            nEEPRomAddress += sizeof(float);
+            
+            Serialprint(_gCalibMeanAccel[i]);
+            Serialprint(F(" / "));
+        }
+        Serialprintln(F(" "));
     }
     else if(EEPROM_DATA_RC_TYPE == nStartAddress)
     {
@@ -286,7 +364,6 @@ void _EEPROM_Write(int nStartAddress)
             Serialprint(F(" / "));
         }
         Serialprintln(F(" "));
-        
     }
     else if(EEPROM_DATA_RC_RANGE == nStartAddress)
     {
@@ -296,12 +373,9 @@ void _EEPROM_Write(int nStartAddress)
         
         for(i=0 ; i<4 ; i++)
         {
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_L[i] >> 8);
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_L[i] & B11111111);
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_M[i] >> 8);
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_M[i] & B11111111);
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_H[i] >> 8);
-            EEPROM.write(nEEPRomAddress++, _gRCSignal_H[i] & B11111111);
+            EEPROM.put(nEEPRomAddress, _gRCSignal_L[i]);  nEEPRomAddress += sizeof(int);  
+            EEPROM.put(nEEPRomAddress, _gRCSignal_M[i]);  nEEPRomAddress += sizeof(int);  
+            EEPROM.put(nEEPRomAddress, _gRCSignal_H[i]);  nEEPRomAddress += sizeof(int);  
 
             Serialprint(F("                  "));
             Serialprint(_gRCSignal_L[i]);
@@ -315,7 +389,7 @@ void _EEPROM_Write(int nStartAddress)
     
     delay(300);
     
-    Serialprintln(F(" *            => Done!!   "));
+    Serialprintln(F(" *                => Done!!   "));
 }
 
 
@@ -382,5 +456,7 @@ float _InvSqrt(float nNumber)
 }
 
 #endif /* Misc_h */
+
+
 
 
