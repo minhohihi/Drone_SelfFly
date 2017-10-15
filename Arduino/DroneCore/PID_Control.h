@@ -85,9 +85,10 @@ void _CalculatePID()
     }
 
     // PID configuration
+    #if 1
     {
         // Roll
-        nCurrErrRate = _gEstRoll - nEstimatedRCVal[CH_TYPE_ROLL];
+        nCurrErrRate = _gEstimatedRPY[0] - nEstimatedRCVal[CH_TYPE_ROLL];
         
         _gRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
         _gRPY_PID[0].nI_ErrRate += nPIDGainTable[0][1] * nCurrErrRate;
@@ -102,7 +103,7 @@ void _CalculatePID()
 
     {
         // Picth
-        nCurrErrRate = _gEstPitch - nEstimatedRCVal[CH_TYPE_PITCH];
+        nCurrErrRate = _gEstimatedRPY[1] - nEstimatedRCVal[CH_TYPE_PITCH];
         
         _gRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
         _gRPY_PID[1].nI_ErrRate += nPIDGainTable[1][1] * nCurrErrRate;
@@ -117,7 +118,7 @@ void _CalculatePID()
 
     {
         // Yaw
-        nCurrErrRate = _gEstYaw - nEstimatedRCVal[CH_TYPE_YAW];
+        nCurrErrRate = _gEstimatedRPY[2] - nEstimatedRCVal[CH_TYPE_YAW];
         
         _gRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;
         _gRPY_PID[2].nI_ErrRate += nPIDGainTable[2][1] * nCurrErrRate;
@@ -129,6 +130,23 @@ void _CalculatePID()
         
         _gRPY_PID[2].nPrevErrRate = nCurrErrRate;
     }
+    #else
+    for(i=0 ; i<3 ; i++)
+    {
+        int          nIdx = (2 != i) ? i : CH_TYPE_YAW;
+        nCurrErrRate = _gEstimatedRPY[i] - nEstimatedRCVal[nIdx];
+        
+        _gRPY_PID[i].nP_ErrRate = nPIDGainTable[i][0] * nCurrErrRate;
+        _gRPY_PID[i].nI_ErrRate += nPIDGainTable[i][1] * nCurrErrRate;
+        _gRPY_PID[i].nI_ErrRate = _Clip3Float(_gRPY_PID[i].nI_ErrRate, -nPIDGainTable[i][3], nPIDGainTable[i][3]);
+        _gRPY_PID[i].nD_ErrRate = nPIDGainTable[i][2] * (nCurrErrRate - _gRPY_PID[i].nPrevErrRate);
+        
+        _gRPY_PID[i].nBalance   = _gRPY_PID[i].nP_ErrRate + _gRPY_PID[i].nI_ErrRate + _gRPY_PID[i].nD_ErrRate;
+        _gRPY_PID[i].nBalance   = _Clip3Float(_gRPY_PID[i].nBalance, -nPIDGainTable[i][3], nPIDGainTable[i][3]);
+        
+        _gRPY_PID[i].nPrevErrRate = nCurrErrRate;
+    }
+    #endif
 }
 
 
@@ -172,6 +190,18 @@ void _Calculate_Altitude(float *pEstimatedThrottle)
 }
 
 #endif /* PID_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

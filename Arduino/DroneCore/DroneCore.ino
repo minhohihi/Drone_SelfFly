@@ -9,6 +9,7 @@
 #include <HMC5883L.h>
 #include <MS561101BA.h>
 #include <math.h>
+#include <Timer.h>
 #if USE_LCD_DISPLAY
     #include <LiquidCrystal_I2C.h>
 #endif
@@ -120,6 +121,7 @@ int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 
 // For Estimated Status of Drone
 float               _gEstRoll = 0.0, _gEstPitch = 0.0, _gEstYaw = 0.0;
+float               _gEstimatedRPY[3] = {0.0, };            // 0:Roll,   1:Pitch,   2:Yaw
 //float               _gFineGyro[3] = {0.0, };
 //float               _gQuat[4] = {0.0, };                  // quaternion
 //float               _gEstGravity[3] = {0.0, };            // estimated gravity direction
@@ -156,10 +158,20 @@ unsigned long       _gPrevBlinkTime = 0;
     LiquidCrystal_I2C   _gLCDHndl(0x3F,16,2);
 #endif
 
-String _gInputFromHost = "";
-boolean _gInputFromHostComplete = false;
+String              _gInputFromHost = "";
+boolean             _gInputFromHostComplete = false;
 
 int                 _gDroneInitStep = 1;
+
+Timer               LEDTimer;
+//Timer               SonarTimer;
+
+byte                bIsMPUInitialized = 0;
+byte                bIsMagnitudeInitialized = 0;
+byte                bIsBarometerInitialized = 0;
+byte                bIsSonarInitialized = 0;
+byte                bIsThrottleInitialized = 0;
+
 
 /*----------------------------------------------------------------------------------------
  Static Function
@@ -186,7 +198,6 @@ int                 _gDroneInitStep = 1;
 #include "ESC_Control.h"
 #include "MPU6050_Control.h"
 #include "HMC5883L_Control.h"
-//#include "HS5611_Control.h"
 //#include "SR04_Control.h"
 #include "Misc.h"
 #include "AHRS_Control.h"
@@ -212,15 +223,15 @@ void setup()
     Serial.flush();
     #endif
 
+    // Initialize LCD
+    _LCD_Initialize();
+
     // Read EEPROM Data
     _EEPROM_Read(EEPROM_DATA_SIGN, 0);
     _EEPROM_Read(EEPROM_DATA_RC_TYPE, 0);
     _EEPROM_Read(EEPROM_DATA_MPU_AXIS, 0);
     _EEPROM_Read(EEPROM_DATA_MPU_CALIMEAN, 0);
     _EEPROM_Read(EEPROM_DATA_RC_RANGE, 0);
-
-    // Initialize LCD
-    _LCD_Initialize();
 
     // Initialize LED
     _LED_Initialize();
@@ -235,7 +246,7 @@ void setup()
     _AccelGyro_Initialize();
 
     // Initialize Magnetic
-    _Mag_Initialize();
+    //_Mag_Initialize();
 
     // Initialize Barometer
     //_Barometer_Initialize();
@@ -257,7 +268,7 @@ void setup()
     Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   ")); Serialprintln(F("   "));
 
     #if USE_LCD_DISPLAY
-        delay(1500);
+        delay(500);
         _gLCDHndl.clear();
     #endif
 
@@ -268,13 +279,22 @@ void setup()
 
 void loop()
 {
-    int                     i = 0;
-
+    static int       nLoopCnt = 0;
+    
     _gLoopStartTime = micros();
-
+    
+    LEDTimer.update();
+    
+    // Get Accel & Gryo Data
+//    if(1 == (nLoopCnt % 2))
+//        _AccelGyro_GetGyroData(); 
+//    else
+//        _AccelGyro_GetAccelData();
+    _AccelGyro_GetGyroAccelData();
+    
     // Get Receiver Input
     // Then Mapping Actual Reciever Value to 1000 ~ 2000
-    for(i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
+    for(int i=0 ; i<=CH_TYPE_TAKE_LAND ; i++)
         _RC_Compensate(i);
 
     // Check Drone Status
@@ -292,54 +312,17 @@ void loop()
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    // Wait Until Passing 4ms.
-    _Wait(4000);
+    // Set Throttle to ESCs
+    _ESC_Update();
 
-    {
-        unsigned long           nESCOut[4] = {0, };
-        unsigned long           nCurrTime = micros();
-        int                     i = 0;
+    _Wait(5000);
 
-        // Update ESC
-        // Set Digital Port 8, 9, 10, and 11 as high.
-        PORTB |= B00001111;
-
-        // Get Sensor (Gyro / Accel / Megnetic / Baro / Temp)
-        // Time Comsumtion
-        // Read Gyro & Accel: 0.67ms -+0.01ms
-         _AccelGyro_GetGyroAccelData();
-
-        // Set Relative Throttle Value by Adding Current Time
-        nESCOut[0] = _gESCOutput[0] + nCurrTime;
-        nESCOut[1] = _gESCOutput[1] + nCurrTime;
-        nESCOut[2] = _gESCOutput[2] + nCurrTime;
-        nESCOut[3] = _gESCOutput[3] + nCurrTime;
-
-        while(PORTB & B00001111)
-        {
-            nCurrTime = micros();
-
-            if(nESCOut[0] <= nCurrTime)
-                PORTB &= B11111110;
-
-            if(nESCOut[1] <= nCurrTime)
-                PORTB &= B11111101;
-
-            if(nESCOut[2] <= nCurrTime)
-                PORTB &= B11111011;
-
-            if(nESCOut[3] <= nCurrTime)
-                PORTB &= B11110111;
-        }
-    }
-
-    //_Mag_GetData();
-
+    _gLoopEndTime = micros();
+    nLoopCnt++;
+    
     #if PRINT_SERIAL || USE_EXT_SR_READ
         _print_Data();
     #endif
-
-    _gLoopEndTime = micros();
 
     #if USE_LCD_DISPLAY
         _LCD_DispInfo();
@@ -503,6 +486,18 @@ void serialEvent()
             _gInputFromHostComplete = true;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

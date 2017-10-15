@@ -11,28 +11,28 @@
 
 void _Check_Drone_Status()
 {
-    int32_t                 nLEDPeriod = 500000;
-    
     if(((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && 
        ((_gRCSignal_L[_gRCChMap[CH_TYPE_YAW]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
         _gDroneStatus = DRONESTATUS_READY;
     
     //When yaw stick is back in the center position start the motors (step 2).
     if((DRONESTATUS_READY == _gDroneStatus) &&
-       ((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) && 
+       ((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) < _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]) &&
        ((_gRCSignal_M[_gRCChMap[CH_TYPE_YAW]] - 50) < _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]) &&
        ((_gRCSignal_M[_gRCChMap[CH_TYPE_YAW]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]]))
     {
         int         i = 0;
         
-        _gEstRoll       = 0.0;
-        _gEstPitch      = 0.0;
-        _gEstYaw        = 0.0;
-        _gAngleRoll     = 0.0;
-        _gAnglePitch    = 0.0;
-        _gAnglePitchOut = 0.0;
-        _gAngleRollOut  = 0.0;
-        _gbAngleSet     = false;
+        _gEstimatedRPY[0]   = 0.0;
+        _gEstimatedRPY[1]   = 0.0;
+        _gEstimatedRPY[2]   = 0.0;
+        _gAngleRoll         = 0.0;
+        _gAnglePitch        = 0.0;
+        _gAngleYaw          = 0.0;
+        _gAnglePitchOut     = 0.0;
+        _gAngleRollOut      = 0.0;
+        _gAngleYawOut       = 0.0;
+        _gbAngleSet         = false;
 
         //Reset the pid controllers for a bumpless start.
         for(i=0 ; i<3 ; i++)
@@ -46,6 +46,11 @@ void _Check_Drone_Status()
         
         _gDroneStatus = DRONESTATUS_START;
     }
+    else if((DRONESTATUS_START == _gDroneStatus) &&
+            ((_gRCSignal_L[_gRCChMap[CH_TYPE_THROTTLE]] + 50) > _gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]]))
+    {
+        _gDroneStatus = DRONESTATUS_READY;
+    }
     
     //Stopping the motors: throttle low and yaw right.
     if(((DRONESTATUS_START == _gDroneStatus) || (DRONESTATUS_READY == _gDroneStatus)) &&
@@ -58,11 +63,11 @@ void _Check_Drone_Status()
     //    nLEDPeriod = 200000;
 
     if(DRONESTATUS_STOP == _gDroneStatus)
-        _LED_Blink(1, 1, 0, nLEDPeriod);                                 // Turn On a Red Light
+        _LED_SetDroneStatusColor(1, 1, 0);                                 // Turn On a Red Light
     else if(DRONESTATUS_READY == _gDroneStatus)
-        _LED_Blink(0, 1, 1, nLEDPeriod);                                 // Turn On a Green Light
+        _LED_SetDroneStatusColor(0, 1, 1);                                 // Turn On a Green Light
     else if(DRONESTATUS_START == _gDroneStatus)
-        _LED_Blink(0, 0, 1, nLEDPeriod);                                 // Turn On a Blue Light
+        _LED_SetDroneStatusColor(0, 0, 1);                                 // Turn On a Blue Light
     
     return;
 }
@@ -76,30 +81,50 @@ void _GetRawSensorData()
     _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     
     // Get Gyro Raw Data && Accel Raw Data
-    _AccelGyro_GetGyroAccelData();
+    // Read Gyro & Accel: 0.67ms -+0.01ms
+    if(1 == bIsMPUInitialized)
+        _AccelGyro_GetGyroAccelData();
 
     // Get Magnetic Raw Data
-    _Mag_GetData();
+    // Read Magnitude   : 0.44ms -+0.01ms
+    if(1 == bIsMagnitudeInitialized)
+        _Mag_GetData();
 
     // Get Barometer Raw Data
-    //_Barometer_GetData();
+    if(1 == bIsBarometerInitialized)
+        //_Barometer_GetData();
 
     // Get Sonar Raw Data
-    //_Sonar_GetData();
-    //_Sonar_GetData_WithPeriod();
+    if(1 == bIsSonarInitialized)
+    {
+        //_Sonar_GetData();
+        //_Sonar_GetData_WithPeriod();
+    }
 }
 
 
 void _Wait(unsigned long nMicroTime)
 {
-    while(micros() - _gLoopTimer < nMicroTime)
-    {
-        // Get Magnetic Raw Data
-        // Read Magnitude   : 0.44ms -+0.01ms  
-        _Mag_GetData();
-    }
+    int nDone = 0;
     
-    _gLoopTimer = micros();
+    while((micros() - _gLoopStartTime) < nMicroTime)
+    {
+        if(0 == nDone)
+        {
+            // Get Gyro Raw Data && Accel Raw Data
+            // Read Gyro & Accel: 0.67ms -+0.01ms
+            //_AccelGyro_GetGyroAccelData();
+            Wire.beginTransmission(0x68);
+            Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
+            Wire.endTransmission();
+
+            // Get Magnetic Raw Data
+            // Read Magnitude   : 0.44ms -+0.01ms
+            //_Mag_GetData();
+
+            nDone = 1;
+        }
+    }
 }
 
 
@@ -224,7 +249,10 @@ int _EEPROM_Read(int nStartAddress, int nValidMode)
                 _gRCChMap[i] = nTmpRCChAxis;
                 _gRCRvrsFlag[i] = (!(!(_gRCChMap[i] & B10000000)));
                 _gRCChMap[i] &= B01111111;
-                
+
+                if(i < 2)
+                    _gRCRvrsFlag[i] = !(_gRCRvrsFlag[i]);
+                    
                 if((0 > _gRCChMap[i]) || (5 <= _gRCChMap[i]))
                     nValidationChk = -1;
 
@@ -456,6 +484,18 @@ float _InvSqrt(float nNumber)
 }
 
 #endif /* Misc_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

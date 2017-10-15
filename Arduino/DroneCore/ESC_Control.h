@@ -30,7 +30,9 @@ void _ESC_Initialize()
     for(i=0 ; i<500 ; i++)
         _ESC_SetDefault();
     
-    delay(300);
+    delay(100);
+    
+    bIsThrottleInitialized = 1;
     
     _ESC_DispStatus(2);
 }
@@ -40,32 +42,22 @@ void _ESC_Update()
 {
     unsigned long           nESCOut[4] = {0, };
     unsigned long           nCurrTime = micros();
-    int                     i = 0;
     
     // Set Digital Port 8, 9, 10, and 11 as high.
     PORTB |= B00001111;
-
+    
     // Set Relative Throttle Value by Adding Current Time
-    nESCOut[0] = _gESCOutput[0] + nCurrTime;
-    nESCOut[1] = _gESCOutput[1] + nCurrTime;
-    nESCOut[2] = _gESCOutput[2] + nCurrTime;
-    nESCOut[3] = _gESCOutput[3] + nCurrTime;
+    for(int i=0 ; i<4 ; i++)
+        nESCOut[i] = _gESCOutput[i] + nCurrTime;
     
     while(PORTB & B00001111)
     {
         nCurrTime = micros();
-
-        if(nESCOut[0] <= nCurrTime)
-            PORTB &= B11111110;
-
-        if(nESCOut[1] <= nCurrTime)
-            PORTB &= B11111101;
-
-        if(nESCOut[2] <= nCurrTime)
-            PORTB &= B11111011;
-
-        if(nESCOut[3] <= nCurrTime)
-            PORTB &= B11110111;
+        
+        if(nESCOut[0] <= nCurrTime) PORTB &= B11111110;
+        if(nESCOut[1] <= nCurrTime) PORTB &= B11111101;
+        if(nESCOut[2] <= nCurrTime) PORTB &= B11111011;
+        if(nESCOut[3] <= nCurrTime) PORTB &= B11110111;
     }
 }
 
@@ -131,6 +123,18 @@ void _ESC_DispStatus(int nCase)
     #endif
 }
 #endif /* ESC_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

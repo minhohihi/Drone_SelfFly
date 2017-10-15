@@ -25,11 +25,11 @@ void _RC_Initialize()
 
     _RC_Wait_Signal();
     
-    delay(300); _RC_DispStatus(1);
-    delay(300); _RC_DispStatus(1);
-    delay(300); _RC_DispStatus(1);
-    delay(300); _RC_DispStatus(1);
-    delay(300); _RC_DispStatus(1);
+    delay(100); _RC_DispStatus(1);
+    delay(100); _RC_DispStatus(1);
+    delay(100); _RC_DispStatus(1);
+    delay(100); _RC_DispStatus(1);
+    delay(100); _RC_DispStatus(1);
     
     _RC_DispStatus(2);
 }
@@ -420,6 +420,18 @@ void _RC_DispStatus(int nCase)
 }
 
 #endif /* RC_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

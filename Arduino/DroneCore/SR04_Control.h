@@ -29,6 +29,10 @@ void _Sonar_Initialize()
         if(0 == (i % 10))
             _Sonar_DispStatus(1);
     }
+
+    SonarTimer.every(100, _Sonar_GetData);
+    
+    bIsSonarInitialized = 1;
     
     _Sonar_DispStatus(2);
 }
@@ -41,7 +45,7 @@ void _Sonar_GetData()
     PORTC &= B11111101;
 
     // Get Raw Distance Value
-    _gRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, SONAR_MAX_WAIT);
+    _gRawDist = pulseIn(PIN_SONAR_ECHO, HIGH, 100000);
 
     // Calculate Distance From Ground
     _gDistFromGnd = _gRawDist * 0.017; // (340(m/s) * 1000(mm) / 1000000(microsec) / 2(oneway))
@@ -112,6 +116,18 @@ void _Sonar_DispStatus(int nCase)
 }
 
 #endif /* SR04_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

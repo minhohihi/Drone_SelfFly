@@ -10,9 +10,12 @@
 
 void _Get_RollPitchYaw()
 {
-    const float     nOffset0 = 0.7f;
+    const float     nOffset0 = 0.9f;
     const float     nOffset1 = 1.0f  - nOffset0;
     int             i = 0;
+    const int       nRollAxisIdx  = _gGyroAccelAxis[0];
+    const int       nPitchAxisIdx = _gGyroAccelAxis[1];
+    const int       nYawAxisIdx   = _gGyroAccelAxis[2];
 
     for(i=0 ; i<3 ; i++)
     {
@@ -24,18 +27,15 @@ void _Get_RollPitchYaw()
         }
     }
     
-    _gEstRoll  = (_gEstRoll * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[0]] / GYRO_FS) * nOffset1);
-    _gEstPitch = (_gEstPitch * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[1]] / GYRO_FS) * nOffset1);
-    _gEstYaw   = (_gEstYaw * nOffset0) + ((_gRawGyro[_gGyroAccelAxis[2]] / GYRO_FS) * nOffset1);
-    
     // Gyro angle calculations
-    //0.0000611 = 1 / (250Hz / GYRO_FS=65.5)
-    _gAngleRoll += _gRawGyro[_gGyroAccelAxis[0]] * 0.0000611;
-    _gAnglePitch += _gRawGyro[_gGyroAccelAxis[1]] * 0.0000611;
-    
-    // 0.000001066 = 0.0000611 * (3.142(PI) / 180degr) The Arduino sin function is in radians
-    _gAnglePitch += _gAngleRoll * sin(_gRawGyro[_gGyroAccelAxis[2]] * 0.000001066);
-    _gAngleRoll -= _gAnglePitch * sin(_gRawGyro[_gGyroAccelAxis[2]] * 0.000001066);
+    //0.000076335 = 1 / (200Hz / GYRO_FS=65.5)
+    _gAnglePitch += _gRawGyro[nPitchAxisIdx] * ACCELGYRO_FS;
+    _gAngleRoll  += _gRawGyro[nRollAxisIdx] * ACCELGYRO_FS;
+    _gAngleYaw   = (_gAngleYaw * 0.7) + ((_gRawGyro[_gGyroAccelAxis[2]] / GYRO_FS) * 0.3);
+
+    // 0.00000133229 = ACCELGYRO_FS * (3.142(PI) / 180degr) The Arduino sin function is in radians
+    _gAnglePitch +=  _gAngleRoll * sin(_gRawGyro[nYawAxisIdx] * APPROX_SIN_SCALE);
+    _gAngleRoll  -= _gAnglePitch * sin(_gRawGyro[nYawAxisIdx] * APPROX_SIN_SCALE);
     
     // Accelerometer angle calculations
     // Calculate the total accelerometer vector.
@@ -43,11 +43,8 @@ void _Get_RollPitchYaw()
                             (_gRawAccel[Y_AXIS] * _gRawAccel[Y_AXIS]) +
                             (_gRawAccel[Z_AXIS] * _gRawAccel[Z_AXIS]));
 
-    //if(abs(_gRawAccel[X_AXIS]) < _gAccTotalVector)
-    _gAngleRollAcc = asin(_gRawAccel[_gGyroAccelAxis[1]] / _gAccTotalVector) * (-RAD_TO_DEG_SCALE);
-    
-    //if(abs(_gRawAccel[Y_AXIS]) < _gAccTotalVector)
-    _gAnglePitchAcc = asin(_gRawAccel[_gGyroAccelAxis[0]] / _gAccTotalVector) * RAD_TO_DEG_SCALE;
+    _gAnglePitchAcc = asin(_gRawAccel[nPitchAxisIdx] / _gAccTotalVector) * RAD_TO_DEG_SCALE;
+    _gAngleRollAcc  = asin(_gRawAccel[nRollAxisIdx] / _gAccTotalVector) * (-RAD_TO_DEG_SCALE);
 
     //Place the MPU-6050 spirit level and note the values in the following two lines for calibration.
     _gAnglePitchAcc -= 0.0;
@@ -65,8 +62,12 @@ void _Get_RollPitchYaw()
         _gbAngleSet = true;
     }
   
-    _gAnglePitchOut = _gAnglePitchOut * 0.9 + _gAnglePitch * 0.1;
-    _gAngleRollOut = _gAngleRollOut * 0.9 + _gAngleRoll * 0.1;
+    _gAnglePitchOut = _gAnglePitchOut * nOffset0 + _gAnglePitch * nOffset1;
+    _gAngleRollOut  = _gAngleRollOut * nOffset0 + _gAngleRoll * nOffset1;
+    
+    _gEstimatedRPY[0] = _gAngleRollOut;
+    _gEstimatedRPY[1] = _gAnglePitchOut;
+    _gEstimatedRPY[2] = _gAngleYaw;
     
     _gPitchLevelAdjust = _gAnglePitch * 15.0;
     _gRollLevelAdjust = _gAngleRoll * 15.0;
@@ -79,6 +80,18 @@ void _Get_RollPitchYaw()
 }
 
 #endif /* AHRS_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

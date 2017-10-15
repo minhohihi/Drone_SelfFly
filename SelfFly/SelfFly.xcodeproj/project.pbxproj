@@ -468,6 +468,235 @@
 		8BF96BCE1C50DACE005A028B /* PID_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PID_Control.h; path = ../Arduino/DroneCore/PID_Control.h; sourceTree = "<group>"; };
 		8BF96BCF1C50DACE005A028B /* RC_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RC_Control.h; path = ../Arduino/DroneCore/RC_Control.h; sourceTree = "<group>"; };
 		8BF96BD01C50DACE005A028B /* SR04_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SR04_Control.h; path = ../Arduino/DroneCore/SR04_Control.h; sourceTree = "<group>"; };
+		C6F22C901F8BA04E0070A806 /* Event.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Event.h; sourceTree = "<group>"; };
+		C6F22C911F8BA04E0070A806 /* keywords.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
+		C6F22C921F8BA04E0070A806 /* Timer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Timer.cpp; sourceTree = "<group>"; };
+		C6F22C931F8BA04E0070A806 /* Timer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Timer.h; sourceTree = "<group>"; };
+		C6F22C961F8BA04E0070A806 /* blink2.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = blink2.ino; sourceTree = "<group>"; };
+		C6F22C981F8BA04E0070A806 /* read_A0_flashLED.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = read_A0_flashLED.pde; sourceTree = "<group>"; };
+		C6F22C9A1F8BA04E0070A806 /* pin_high_10_mins.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = pin_high_10_mins.pde; sourceTree = "<group>"; };
+		C6F22C9C1F8BA04E0070A806 /* kitchen_sink.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = kitchen_sink.pde; sourceTree = "<group>"; };
+		C6F22C9D1F8BA04E0070A806 /* ReadMe.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ReadMe.txt; sourceTree = "<group>"; };
+		C6F22C9E1F8BA04E0070A806 /* Event.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Event.cpp; sourceTree = "<group>"; };
+		C6F22CA01F8BA04E0070A806 /* keywords.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
+		C6F22CA11F8BA04E0070A806 /* TinyGPS.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TinyGPS.cpp; sourceTree = "<group>"; };
+		C6F22CA21F8BA04E0070A806 /* TinyGPS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TinyGPS.h; sourceTree = "<group>"; };
+		C6F22CA51F8BA04E0070A806 /* test_with_gps_device.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = test_with_gps_device.pde; sourceTree = "<group>"; };
+		C6F22CA71F8BA04E0070A806 /* simple_test.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = simple_test.pde; sourceTree = "<group>"; };
+		C6F22CA91F8BA04E0070A806 /* static_test.pde */ = {isa = PBXFileReference; lastKnownFileType = text; path = static_test.pde; sourceTree = "<group>"; };
+		C6F22CAB1F8BA04F0070A806 /* README.adoc */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.adoc; sourceTree = "<group>"; };
+		C6F22CAF1F8BA04F0070A806 /* MotorTest.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = MotorTest.ino; sourceTree = "<group>"; };
+		C6F22CB11F8BA04F0070A806 /* LCDWriteText.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = LCDWriteText.ino; sourceTree = "<group>"; };
+		C6F22CB31F8BA04F0070A806 /* LCDDebugPrint.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = LCDDebugPrint.ino; sourceTree = "<group>"; };
+		C6F22CB51F8BA04F0070A806 /* Melody.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = Melody.ino; sourceTree = "<group>"; };
+		C6F22CB71F8BA04F0070A806 /* keyboardTest.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = keyboardTest.ino; sourceTree = "<group>"; };
+		C6F22CB91F8BA04F0070A806 /* AllIOPorts.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = AllIOPorts.ino; sourceTree = "<group>"; };
+		C6F22CBB1F8BA04F0070A806 /* Beep.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = Beep.ino; sourceTree = "<group>"; };
+		C6F22CBD1F8BA04F0070A806 /* TurnTest.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = TurnTest.ino; sourceTree = "<group>"; };
+		C6F22CBF1F8BA04F0070A806 /* CleanEEPROM.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = CleanEEPROM.ino; sourceTree = "<group>"; };
+		C6F22CC11F8BA04F0070A806 /* Compass.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = Compass.ino; sourceTree = "<group>"; };
+		C6F22CC31F8BA04F0070A806 /* LCDPrint.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = LCDPrint.ino; sourceTree = "<group>"; };
+		C6F22CC51F8BA04F0070A806 /* SpeedByPotentiometer.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = SpeedByPotentiometer.ino; sourceTree = "<group>"; };
+		C6F22CC71F8BA04F0070A806 /* IRArray.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = IRArray.ino; sourceTree = "<group>"; };
+		C6F22CC91F8BA04F0070A806 /* LineFollowWithPause.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = LineFollowWithPause.ino; sourceTree = "<group>"; };
+		C6F22CCC1F8BA04F0070A806 /* R08_Remote_Control.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R08_Remote_Control.ino; sourceTree = "<group>"; };
+		C6F22CCE1F8BA04F0070A806 /* R02_Line_Follow.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R02_Line_Follow.ino; sourceTree = "<group>"; };
+		C6F22CD01F8BA04F0070A806 /* R03_Disco_Bot.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R03_Disco_Bot.ino; sourceTree = "<group>"; };
+		C6F22CD21F8BA04F0070A806 /* R09_Picture_Browser.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R09_Picture_Browser.ino; sourceTree = "<group>"; };
+		C6F22CD41F8BA04F0070A806 /* R01_Logo.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R01_Logo.ino; sourceTree = "<group>"; };
+		C6F22CD61F8BA04F0070A806 /* R05_Inputs.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R05_Inputs.ino; sourceTree = "<group>"; };
+		C6F22CD81F8BA04F0070A806 /* R06_Wheel_Calibration.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R06_Wheel_Calibration.ino; sourceTree = "<group>"; };
+		C6F22CD91F8BA04F0070A806 /* scripts_library.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scripts_library.h; sourceTree = "<group>"; };
+		C6F22CDB1F8BA04F0070A806 /* R04_Compass.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R04_Compass.ino; sourceTree = "<group>"; };
+		C6F22CDD1F8BA04F0070A806 /* R11_Hello_User.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R11_Hello_User.ino; sourceTree = "<group>"; };
+		C6F22CDF1F8BA04F0070A806 /* R10_Rescue.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R10_Rescue.ino; sourceTree = "<group>"; };
+		C6F22CE11F8BA04F0070A806 /* R07_Runaway_Robot.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = R07_Runaway_Robot.ino; sourceTree = "<group>"; };
+		C6F22CE21F8BA04F0070A806 /* library.properties */ = {isa = PBXFileReference; lastKnownFileType = text; path = library.properties; sourceTree = "<group>"; };
+		C6F22CE41F8BA04F0070A806 /* SdCard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SdCard.cpp; sourceTree = "<group>"; };
+		C6F22CE51F8BA04F0070A806 /* Motors.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Motors.cpp; sourceTree = "<group>"; };
+		C6F22CE61F8BA04F0070A806 /* Multiplexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Multiplexer.h; sourceTree = "<group>"; };
+		C6F22CE71F8BA04F0070A806 /* Multiplexer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Multiplexer.cpp; sourceTree = "<group>"; };
+		C6F22CE81F8BA04F0070A806 /* Compass.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Compass.cpp; sourceTree = "<group>"; };
+		C6F22CE91F8BA04F0070A806 /* lcd.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lcd.cpp; sourceTree = "<group>"; };
+		C6F22CEA1F8BA04F0070A806 /* Fat16.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Fat16.h; sourceTree = "<group>"; };
+		C6F22CEB1F8BA04F0070A806 /* ArduinoRobot.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ArduinoRobot.h; sourceTree = "<group>"; };
+		C6F22CEC1F8BA04F0070A806 /* Fat16Config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Fat16Config.h; sourceTree = "<group>"; };
+		C6F22CED1F8BA04F0070A806 /* Arduino_LCD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Arduino_LCD.h; sourceTree = "<group>"; };
+		C6F22CEE1F8BA04F0070A806 /* SquawkSD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SquawkSD.h; sourceTree = "<group>"; };
+		C6F22CEF1F8BA04F0070A806 /* ArduinoRobot.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ArduinoRobot.cpp; sourceTree = "<group>"; };
+		C6F22CF01F8BA04F0070A806 /* EasyTransfer2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EasyTransfer2.h; sourceTree = "<group>"; };
+		C6F22CF11F8BA04F0070A806 /* helper.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = helper.cpp; sourceTree = "<group>"; };
+		C6F22CF21F8BA04F0070A806 /* Fat16.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Fat16.cpp; sourceTree = "<group>"; };
+		C6F22CF31F8BA04F0070A806 /* Melody.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Melody.cpp; sourceTree = "<group>"; };
+		C6F22CF41F8BA04F0070A806 /* Arduino_LCD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Arduino_LCD.cpp; sourceTree = "<group>"; };
+		C6F22CF51F8BA04F0070A806 /* Fat16mainpage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Fat16mainpage.h; sourceTree = "<group>"; };
+		C6F22CF61F8BA04F0070A806 /* SdCard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdCard.h; sourceTree = "<group>"; };
+		C6F22CF71F8BA04F0070A806 /* Squawk.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Squawk.cpp; sourceTree = "<group>"; };
+		C6F22CF81F8BA04F0070A806 /* communication.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = communication.cpp; sourceTree = "<group>"; };
+		C6F22CF91F8BA04F0070A806 /* SdInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SdInfo.h; sourceTree = "<group>"; };
+		C6F22CFA1F8BA04F0070A806 /* Compass.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Compass.h; sourceTree = "<group>"; };
+		C6F22CFB1F8BA04F0070A806 /* Squawk.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Squawk.h; sourceTree = "<group>"; };
+		C6F22CFC1F8BA04F0070A806 /* glcdfont.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = glcdfont.c; sourceTree = "<group>"; };
+		C6F22CFD1F8BA04F0070A806 /* EEPROM_I2C.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EEPROM_I2C.cpp; sourceTree = "<group>"; };
+		C6F22CFE1F8BA04F0070A806 /* information.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = information.cpp; sourceTree = "<group>"; };
+		C6F22CFF1F8BA04F0070A806 /* SquawkSD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SquawkSD.cpp; sourceTree = "<group>"; };
+		C6F22D001F8BA04F0070A806 /* EEPROM_I2C.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EEPROM_I2C.h; sourceTree = "<group>"; };
+		C6F22D011F8BA04F0070A806 /* RobotSdCard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RobotSdCard.cpp; sourceTree = "<group>"; };
+		C6F22D021F8BA04F0070A806 /* Sensors.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Sensors.cpp; sourceTree = "<group>"; };
+		C6F22D031F8BA04F0070A806 /* Fat16util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Fat16util.h; sourceTree = "<group>"; };
+		C6F22D041F8BA04F0070A806 /* EasyTransfer2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EasyTransfer2.cpp; sourceTree = "<group>"; };
+		C6F22D051F8BA04F0070A806 /* keyboard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = keyboard.cpp; sourceTree = "<group>"; };
+		C6F22D061F8BA04F0070A806 /* FatStructs.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FatStructs.h; sourceTree = "<group>"; };
+		C6F22D081F8BA04F0070A806 /* RobotTextManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RobotTextManager.h; sourceTree = "<group>"; };
+		C6F22D091F8BA04F0070A806 /* VirtualKeyboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = VirtualKeyboard.h; sourceTree = "<group>"; };
+		C6F22D0A1F8BA04F0070A806 /* scripts_Hello_User.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = scripts_Hello_User.h; sourceTree = "<group>"; };
+		C6F22D0B1F8BA04F0070A806 /* Adafruit_GFX.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Adafruit_GFX.h; sourceTree = "<group>"; };
+		C6F22D0C1F8BA04F0070A806 /* Adafruit_GFX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Adafruit_GFX.cpp; sourceTree = "<group>"; };
+		C6F22D0D1F8BA04F0070A806 /* RobotTextManager.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RobotTextManager.cpp; sourceTree = "<group>"; };
+		C6F22D0E1F8BA04F0070A806 /* VirtualKeyboard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VirtualKeyboard.cpp; sourceTree = "<group>"; };
+		C6F22D101F8BA04F0070A806 /* keywords.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
+		C6F22D111F8BA04F0070A806 /* README.adoc */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.adoc; sourceTree = "<group>"; };
+		C6F22D121F8BA04F0070A806 /* library.properties */ = {isa = PBXFileReference; lastKnownFileType = text; path = library.properties; sourceTree = "<group>"; };
+		C6F22D141F8BA04F0070A806 /* IRremote.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IRremote.cpp; sourceTree = "<group>"; };
+		C6F22D151F8BA04F0070A806 /* RobotIRremoteInt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RobotIRremoteInt.h; sourceTree = "<group>"; };
+		C6F22D161F8BA04F0070A806 /* RobotIRremote.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RobotIRremote.h; sourceTree = "<group>"; };
+		C6F22D171F8BA04F0070A806 /* RobotIRremoteTools.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RobotIRremoteTools.h; sourceTree = "<group>"; };
+		C6F22D181F8BA04F0070A806 /* IRremoteTools.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IRremoteTools.cpp; sourceTree = "<group>"; };
+		C6F22D1A1F8BA04F0070A806 /* readme */ = {isa = PBXFileReference; lastKnownFileType = text; path = readme; sourceTree = "<group>"; };
+		C6F22D1B1F8BA04F0070A806 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
+		C6F22D1D1F8BA0500070A806 /* README.adoc */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.adoc; sourceTree = "<group>"; };
+		C6F22D201F8BA0500070A806 /* Robot_IR_Array_Test.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = Robot_IR_Array_Test.ino; sourceTree = "<group>"; };
+		C6F22D221F8BA0500070A806 /* Robot_Motor_Core.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = Robot_Motor_Core.ino; sourceTree = "<group>"; };
+		C6F22D231F8BA0500070A806 /* library.properties */ = {isa = PBXFileReference; lastKnownFileType = text; path = library.properties; sourceTree = "<group>"; };
+		C6F22D251F8BA0500070A806 /* Multiplexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Multiplexer.h; sourceTree = "<group>"; };
+		C6F22D261F8BA0500070A806 /* Multiplexer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Multiplexer.cpp; sourceTree = "<group>"; };
+		C6F22D271F8BA0500070A806 /* EasyTransfer2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EasyTransfer2.h; sourceTree = "<group>"; };
+		C6F22D281F8BA0500070A806 /* ArduinoRobotMotorBoard.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ArduinoRobotMotorBoard.cpp; sourceTree = "<group>"; };
+		C6F22D291F8BA0500070A806 /* ArduinoRobotMotorBoard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ArduinoRobotMotorBoard.h; sourceTree = "<group>"; };
+		C6F22D2A1F8BA0500070A806 /* LineFollow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LineFollow.h; sourceTree = "<group>"; };
+		C6F22D2B1F8BA0500070A806 /* EasyTransfer2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EasyTransfer2.cpp; sourceTree = "<group>"; };
+		C6F22D2C1F8BA0500070A806 /* lineFollow.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = lineFollow.cpp; sourceTree = "<group>"; };
+		C6F22D2E1F8BA0500070A806 /* keywords.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
+		C6F22D2F1F8BA0500070A806 /* README.adoc */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.adoc; sourceTree = "<group>"; };
+		C6F22D331F8BA0500070A806 /* ReadATweet.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = ReadATweet.ino; sourceTree = "<group>"; };
+		C6F22D341F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D361F8BA0500070A806 /* GetYahooWeatherReport.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = GetYahooWeatherReport.ino; sourceTree = "<group>"; };
+		C6F22D371F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D391F8BA0500070A806 /* SendDataToGoogleSpreadsheet.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = SendDataToGoogleSpreadsheet.ino; sourceTree = "<group>"; };
+		C6F22D3A1F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D3C1F8BA0500070A806 /* UpdateFacebookStatus.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = UpdateFacebookStatus.ino; sourceTree = "<group>"; };
+		C6F22D3D1F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D3F1F8BA0500070A806 /* ToxicFacilitiesSearch.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = ToxicFacilitiesSearch.ino; sourceTree = "<group>"; };
+		C6F22D401F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D421F8BA0500070A806 /* TembooDeviceConfig.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = TembooDeviceConfig.ino; sourceTree = "<group>"; };
+		C6F22D441F8BA0500070A806 /* SendAnSMS.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = SendAnSMS.ino; sourceTree = "<group>"; };
+		C6F22D451F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D471F8BA0500070A806 /* UploadToDropbox.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = UploadToDropbox.ino; sourceTree = "<group>"; };
+		C6F22D481F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D4A1F8BA0500070A806 /* SendATweet.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = SendATweet.ino; sourceTree = "<group>"; };
+		C6F22D4B1F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D4D1F8BA0500070A806 /* SendAnEmail.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = SendAnEmail.ino; sourceTree = "<group>"; };
+		C6F22D4E1F8BA0500070A806 /* TembooAccount.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooAccount.h; sourceTree = "<group>"; };
+		C6F22D511F8BA0500070A806 /* TembooDeviceConfig.ino */ = {isa = PBXFileReference; lastKnownFileType = text; path = TembooDeviceConfig.ino; sourceTree = "<group>"; };
+		C6F22D521F8BA0500070A806 /* library.properties */ = {isa = PBXFileReference; lastKnownFileType = text; path = library.properties; sourceTree = "<group>"; };
+		C6F22D541F8BA0500070A806 /* TembooCoAPEdgeDevice.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooCoAPEdgeDevice.cpp; sourceTree = "<group>"; };
+		C6F22D551F8BA0500070A806 /* TembooMQTTEdgeDevice.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooMQTTEdgeDevice.cpp; sourceTree = "<group>"; };
+		C6F22D561F8BA0500070A806 /* TembooSSL.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooSSL.h; sourceTree = "<group>"; };
+		C6F22D571F8BA0500070A806 /* TembooMQTTEdgeDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooMQTTEdgeDevice.h; sourceTree = "<group>"; };
+		C6F22D581F8BA0500070A806 /* TembooMonitoring.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooMonitoring.cpp; sourceTree = "<group>"; };
+		C6F22D591F8BA0500070A806 /* TembooCoAPEdgeDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooCoAPEdgeDevice.h; sourceTree = "<group>"; };
+		C6F22D5A1F8BA0500070A806 /* Temboo.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Temboo.cpp; sourceTree = "<group>"; };
+		C6F22D5B1F8BA0500070A806 /* TembooSSL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooSSL.cpp; sourceTree = "<group>"; };
+		C6F22D5C1F8BA0500070A806 /* TembooMonitoring.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooMonitoring.h; sourceTree = "<group>"; };
+		C6F22D5D1F8BA0500070A806 /* Temboo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Temboo.h; sourceTree = "<group>"; };
+		C6F22D5E1F8BA0500070A806 /* TembooYunShield.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooYunShield.h; sourceTree = "<group>"; };
+		C6F22D601F8BA0500070A806 /* ChoreoInputFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInputFormatter.h; sourceTree = "<group>"; };
+		C6F22D611F8BA0500070A806 /* TembooWebSocketRequestHandles.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooWebSocketRequestHandles.h; sourceTree = "<group>"; };
+		C6F22D621F8BA0500070A806 /* ChoreoPreset.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoPreset.cpp; sourceTree = "<group>"; };
+		C6F22D631F8BA0500070A806 /* MQTTPublish.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTPublish.h; sourceTree = "<group>"; };
+		C6F22D641F8BA0500070A806 /* BaseFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BaseFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D651F8BA0500070A806 /* MQTTConnectServer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTConnectServer.c; sourceTree = "<group>"; };
+		C6F22D661F8BA0500070A806 /* ChoreoInputExpressionFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInputExpressionFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D671F8BA0500070A806 /* ChoreoDevice.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoDevice.h; sourceTree = "<group>"; };
+		C6F22D681F8BA0500070A806 /* ChoreoDeviceFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoDeviceFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D691F8BA0500070A806 /* CoapMsg.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CoapMsg.cpp; sourceTree = "<group>"; };
+		C6F22D6A1F8BA0500070A806 /* TembooCoAPSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooCoAPSession.h; sourceTree = "<group>"; };
+		C6F22D6B1F8BA0500070A806 /* CoapMsg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoapMsg.h; sourceTree = "<group>"; };
+		C6F22D6C1F8BA0500070A806 /* TembooGPIO.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = TembooGPIO.c; sourceTree = "<group>"; };
+		C6F22D6D1F8BA0500070A806 /* MQTTPacket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTPacket.h; sourceTree = "<group>"; };
+		C6F22D6E1F8BA0500070A806 /* tmbhmac.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tmbhmac.cpp; sourceTree = "<group>"; };
+		C6F22D6F1F8BA0500070A806 /* TembooMQTTSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooMQTTSession.h; sourceTree = "<group>"; };
+		C6F22D701F8BA0500070A806 /* ChoreoInput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInput.cpp; sourceTree = "<group>"; };
+		C6F22D711F8BA0500070A806 /* StackTrace.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StackTrace.h; sourceTree = "<group>"; };
+		C6F22D721F8BA0500070A806 /* TembooDS18B20.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooDS18B20.h; sourceTree = "<group>"; };
+		C6F22D731F8BA0500070A806 /* MQTTSubscribeServer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTSubscribeServer.c; sourceTree = "<group>"; };
+		C6F22D741F8BA0500070A806 /* ChoreoOutputSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoOutputSet.h; sourceTree = "<group>"; };
+		C6F22D751F8BA0500070A806 /* MQTTSerializePublish.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTSerializePublish.c; sourceTree = "<group>"; };
+		C6F22D761F8BA0500070A806 /* tmbmd5.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tmbmd5.h; sourceTree = "<group>"; };
+		C6F22D771F8BA0500070A806 /* TembooOneWire.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooOneWire.h; sourceTree = "<group>"; };
+		C6F22D781F8BA0500070A806 /* TembooCoAPSession.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooCoAPSession.cpp; sourceTree = "<group>"; };
+		C6F22D791F8BA0500070A806 /* ChoreoOutputFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoOutputFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D7A1F8BA0500070A806 /* ChoreoOutput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoOutput.h; sourceTree = "<group>"; };
+		C6F22D7B1F8BA0500070A806 /* TembooGlobal.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = TembooGlobal.c; sourceTree = "<group>"; };
+		C6F22D7C1F8BA0500070A806 /* tmbhmac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tmbhmac.h; sourceTree = "<group>"; };
+		C6F22D7D1F8BA0500070A806 /* ChoreoInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInput.h; sourceTree = "<group>"; };
+		C6F22D7E1F8BA0500070A806 /* MQTTDeserializePublish.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTDeserializePublish.c; sourceTree = "<group>"; };
+		C6F22D7F1F8BA0500070A806 /* TembooSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooSession.h; sourceTree = "<group>"; };
+		C6F22D801F8BA0500070A806 /* CoapMessageLayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoapMessageLayer.h; sourceTree = "<group>"; };
+		C6F22D811F8BA0500070A806 /* ChoreoInputExpressionFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInputExpressionFormatter.h; sourceTree = "<group>"; };
+		C6F22D821F8BA0500070A806 /* MQTTFormat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTFormat.h; sourceTree = "<group>"; };
+		C6F22D831F8BA0500070A806 /* MQTTUnsubscribeClient.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTUnsubscribeClient.c; sourceTree = "<group>"; };
+		C6F22D841F8BA0500070A806 /* ChoreoDeviceFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoDeviceFormatter.h; sourceTree = "<group>"; };
+		C6F22D851F8BA0500070A806 /* TembooTimer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooTimer.h; sourceTree = "<group>"; };
+		C6F22D861F8BA0500070A806 /* ChoreoInputExpression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInputExpression.h; sourceTree = "<group>"; };
+		C6F22D871F8BA0500070A806 /* DataFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataFormatter.h; sourceTree = "<group>"; };
+		C6F22D881F8BA0500070A806 /* CoapMessageLayer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CoapMessageLayer.cpp; sourceTree = "<group>"; };
+		C6F22D891F8BA0500070A806 /* TembooSession.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooSession.cpp; sourceTree = "<group>"; };
+		C6F22D8A1F8BA0500070A806 /* ArduinoTimer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ArduinoTimer.h; sourceTree = "<group>"; };
+		C6F22D8B1F8BA0500070A806 /* TembooDS18B20.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooDS18B20.cpp; sourceTree = "<group>"; };
+		C6F22D8C1F8BA0500070A806 /* CoapRRLayer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoapRRLayer.h; sourceTree = "<group>"; };
+		C6F22D8D1F8BA0500070A806 /* ChoreoInputSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInputSet.h; sourceTree = "<group>"; };
+		C6F22D8E1F8BA0500070A806 /* ChoreoInputSet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInputSet.cpp; sourceTree = "<group>"; };
+		C6F22D8F1F8BA0500070A806 /* MQTTClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTClient.h; sourceTree = "<group>"; };
+		C6F22D901F8BA0500070A806 /* TembooWebSocketRequestHandles.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = TembooWebSocketRequestHandles.c; sourceTree = "<group>"; };
+		C6F22D911F8BA0500070A806 /* DataFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DataFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D921F8BA0500070A806 /* TembooOneWire.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooOneWire.cpp; sourceTree = "<group>"; };
+		C6F22D931F8BA0500070A806 /* ChoreoOutputSet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoOutputSet.cpp; sourceTree = "<group>"; };
+		C6F22D941F8BA0500070A806 /* ChoreoDevice.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoDevice.cpp; sourceTree = "<group>"; };
+		C6F22D951F8BA0500070A806 /* TembooTags.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooTags.h; sourceTree = "<group>"; };
+		C6F22D961F8BA0500070A806 /* ChoreoPresetFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoPresetFormatter.h; sourceTree = "<group>"; };
+		C6F22D971F8BA0500070A806 /* MQTTUnsubscribeServer.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTUnsubscribeServer.c; sourceTree = "<group>"; };
+		C6F22D981F8BA0500070A806 /* ChoreoPresetFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoPresetFormatter.cpp; sourceTree = "<group>"; };
+		C6F22D991F8BA0500070A806 /* ChoreoSensorInput.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoSensorInput.h; sourceTree = "<group>"; };
+		C6F22D9A1F8BA0500070A806 /* ChoreoSensorInputFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoSensorInputFormatter.h; sourceTree = "<group>"; };
+		C6F22D9B1F8BA0500070A806 /* MQTTPacket.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTPacket.c; sourceTree = "<group>"; };
+		C6F22D9C1F8BA0500070A806 /* MQTTSubscribe.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTSubscribe.h; sourceTree = "<group>"; };
+		C6F22D9D1F8BA0500070A806 /* MQTTUnsubscribe.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTUnsubscribe.h; sourceTree = "<group>"; };
+		C6F22D9E1F8BA0500070A806 /* ChoreoOutput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoOutput.cpp; sourceTree = "<group>"; };
+		C6F22D9F1F8BA0500070A806 /* FP.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FP.h; sourceTree = "<group>"; };
+		C6F22DA01F8BA0500070A806 /* TembooGPIO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooGPIO.h; sourceTree = "<group>"; };
+		C6F22DA11F8BA0500070A806 /* ChoreoSensorInput.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoSensorInput.cpp; sourceTree = "<group>"; };
+		C6F22DA21F8BA0500070A806 /* tmbmd5.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tmbmd5.cpp; sourceTree = "<group>"; };
+		C6F22DA31F8BA0500070A806 /* CoapRRLayer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CoapRRLayer.cpp; sourceTree = "<group>"; };
+		C6F22DA41F8BA0500070A806 /* ChoreoSensorInputSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoSensorInputSet.h; sourceTree = "<group>"; };
+		C6F22DA51F8BA0500070A806 /* ChoreoSensorInputFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoSensorInputFormatter.cpp; sourceTree = "<group>"; };
+		C6F22DA61F8BA0500070A806 /* MQTTLogging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTLogging.h; sourceTree = "<group>"; };
+		C6F22DA71F8BA0500070A806 /* MQTTSubscribeClient.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTSubscribeClient.c; sourceTree = "<group>"; };
+		C6F22DA81F8BA0500070A806 /* TembooCoAPIPStack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooCoAPIPStack.h; sourceTree = "<group>"; };
+		C6F22DA91F8BA0500070A806 /* ChoreoInputFormatter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInputFormatter.cpp; sourceTree = "<group>"; };
+		C6F22DAA1F8BA0500070A806 /* ChoreoInputExpressionSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoInputExpressionSet.h; sourceTree = "<group>"; };
+		C6F22DAB1F8BA0500070A806 /* MQTTFormat.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTFormat.c; sourceTree = "<group>"; };
+		C6F22DAC1F8BA0500070A806 /* TembooGlobal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooGlobal.h; sourceTree = "<group>"; };
+		C6F22DAD1F8BA0500070A806 /* ChoreoInputExpressionSet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInputExpressionSet.cpp; sourceTree = "<group>"; };
+		C6F22DAE1F8BA0500070A806 /* BaseFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BaseFormatter.h; sourceTree = "<group>"; };
+		C6F22DAF1F8BA0500070A806 /* ChoreoOutputFormatter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoOutputFormatter.h; sourceTree = "<group>"; };
+		C6F22DB01F8BA0500070A806 /* ChoreoPreset.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChoreoPreset.h; sourceTree = "<group>"; };
+		C6F22DB11F8BA0500070A806 /* MQTTConnectClient.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = MQTTConnectClient.c; sourceTree = "<group>"; };
+		C6F22DB21F8BA0500070A806 /* ChoreoSensorInputSet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoSensorInputSet.cpp; sourceTree = "<group>"; };
+		C6F22DB31F8BA0500070A806 /* MQTTConnect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MQTTConnect.h; sourceTree = "<group>"; };
+		C6F22DB41F8BA0500070A806 /* ChoreoInputExpression.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ChoreoInputExpression.cpp; sourceTree = "<group>"; };
+		C6F22DB51F8BA0500070A806 /* TembooMQTTIPStack.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TembooMQTTIPStack.h; sourceTree = "<group>"; };
+		C6F22DB61F8BA0500070A806 /* TembooMQTTSession.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TembooMQTTSession.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1813,6 +2042,12 @@
 				8B0F2C8E1BF57A7F0044F792 /* SSD1308 */,
 				8B0F2C941BF57A7F0044F792 /* TCA6424A */,
 				8B31B8571BEAE0F1005634F8 /* Products */,
+				C6F22CAA1F8BA04F0070A806 /* Robot_Control */,
+				C6F22D0F1F8BA04F0070A806 /* Robot_IR_Remote */,
+				C6F22D1C1F8BA0500070A806 /* Robot_Motor */,
+				C6F22D2D1F8BA0500070A806 /* Temboo */,
+				C6F22C8F1F8BA04E0070A806 /* Timer */,
+				C6F22C9F1F8BA04E0070A806 /* TinyGPS */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1868,6 +2103,765 @@
 				8B6108991DA23A4D000EBE05 /* test_with_gps_device.pde */,
 			);
 			path = test_with_gps_device;
+			sourceTree = "<group>";
+		};
+		C6F22C8F1F8BA04E0070A806 /* Timer */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C901F8BA04E0070A806 /* Event.h */,
+				C6F22C911F8BA04E0070A806 /* keywords.txt */,
+				C6F22C921F8BA04E0070A806 /* Timer.cpp */,
+				C6F22C931F8BA04E0070A806 /* Timer.h */,
+				C6F22C941F8BA04E0070A806 /* examples */,
+				C6F22C9D1F8BA04E0070A806 /* ReadMe.txt */,
+				C6F22C9E1F8BA04E0070A806 /* Event.cpp */,
+			);
+			path = Timer;
+			sourceTree = "<group>";
+		};
+		C6F22C941F8BA04E0070A806 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C951F8BA04E0070A806 /* blink2 */,
+				C6F22C971F8BA04E0070A806 /* read_A0_flashLED */,
+				C6F22C991F8BA04E0070A806 /* pin_high_10_mins */,
+				C6F22C9B1F8BA04E0070A806 /* kitchen_sink */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		C6F22C951F8BA04E0070A806 /* blink2 */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C961F8BA04E0070A806 /* blink2.ino */,
+			);
+			path = blink2;
+			sourceTree = "<group>";
+		};
+		C6F22C971F8BA04E0070A806 /* read_A0_flashLED */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C981F8BA04E0070A806 /* read_A0_flashLED.pde */,
+			);
+			path = read_A0_flashLED;
+			sourceTree = "<group>";
+		};
+		C6F22C991F8BA04E0070A806 /* pin_high_10_mins */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C9A1F8BA04E0070A806 /* pin_high_10_mins.pde */,
+			);
+			path = pin_high_10_mins;
+			sourceTree = "<group>";
+		};
+		C6F22C9B1F8BA04E0070A806 /* kitchen_sink */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22C9C1F8BA04E0070A806 /* kitchen_sink.pde */,
+			);
+			path = kitchen_sink;
+			sourceTree = "<group>";
+		};
+		C6F22C9F1F8BA04E0070A806 /* TinyGPS */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CA01F8BA04E0070A806 /* keywords.txt */,
+				C6F22CA11F8BA04E0070A806 /* TinyGPS.cpp */,
+				C6F22CA21F8BA04E0070A806 /* TinyGPS.h */,
+				C6F22CA31F8BA04E0070A806 /* examples */,
+			);
+			path = TinyGPS;
+			sourceTree = "<group>";
+		};
+		C6F22CA31F8BA04E0070A806 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CA41F8BA04E0070A806 /* test_with_gps_device */,
+				C6F22CA61F8BA04E0070A806 /* simple_test */,
+				C6F22CA81F8BA04E0070A806 /* static_test */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		C6F22CA41F8BA04E0070A806 /* test_with_gps_device */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CA51F8BA04E0070A806 /* test_with_gps_device.pde */,
+			);
+			path = test_with_gps_device;
+			sourceTree = "<group>";
+		};
+		C6F22CA61F8BA04E0070A806 /* simple_test */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CA71F8BA04E0070A806 /* simple_test.pde */,
+			);
+			path = simple_test;
+			sourceTree = "<group>";
+		};
+		C6F22CA81F8BA04E0070A806 /* static_test */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CA91F8BA04E0070A806 /* static_test.pde */,
+			);
+			path = static_test;
+			sourceTree = "<group>";
+		};
+		C6F22CAA1F8BA04F0070A806 /* Robot_Control */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CAB1F8BA04F0070A806 /* README.adoc */,
+				C6F22CAC1F8BA04F0070A806 /* examples */,
+				C6F22CE21F8BA04F0070A806 /* library.properties */,
+				C6F22CE31F8BA04F0070A806 /* src */,
+			);
+			path = Robot_Control;
+			sourceTree = "<group>";
+		};
+		C6F22CAC1F8BA04F0070A806 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CAD1F8BA04F0070A806 /* learn */,
+				C6F22CCA1F8BA04F0070A806 /* explore */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		C6F22CAD1F8BA04F0070A806 /* learn */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CAE1F8BA04F0070A806 /* MotorTest */,
+				C6F22CB01F8BA04F0070A806 /* LCDWriteText */,
+				C6F22CB21F8BA04F0070A806 /* LCDDebugPrint */,
+				C6F22CB41F8BA04F0070A806 /* Melody */,
+				C6F22CB61F8BA04F0070A806 /* keyboardTest */,
+				C6F22CB81F8BA04F0070A806 /* AllIOPorts */,
+				C6F22CBA1F8BA04F0070A806 /* Beep */,
+				C6F22CBC1F8BA04F0070A806 /* TurnTest */,
+				C6F22CBE1F8BA04F0070A806 /* CleanEEPROM */,
+				C6F22CC01F8BA04F0070A806 /* Compass */,
+				C6F22CC21F8BA04F0070A806 /* LCDPrint */,
+				C6F22CC41F8BA04F0070A806 /* SpeedByPotentiometer */,
+				C6F22CC61F8BA04F0070A806 /* IRArray */,
+				C6F22CC81F8BA04F0070A806 /* LineFollowWithPause */,
+			);
+			path = learn;
+			sourceTree = "<group>";
+		};
+		C6F22CAE1F8BA04F0070A806 /* MotorTest */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CAF1F8BA04F0070A806 /* MotorTest.ino */,
+			);
+			path = MotorTest;
+			sourceTree = "<group>";
+		};
+		C6F22CB01F8BA04F0070A806 /* LCDWriteText */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CB11F8BA04F0070A806 /* LCDWriteText.ino */,
+			);
+			path = LCDWriteText;
+			sourceTree = "<group>";
+		};
+		C6F22CB21F8BA04F0070A806 /* LCDDebugPrint */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CB31F8BA04F0070A806 /* LCDDebugPrint.ino */,
+			);
+			path = LCDDebugPrint;
+			sourceTree = "<group>";
+		};
+		C6F22CB41F8BA04F0070A806 /* Melody */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CB51F8BA04F0070A806 /* Melody.ino */,
+			);
+			path = Melody;
+			sourceTree = "<group>";
+		};
+		C6F22CB61F8BA04F0070A806 /* keyboardTest */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CB71F8BA04F0070A806 /* keyboardTest.ino */,
+			);
+			path = keyboardTest;
+			sourceTree = "<group>";
+		};
+		C6F22CB81F8BA04F0070A806 /* AllIOPorts */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CB91F8BA04F0070A806 /* AllIOPorts.ino */,
+			);
+			path = AllIOPorts;
+			sourceTree = "<group>";
+		};
+		C6F22CBA1F8BA04F0070A806 /* Beep */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CBB1F8BA04F0070A806 /* Beep.ino */,
+			);
+			path = Beep;
+			sourceTree = "<group>";
+		};
+		C6F22CBC1F8BA04F0070A806 /* TurnTest */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CBD1F8BA04F0070A806 /* TurnTest.ino */,
+			);
+			path = TurnTest;
+			sourceTree = "<group>";
+		};
+		C6F22CBE1F8BA04F0070A806 /* CleanEEPROM */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CBF1F8BA04F0070A806 /* CleanEEPROM.ino */,
+			);
+			path = CleanEEPROM;
+			sourceTree = "<group>";
+		};
+		C6F22CC01F8BA04F0070A806 /* Compass */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CC11F8BA04F0070A806 /* Compass.ino */,
+			);
+			path = Compass;
+			sourceTree = "<group>";
+		};
+		C6F22CC21F8BA04F0070A806 /* LCDPrint */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CC31F8BA04F0070A806 /* LCDPrint.ino */,
+			);
+			path = LCDPrint;
+			sourceTree = "<group>";
+		};
+		C6F22CC41F8BA04F0070A806 /* SpeedByPotentiometer */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CC51F8BA04F0070A806 /* SpeedByPotentiometer.ino */,
+			);
+			path = SpeedByPotentiometer;
+			sourceTree = "<group>";
+		};
+		C6F22CC61F8BA04F0070A806 /* IRArray */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CC71F8BA04F0070A806 /* IRArray.ino */,
+			);
+			path = IRArray;
+			sourceTree = "<group>";
+		};
+		C6F22CC81F8BA04F0070A806 /* LineFollowWithPause */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CC91F8BA04F0070A806 /* LineFollowWithPause.ino */,
+			);
+			path = LineFollowWithPause;
+			sourceTree = "<group>";
+		};
+		C6F22CCA1F8BA04F0070A806 /* explore */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CCB1F8BA04F0070A806 /* R08_Remote_Control */,
+				C6F22CCD1F8BA04F0070A806 /* R02_Line_Follow */,
+				C6F22CCF1F8BA04F0070A806 /* R03_Disco_Bot */,
+				C6F22CD11F8BA04F0070A806 /* R09_Picture_Browser */,
+				C6F22CD31F8BA04F0070A806 /* R01_Logo */,
+				C6F22CD51F8BA04F0070A806 /* R05_Inputs */,
+				C6F22CD71F8BA04F0070A806 /* R06_Wheel_Calibration */,
+				C6F22CDA1F8BA04F0070A806 /* R04_Compass */,
+				C6F22CDC1F8BA04F0070A806 /* R11_Hello_User */,
+				C6F22CDE1F8BA04F0070A806 /* R10_Rescue */,
+				C6F22CE01F8BA04F0070A806 /* R07_Runaway_Robot */,
+			);
+			path = explore;
+			sourceTree = "<group>";
+		};
+		C6F22CCB1F8BA04F0070A806 /* R08_Remote_Control */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CCC1F8BA04F0070A806 /* R08_Remote_Control.ino */,
+			);
+			path = R08_Remote_Control;
+			sourceTree = "<group>";
+		};
+		C6F22CCD1F8BA04F0070A806 /* R02_Line_Follow */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CCE1F8BA04F0070A806 /* R02_Line_Follow.ino */,
+			);
+			path = R02_Line_Follow;
+			sourceTree = "<group>";
+		};
+		C6F22CCF1F8BA04F0070A806 /* R03_Disco_Bot */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CD01F8BA04F0070A806 /* R03_Disco_Bot.ino */,
+			);
+			path = R03_Disco_Bot;
+			sourceTree = "<group>";
+		};
+		C6F22CD11F8BA04F0070A806 /* R09_Picture_Browser */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CD21F8BA04F0070A806 /* R09_Picture_Browser.ino */,
+			);
+			path = R09_Picture_Browser;
+			sourceTree = "<group>";
+		};
+		C6F22CD31F8BA04F0070A806 /* R01_Logo */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CD41F8BA04F0070A806 /* R01_Logo.ino */,
+			);
+			path = R01_Logo;
+			sourceTree = "<group>";
+		};
+		C6F22CD51F8BA04F0070A806 /* R05_Inputs */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CD61F8BA04F0070A806 /* R05_Inputs.ino */,
+			);
+			path = R05_Inputs;
+			sourceTree = "<group>";
+		};
+		C6F22CD71F8BA04F0070A806 /* R06_Wheel_Calibration */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CD81F8BA04F0070A806 /* R06_Wheel_Calibration.ino */,
+				C6F22CD91F8BA04F0070A806 /* scripts_library.h */,
+			);
+			path = R06_Wheel_Calibration;
+			sourceTree = "<group>";
+		};
+		C6F22CDA1F8BA04F0070A806 /* R04_Compass */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CDB1F8BA04F0070A806 /* R04_Compass.ino */,
+			);
+			path = R04_Compass;
+			sourceTree = "<group>";
+		};
+		C6F22CDC1F8BA04F0070A806 /* R11_Hello_User */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CDD1F8BA04F0070A806 /* R11_Hello_User.ino */,
+			);
+			path = R11_Hello_User;
+			sourceTree = "<group>";
+		};
+		C6F22CDE1F8BA04F0070A806 /* R10_Rescue */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CDF1F8BA04F0070A806 /* R10_Rescue.ino */,
+			);
+			path = R10_Rescue;
+			sourceTree = "<group>";
+		};
+		C6F22CE01F8BA04F0070A806 /* R07_Runaway_Robot */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CE11F8BA04F0070A806 /* R07_Runaway_Robot.ino */,
+			);
+			path = R07_Runaway_Robot;
+			sourceTree = "<group>";
+		};
+		C6F22CE31F8BA04F0070A806 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22CE41F8BA04F0070A806 /* SdCard.cpp */,
+				C6F22CE51F8BA04F0070A806 /* Motors.cpp */,
+				C6F22CE61F8BA04F0070A806 /* Multiplexer.h */,
+				C6F22CE71F8BA04F0070A806 /* Multiplexer.cpp */,
+				C6F22CE81F8BA04F0070A806 /* Compass.cpp */,
+				C6F22CE91F8BA04F0070A806 /* lcd.cpp */,
+				C6F22CEA1F8BA04F0070A806 /* Fat16.h */,
+				C6F22CEB1F8BA04F0070A806 /* ArduinoRobot.h */,
+				C6F22CEC1F8BA04F0070A806 /* Fat16Config.h */,
+				C6F22CED1F8BA04F0070A806 /* Arduino_LCD.h */,
+				C6F22CEE1F8BA04F0070A806 /* SquawkSD.h */,
+				C6F22CEF1F8BA04F0070A806 /* ArduinoRobot.cpp */,
+				C6F22CF01F8BA04F0070A806 /* EasyTransfer2.h */,
+				C6F22CF11F8BA04F0070A806 /* helper.cpp */,
+				C6F22CF21F8BA04F0070A806 /* Fat16.cpp */,
+				C6F22CF31F8BA04F0070A806 /* Melody.cpp */,
+				C6F22CF41F8BA04F0070A806 /* Arduino_LCD.cpp */,
+				C6F22CF51F8BA04F0070A806 /* Fat16mainpage.h */,
+				C6F22CF61F8BA04F0070A806 /* SdCard.h */,
+				C6F22CF71F8BA04F0070A806 /* Squawk.cpp */,
+				C6F22CF81F8BA04F0070A806 /* communication.cpp */,
+				C6F22CF91F8BA04F0070A806 /* SdInfo.h */,
+				C6F22CFA1F8BA04F0070A806 /* Compass.h */,
+				C6F22CFB1F8BA04F0070A806 /* Squawk.h */,
+				C6F22CFC1F8BA04F0070A806 /* glcdfont.c */,
+				C6F22CFD1F8BA04F0070A806 /* EEPROM_I2C.cpp */,
+				C6F22CFE1F8BA04F0070A806 /* information.cpp */,
+				C6F22CFF1F8BA04F0070A806 /* SquawkSD.cpp */,
+				C6F22D001F8BA04F0070A806 /* EEPROM_I2C.h */,
+				C6F22D011F8BA04F0070A806 /* RobotSdCard.cpp */,
+				C6F22D021F8BA04F0070A806 /* Sensors.cpp */,
+				C6F22D031F8BA04F0070A806 /* Fat16util.h */,
+				C6F22D041F8BA04F0070A806 /* EasyTransfer2.cpp */,
+				C6F22D051F8BA04F0070A806 /* keyboard.cpp */,
+				C6F22D061F8BA04F0070A806 /* FatStructs.h */,
+				C6F22D071F8BA04F0070A806 /* utility */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		C6F22D071F8BA04F0070A806 /* utility */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D081F8BA04F0070A806 /* RobotTextManager.h */,
+				C6F22D091F8BA04F0070A806 /* VirtualKeyboard.h */,
+				C6F22D0A1F8BA04F0070A806 /* scripts_Hello_User.h */,
+				C6F22D0B1F8BA04F0070A806 /* Adafruit_GFX.h */,
+				C6F22D0C1F8BA04F0070A806 /* Adafruit_GFX.cpp */,
+				C6F22D0D1F8BA04F0070A806 /* RobotTextManager.cpp */,
+				C6F22D0E1F8BA04F0070A806 /* VirtualKeyboard.cpp */,
+			);
+			path = utility;
+			sourceTree = "<group>";
+		};
+		C6F22D0F1F8BA04F0070A806 /* Robot_IR_Remote */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D101F8BA04F0070A806 /* keywords.txt */,
+				C6F22D111F8BA04F0070A806 /* README.adoc */,
+				C6F22D121F8BA04F0070A806 /* library.properties */,
+				C6F22D131F8BA04F0070A806 /* src */,
+				C6F22D191F8BA04F0070A806 /* extras */,
+			);
+			path = Robot_IR_Remote;
+			sourceTree = "<group>";
+		};
+		C6F22D131F8BA04F0070A806 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D141F8BA04F0070A806 /* IRremote.cpp */,
+				C6F22D151F8BA04F0070A806 /* RobotIRremoteInt.h */,
+				C6F22D161F8BA04F0070A806 /* RobotIRremote.h */,
+				C6F22D171F8BA04F0070A806 /* RobotIRremoteTools.h */,
+				C6F22D181F8BA04F0070A806 /* IRremoteTools.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		C6F22D191F8BA04F0070A806 /* extras */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D1A1F8BA04F0070A806 /* readme */,
+				C6F22D1B1F8BA04F0070A806 /* LICENSE.txt */,
+			);
+			path = extras;
+			sourceTree = "<group>";
+		};
+		C6F22D1C1F8BA0500070A806 /* Robot_Motor */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D1D1F8BA0500070A806 /* README.adoc */,
+				C6F22D1E1F8BA0500070A806 /* examples */,
+				C6F22D231F8BA0500070A806 /* library.properties */,
+				C6F22D241F8BA0500070A806 /* src */,
+			);
+			path = Robot_Motor;
+			sourceTree = "<group>";
+		};
+		C6F22D1E1F8BA0500070A806 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D1F1F8BA0500070A806 /* Robot_IR_Array_Test */,
+				C6F22D211F8BA0500070A806 /* Robot_Motor_Core */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		C6F22D1F1F8BA0500070A806 /* Robot_IR_Array_Test */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D201F8BA0500070A806 /* Robot_IR_Array_Test.ino */,
+			);
+			path = Robot_IR_Array_Test;
+			sourceTree = "<group>";
+		};
+		C6F22D211F8BA0500070A806 /* Robot_Motor_Core */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D221F8BA0500070A806 /* Robot_Motor_Core.ino */,
+			);
+			path = Robot_Motor_Core;
+			sourceTree = "<group>";
+		};
+		C6F22D241F8BA0500070A806 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D251F8BA0500070A806 /* Multiplexer.h */,
+				C6F22D261F8BA0500070A806 /* Multiplexer.cpp */,
+				C6F22D271F8BA0500070A806 /* EasyTransfer2.h */,
+				C6F22D281F8BA0500070A806 /* ArduinoRobotMotorBoard.cpp */,
+				C6F22D291F8BA0500070A806 /* ArduinoRobotMotorBoard.h */,
+				C6F22D2A1F8BA0500070A806 /* LineFollow.h */,
+				C6F22D2B1F8BA0500070A806 /* EasyTransfer2.cpp */,
+				C6F22D2C1F8BA0500070A806 /* lineFollow.cpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		C6F22D2D1F8BA0500070A806 /* Temboo */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D2E1F8BA0500070A806 /* keywords.txt */,
+				C6F22D2F1F8BA0500070A806 /* README.adoc */,
+				C6F22D301F8BA0500070A806 /* examples */,
+				C6F22D521F8BA0500070A806 /* library.properties */,
+				C6F22D531F8BA0500070A806 /* src */,
+			);
+			path = Temboo;
+			sourceTree = "<group>";
+		};
+		C6F22D301F8BA0500070A806 /* examples */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D311F8BA0500070A806 /* ArduinoYun */,
+				C6F22D4F1F8BA0500070A806 /* YunShield */,
+			);
+			path = examples;
+			sourceTree = "<group>";
+		};
+		C6F22D311F8BA0500070A806 /* ArduinoYun */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D321F8BA0500070A806 /* ReadATweet */,
+				C6F22D351F8BA0500070A806 /* GetYahooWeatherReport */,
+				C6F22D381F8BA0500070A806 /* SendDataToGoogleSpreadsheet */,
+				C6F22D3B1F8BA0500070A806 /* UpdateFacebookStatus */,
+				C6F22D3E1F8BA0500070A806 /* ToxicFacilitiesSearch */,
+				C6F22D411F8BA0500070A806 /* TembooDeviceConfig */,
+				C6F22D431F8BA0500070A806 /* SendAnSMS */,
+				C6F22D461F8BA0500070A806 /* UploadToDropbox */,
+				C6F22D491F8BA0500070A806 /* SendATweet */,
+				C6F22D4C1F8BA0500070A806 /* SendAnEmail */,
+			);
+			path = ArduinoYun;
+			sourceTree = "<group>";
+		};
+		C6F22D321F8BA0500070A806 /* ReadATweet */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D331F8BA0500070A806 /* ReadATweet.ino */,
+				C6F22D341F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = ReadATweet;
+			sourceTree = "<group>";
+		};
+		C6F22D351F8BA0500070A806 /* GetYahooWeatherReport */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D361F8BA0500070A806 /* GetYahooWeatherReport.ino */,
+				C6F22D371F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = GetYahooWeatherReport;
+			sourceTree = "<group>";
+		};
+		C6F22D381F8BA0500070A806 /* SendDataToGoogleSpreadsheet */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D391F8BA0500070A806 /* SendDataToGoogleSpreadsheet.ino */,
+				C6F22D3A1F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = SendDataToGoogleSpreadsheet;
+			sourceTree = "<group>";
+		};
+		C6F22D3B1F8BA0500070A806 /* UpdateFacebookStatus */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D3C1F8BA0500070A806 /* UpdateFacebookStatus.ino */,
+				C6F22D3D1F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = UpdateFacebookStatus;
+			sourceTree = "<group>";
+		};
+		C6F22D3E1F8BA0500070A806 /* ToxicFacilitiesSearch */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D3F1F8BA0500070A806 /* ToxicFacilitiesSearch.ino */,
+				C6F22D401F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = ToxicFacilitiesSearch;
+			sourceTree = "<group>";
+		};
+		C6F22D411F8BA0500070A806 /* TembooDeviceConfig */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D421F8BA0500070A806 /* TembooDeviceConfig.ino */,
+			);
+			path = TembooDeviceConfig;
+			sourceTree = "<group>";
+		};
+		C6F22D431F8BA0500070A806 /* SendAnSMS */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D441F8BA0500070A806 /* SendAnSMS.ino */,
+				C6F22D451F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = SendAnSMS;
+			sourceTree = "<group>";
+		};
+		C6F22D461F8BA0500070A806 /* UploadToDropbox */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D471F8BA0500070A806 /* UploadToDropbox.ino */,
+				C6F22D481F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = UploadToDropbox;
+			sourceTree = "<group>";
+		};
+		C6F22D491F8BA0500070A806 /* SendATweet */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D4A1F8BA0500070A806 /* SendATweet.ino */,
+				C6F22D4B1F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = SendATweet;
+			sourceTree = "<group>";
+		};
+		C6F22D4C1F8BA0500070A806 /* SendAnEmail */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D4D1F8BA0500070A806 /* SendAnEmail.ino */,
+				C6F22D4E1F8BA0500070A806 /* TembooAccount.h */,
+			);
+			path = SendAnEmail;
+			sourceTree = "<group>";
+		};
+		C6F22D4F1F8BA0500070A806 /* YunShield */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D501F8BA0500070A806 /* TembooDeviceConfig */,
+			);
+			path = YunShield;
+			sourceTree = "<group>";
+		};
+		C6F22D501F8BA0500070A806 /* TembooDeviceConfig */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D511F8BA0500070A806 /* TembooDeviceConfig.ino */,
+			);
+			path = TembooDeviceConfig;
+			sourceTree = "<group>";
+		};
+		C6F22D531F8BA0500070A806 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D541F8BA0500070A806 /* TembooCoAPEdgeDevice.cpp */,
+				C6F22D551F8BA0500070A806 /* TembooMQTTEdgeDevice.cpp */,
+				C6F22D561F8BA0500070A806 /* TembooSSL.h */,
+				C6F22D571F8BA0500070A806 /* TembooMQTTEdgeDevice.h */,
+				C6F22D581F8BA0500070A806 /* TembooMonitoring.cpp */,
+				C6F22D591F8BA0500070A806 /* TembooCoAPEdgeDevice.h */,
+				C6F22D5A1F8BA0500070A806 /* Temboo.cpp */,
+				C6F22D5B1F8BA0500070A806 /* TembooSSL.cpp */,
+				C6F22D5C1F8BA0500070A806 /* TembooMonitoring.h */,
+				C6F22D5D1F8BA0500070A806 /* Temboo.h */,
+				C6F22D5E1F8BA0500070A806 /* TembooYunShield.h */,
+				C6F22D5F1F8BA0500070A806 /* utility */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+		C6F22D5F1F8BA0500070A806 /* utility */ = {
+			isa = PBXGroup;
+			children = (
+				C6F22D601F8BA0500070A806 /* ChoreoInputFormatter.h */,
+				C6F22D611F8BA0500070A806 /* TembooWebSocketRequestHandles.h */,
+				C6F22D621F8BA0500070A806 /* ChoreoPreset.cpp */,
+				C6F22D631F8BA0500070A806 /* MQTTPublish.h */,
+				C6F22D641F8BA0500070A806 /* BaseFormatter.cpp */,
+				C6F22D651F8BA0500070A806 /* MQTTConnectServer.c */,
+				C6F22D661F8BA0500070A806 /* ChoreoInputExpressionFormatter.cpp */,
+				C6F22D671F8BA0500070A806 /* ChoreoDevice.h */,
+				C6F22D681F8BA0500070A806 /* ChoreoDeviceFormatter.cpp */,
+				C6F22D691F8BA0500070A806 /* CoapMsg.cpp */,
+				C6F22D6A1F8BA0500070A806 /* TembooCoAPSession.h */,
+				C6F22D6B1F8BA0500070A806 /* CoapMsg.h */,
+				C6F22D6C1F8BA0500070A806 /* TembooGPIO.c */,
+				C6F22D6D1F8BA0500070A806 /* MQTTPacket.h */,
+				C6F22D6E1F8BA0500070A806 /* tmbhmac.cpp */,
+				C6F22D6F1F8BA0500070A806 /* TembooMQTTSession.h */,
+				C6F22D701F8BA0500070A806 /* ChoreoInput.cpp */,
+				C6F22D711F8BA0500070A806 /* StackTrace.h */,
+				C6F22D721F8BA0500070A806 /* TembooDS18B20.h */,
+				C6F22D731F8BA0500070A806 /* MQTTSubscribeServer.c */,
+				C6F22D741F8BA0500070A806 /* ChoreoOutputSet.h */,
+				C6F22D751F8BA0500070A806 /* MQTTSerializePublish.c */,
+				C6F22D761F8BA0500070A806 /* tmbmd5.h */,
+				C6F22D771F8BA0500070A806 /* TembooOneWire.h */,
+				C6F22D781F8BA0500070A806 /* TembooCoAPSession.cpp */,
+				C6F22D791F8BA0500070A806 /* ChoreoOutputFormatter.cpp */,
+				C6F22D7A1F8BA0500070A806 /* ChoreoOutput.h */,
+				C6F22D7B1F8BA0500070A806 /* TembooGlobal.c */,
+				C6F22D7C1F8BA0500070A806 /* tmbhmac.h */,
+				C6F22D7D1F8BA0500070A806 /* ChoreoInput.h */,
+				C6F22D7E1F8BA0500070A806 /* MQTTDeserializePublish.c */,
+				C6F22D7F1F8BA0500070A806 /* TembooSession.h */,
+				C6F22D801F8BA0500070A806 /* CoapMessageLayer.h */,
+				C6F22D811F8BA0500070A806 /* ChoreoInputExpressionFormatter.h */,
+				C6F22D821F8BA0500070A806 /* MQTTFormat.h */,
+				C6F22D831F8BA0500070A806 /* MQTTUnsubscribeClient.c */,
+				C6F22D841F8BA0500070A806 /* ChoreoDeviceFormatter.h */,
+				C6F22D851F8BA0500070A806 /* TembooTimer.h */,
+				C6F22D861F8BA0500070A806 /* ChoreoInputExpression.h */,
+				C6F22D871F8BA0500070A806 /* DataFormatter.h */,
+				C6F22D881F8BA0500070A806 /* CoapMessageLayer.cpp */,
+				C6F22D891F8BA0500070A806 /* TembooSession.cpp */,
+				C6F22D8A1F8BA0500070A806 /* ArduinoTimer.h */,
+				C6F22D8B1F8BA0500070A806 /* TembooDS18B20.cpp */,
+				C6F22D8C1F8BA0500070A806 /* CoapRRLayer.h */,
+				C6F22D8D1F8BA0500070A806 /* ChoreoInputSet.h */,
+				C6F22D8E1F8BA0500070A806 /* ChoreoInputSet.cpp */,
+				C6F22D8F1F8BA0500070A806 /* MQTTClient.h */,
+				C6F22D901F8BA0500070A806 /* TembooWebSocketRequestHandles.c */,
+				C6F22D911F8BA0500070A806 /* DataFormatter.cpp */,
+				C6F22D921F8BA0500070A806 /* TembooOneWire.cpp */,
+				C6F22D931F8BA0500070A806 /* ChoreoOutputSet.cpp */,
+				C6F22D941F8BA0500070A806 /* ChoreoDevice.cpp */,
+				C6F22D951F8BA0500070A806 /* TembooTags.h */,
+				C6F22D961F8BA0500070A806 /* ChoreoPresetFormatter.h */,
+				C6F22D971F8BA0500070A806 /* MQTTUnsubscribeServer.c */,
+				C6F22D981F8BA0500070A806 /* ChoreoPresetFormatter.cpp */,
+				C6F22D991F8BA0500070A806 /* ChoreoSensorInput.h */,
+				C6F22D9A1F8BA0500070A806 /* ChoreoSensorInputFormatter.h */,
+				C6F22D9B1F8BA0500070A806 /* MQTTPacket.c */,
+				C6F22D9C1F8BA0500070A806 /* MQTTSubscribe.h */,
+				C6F22D9D1F8BA0500070A806 /* MQTTUnsubscribe.h */,
+				C6F22D9E1F8BA0500070A806 /* ChoreoOutput.cpp */,
+				C6F22D9F1F8BA0500070A806 /* FP.h */,
+				C6F22DA01F8BA0500070A806 /* TembooGPIO.h */,
+				C6F22DA11F8BA0500070A806 /* ChoreoSensorInput.cpp */,
+				C6F22DA21F8BA0500070A806 /* tmbmd5.cpp */,
+				C6F22DA31F8BA0500070A806 /* CoapRRLayer.cpp */,
+				C6F22DA41F8BA0500070A806 /* ChoreoSensorInputSet.h */,
+				C6F22DA51F8BA0500070A806 /* ChoreoSensorInputFormatter.cpp */,
+				C6F22DA61F8BA0500070A806 /* MQTTLogging.h */,
+				C6F22DA71F8BA0500070A806 /* MQTTSubscribeClient.c */,
+				C6F22DA81F8BA0500070A806 /* TembooCoAPIPStack.h */,
+				C6F22DA91F8BA0500070A806 /* ChoreoInputFormatter.cpp */,
+				C6F22DAA1F8BA0500070A806 /* ChoreoInputExpressionSet.h */,
+				C6F22DAB1F8BA0500070A806 /* MQTTFormat.c */,
+				C6F22DAC1F8BA0500070A806 /* TembooGlobal.h */,
+				C6F22DAD1F8BA0500070A806 /* ChoreoInputExpressionSet.cpp */,
+				C6F22DAE1F8BA0500070A806 /* BaseFormatter.h */,
+				C6F22DAF1F8BA0500070A806 /* ChoreoOutputFormatter.h */,
+				C6F22DB01F8BA0500070A806 /* ChoreoPreset.h */,
+				C6F22DB11F8BA0500070A806 /* MQTTConnectClient.c */,
+				C6F22DB21F8BA0500070A806 /* ChoreoSensorInputSet.cpp */,
+				C6F22DB31F8BA0500070A806 /* MQTTConnect.h */,
+				C6F22DB41F8BA0500070A806 /* ChoreoInputExpression.cpp */,
+				C6F22DB51F8BA0500070A806 /* TembooMQTTIPStack.h */,
+				C6F22DB61F8BA0500070A806 /* TembooMQTTSession.cpp */,
+			);
+			path = utility;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

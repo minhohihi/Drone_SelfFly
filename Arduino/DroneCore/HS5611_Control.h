@@ -33,6 +33,8 @@ void _Barometer_Initialize()
     // Get Reference Altitude
     _gRefAbsoluteAltitude = pBaroHndl->getAltitude(_gAvgPressure, _gAvgTemp);
 
+    bIsBarometerInitialized = 1;
+    
     Serialprintln(F(" Done"));
 }
 
@@ -77,6 +79,18 @@ void _Barometer_CalculateData()
     _gPrevAvgAbsoluteAltitude = _gAvgAbsoluteAltitude;
 }
 #endif /* HS5611_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

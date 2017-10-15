@@ -8,7 +8,11 @@
 #ifndef __LED_CONTROL__
 #define __LED_CONTROL__
 
+int     _gDroneStatusRed, _gDroneStatusGreen, _gDroneStatusBlue;
+
 void _LED_SetColor(int nRed, int nGreen, int nBlue);
+void _LED_SetDroneStatusColor(int nRed, int nGreen, int nBlue);
+void _LED_SetDroneStatus();
 void _LED_Blink(int nRed, int nGreen, int nBlue, int32_t nLinkPeriod);
 void _LED_DispStatus(int nCase);
 
@@ -26,19 +30,14 @@ void _LED_Initialize()
     PORTB &= B11001111;
     PORTD &= B01111111;
 
-    // Set Color to White
-    _LED_Blink(1, 1, 1, 0);
-    
-    delay(1000);
-
     for(i=0 ; i<5 ; i++)
     {
         _LED_Blink(1, 0, 0, 0);
-        delay(120);
+        delay(100);
         _LED_Blink(0, 1, 0, 0);
-        delay(120);
+        delay(100);
         _LED_Blink(0, 0, 1, 0);
-        delay(120);
+        delay(100);
         
         _LED_DispStatus(1);
     }
@@ -47,8 +46,10 @@ void _LED_Initialize()
     _LED_Blink(1, 0, 0, 0);
 
     _gPrevBlinkTime = micros();
+
+    LEDTimer.every(500, _LED_SetDroneStatus);
     
-    delay(300);
+    delay(100);
     
     _LED_DispStatus(2);
 }
@@ -73,6 +74,43 @@ void _LED_SetColor(int nRed, int nGreen, int nBlue)
         PORTB |= B00010000;
     else
         PORTB &= B11101111;
+}
+
+
+void _LED_SetDroneStatusColor(int nRed, int nGreen, int nBlue)
+{
+    _gDroneStatusRed = nRed;
+    _gDroneStatusGreen = nGreen;
+    _gDroneStatusBlue = nBlue;
+}
+
+
+void _LED_SetDroneStatus()
+{
+    static int    nLEDStatus = 0;
+    const int     nRed    = nLEDStatus & _gDroneStatusRed;
+    const int     nGreen  = nLEDStatus & _gDroneStatusGreen;
+    const int     nBlue   = nLEDStatus & _gDroneStatusBlue;
+    
+    // Digital Port 7
+    if(0 != nRed)
+        PORTD |= B10000000;
+    else
+        PORTD &= B01111111;
+
+    // Digital Port 13
+    if(0 != nGreen)
+        PORTB |= B00100000;
+    else
+        PORTB &= B11011111;
+
+    // Digital Port 12
+    if(0 != nBlue)
+        PORTB |= B00010000;
+    else
+        PORTB &= B11101111;
+
+    nLEDStatus = !nLEDStatus;
 }
 
 
@@ -146,6 +184,18 @@ void _LED_DispStatus(int nCase)
 }
 
 #endif /* LED_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

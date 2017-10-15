@@ -32,7 +32,7 @@ void _AccelGyro_Initialize()
     
     Wire.beginTransmission(0x68);
     Wire.write(0x1C);
-    Wire.write(0x10);
+    Wire.write(0x08);
     Wire.endTransmission();
     
     Wire.beginTransmission(0x68);
@@ -57,14 +57,11 @@ void _AccelGyro_Initialize()
     I2Cdev::writeBit(0x68, 0x37, 1, true);
     I2Cdev::writeBit(0x68, 0x6B, 6, false);
 
-    delay(300);
-    
-    // Calibration
-    //_AccelGyro_Calibration();
-    
-    delay(300);
+    delay(100);
     
     _AccelGyro_DispStatus(3);
+
+    bIsMPUInitialized = 1;
     
     return;
 }
@@ -107,15 +104,16 @@ void _AccelGyro_GetAccelData()
     _gRawAccel[Z_AXIS] = (float)nRawAccel[Z_AXIS];// - _gCalibMeanAccel[Z_AXIS];
 }
 
+
 void _AccelGyro_GetGyroAccelData()
 {
     int                     nRawGyro[3];
     int                     nRawAccel[3];
     int                     nTemperature = 0;
 
-    Wire.beginTransmission(0x68);
-    Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
-    Wire.endTransmission();
+//    Wire.beginTransmission(0x68);
+//    Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
+//    Wire.endTransmission();
     Wire.requestFrom(0x68, 14);                                                 // request a total of 14 registers
     
     nRawAccel[X_AXIS] = (Wire.read()<<8 | Wire.read());                         // 0x3B (ACCEL_XOUT_H) & 0x3C (ACCEL_XOUT_L)
@@ -232,9 +230,9 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
         _AccelGyro_GetGyroAccelData();
         
         // Calculate Roll, Pitch, and Yaw by Quaternion
-        nAngle[X_AXIS] += _gRawGyro[X_AXIS] * 0.0000611;
-        nAngle[Y_AXIS] += _gRawGyro[Y_AXIS] * 0.0000611;
-        nAngle[Z_AXIS] += _gRawGyro[Z_AXIS] * 0.0000611;
+        nAngle[X_AXIS] += _gRawGyro[X_AXIS] * ACCELGYRO_FS;
+        nAngle[Y_AXIS] += _gRawGyro[Y_AXIS] * ACCELGYRO_FS;
+        nAngle[Z_AXIS] += _gRawGyro[Z_AXIS] * ACCELGYRO_FS;
 
         for(i=0 ; i<3 ; i++)
         {
@@ -268,9 +266,9 @@ void _AccelGyro_CheckAxis(int nAxisIdx)
         _AccelGyro_GetGyroAccelData();
         
         // Calculate Roll, Pitch, and Yaw by Quaternion
-        nAngle[X_AXIS] += _gRawGyro[X_AXIS] * 0.0000611;
-        nAngle[Y_AXIS] += _gRawGyro[Y_AXIS] * 0.0000611;
-        nAngle[Z_AXIS] += _gRawGyro[Z_AXIS] * 0.0000611;
+        nAngle[X_AXIS] += _gRawGyro[X_AXIS] * ACCELGYRO_FS;
+        nAngle[Y_AXIS] += _gRawGyro[Y_AXIS] * ACCELGYRO_FS;
+        nAngle[Z_AXIS] += _gRawGyro[Z_AXIS] * ACCELGYRO_FS;
         
         if(((-5 <= nAngle[X_AXIS]) && (nAngle[X_AXIS] <= 5)) &&
            ((-5 <= nAngle[Y_AXIS]) && (nAngle[Y_AXIS] <= 5)) &&
@@ -352,5 +350,17 @@ void _AccelGyro_DispStatus(int nCase)
 }
 
 #endif /* MPU6050_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 

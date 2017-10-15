@@ -94,7 +94,7 @@
 #define MPU6050_ACCEL_OFFSET_Z              (0)
 
 // Sonar sensor
-#define SONAR_MAX_WAIT                      (18000)                         // Unit: microsecond
+#define SONAR_MAX_WAIT                      (500)                           // Unit: microsecond
 #define SONAR_GETDATA_PERIOD                (200000)                        // Unit: microsecond
 
 #define ROUNDING_BASE                       (10)
@@ -105,6 +105,9 @@
 #define SINGLE_RADIAN                       (3.141592)                      // = PI
 #define DOUBLE_RADIAN                       (6.283184)                      // = 2 * PI
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
+
+#define ACCELGYRO_FS                        (0.000076335)                   // 1 / (200Hz / GYRO_FS=65.5)
+#define APPROX_SIN_SCALE                    (0.00000133229)                 // ACCELGYRO_FS * (3.142(PI) / 180degr)
 
 #define DRONE_STOP_TIME_TH                  (3000)                          // Unit: num of loop() count, About 30 Sec.
 #define RPY_OFFSET_DELAY                    (4000000)                       // Unit: microsecond
@@ -121,7 +124,7 @@
 #if USE_SETUP_MODE
     #define USE_PRINT                       (1)
 #else
-    #define USE_PRINT                       (0)
+    #define USE_PRINT                       (1)
 #endif
     
 #if USE_PRINT
@@ -246,6 +249,18 @@ typedef enum _EEPROM_DataMap
 
 
 #endif /* CommHeader_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -109,6 +109,7 @@ void _print_BarometerData()
     Serialprint(_gVerticalSpeed);
 }
 
+
 void _print_SonarData()
 {
     Serialprint(F("   //   Sonar:"));
@@ -120,11 +121,11 @@ void _print_SonarData()
 void _print_RPY_Signals()
 {
     Serialprint(F("   //   EstRoll:"));
-    Serialprint(_gEstRoll);
+    Serialprint(_gEstimatedRPY[0]);
     Serialprint(F("   EstPitch:"));
-    Serialprint(_gEstPitch);
+    Serialprint(_gEstimatedRPY[1]);
     Serialprint(F("   EstYaw:"));
-    Serialprint(_gEstYaw);
+    Serialprint(_gEstimatedRPY[2]);
 }
 
 
@@ -140,6 +141,7 @@ void _print_PIDGain()
     Serialprint(F("   Rest:"));
     Serialprint(nPIDGainTable[0][3]);
 }
+
 
 void _print_PIDBalance()
 {
@@ -179,6 +181,7 @@ void _print_Profile()
     #endif
 }
 
+
 void _print_Data()
 {
     //_print_DroneStatus();
@@ -199,6 +202,18 @@ void _print_Data()
 }
 #endif
 #endif /* Debugger */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

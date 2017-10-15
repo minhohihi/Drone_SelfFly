@@ -44,6 +44,8 @@ void _Mag_Initialize()
     // http://www.magnetic-declination.com/
     _gDeclinationAngle = (7.0 + (59.76 / 60.0)) * DEG_TO_RAD_SCALE;
 
+    bIsMagnitudeInitialized = 1;
+    
     Serialprintln(F(" Done"));
 
     // Reference WebSite
@@ -91,6 +93,18 @@ void _Mag_CalculateDirection()
 }
 
 #endif /* HMC5883L_Controller_h */
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
