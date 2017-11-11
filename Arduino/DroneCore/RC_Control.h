@@ -129,6 +129,8 @@ void _RC_Wait_Signal()
         
         if((_gRCSignalVal[3] > nOffsetL) && (_gRCSignalVal[3] < nOffsetH))
             nFlag |= B00001000;
+
+        _ESC_SetDefault();
         
         delay(500);
     }

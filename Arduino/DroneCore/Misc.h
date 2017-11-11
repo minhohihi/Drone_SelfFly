@@ -105,26 +105,7 @@ void _GetRawSensorData()
 
 void _Wait(unsigned long nMicroTime)
 {
-    int nDone = 0;
-    
-    while((micros() - _gLoopStartTime) < nMicroTime)
-    {
-        if(0 == nDone)
-        {
-            // Get Gyro Raw Data && Accel Raw Data
-            // Read Gyro & Accel: 0.67ms -+0.01ms
-            //_AccelGyro_GetGyroAccelData();
-            Wire.beginTransmission(0x68);
-            Wire.write(0x3B);                                                           // starting with register 0x3B (ACCEL_XOUT_H)
-            Wire.endTransmission();
-
-            // Get Magnetic Raw Data
-            // Read Magnitude   : 0.44ms -+0.01ms
-            //_Mag_GetData();
-
-            nDone = 1;
-        }
-    }
+    while((micros() - _gLoopEndTime) < nMicroTime);
 }
 
 

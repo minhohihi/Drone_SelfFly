@@ -8,9 +8,9 @@
 #ifndef __PID_CONTROL__
 #define __PID_CONTROL__
 
-float             nPIDGainTable[3][4] = {{1.52, 0.01, 15.40, 400.0},     // Roll's P, I, D
-                                         {1.52, 0.01, 15.40, 400.0},     // Pitch's P, I, D
-                                         {4.00, 0.02, 00.00, 400.0}};    // Yaw's P, I, D
+float             nPIDGainTable[3][4] = {{1.3, 0.04, 18.00, 400.0},     // P, I, D for Roll
+                                         {1.3, 0.04, 18.00, 400.0},     // P, I, D for Pitch
+                                         {4.00, 0.02, 00.00, 400.0}};   // P, I, D for Yaw
         
 void _Calculate_Altitude(float *pEstimatedThrottle);
 
@@ -59,7 +59,8 @@ void _CalculatePID()
         }
     }
     #endif
-    
+
+    nEstimatedRCVal[CH_TYPE_ROLL] = 0.0;
     if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] > 1508)
         nEstimatedRCVal[CH_TYPE_ROLL] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] - 1508);
     else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_ROLL]] < 1492)
@@ -68,6 +69,7 @@ void _CalculatePID()
     nEstimatedRCVal[CH_TYPE_ROLL] -= _gRollLevelAdjust;
     nEstimatedRCVal[CH_TYPE_ROLL] /= 3.0;
 
+    nEstimatedRCVal[CH_TYPE_PITCH] = 0.0;
     if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] > 1508)
         nEstimatedRCVal[CH_TYPE_PITCH] = (_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] - 1508);
     else if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_PITCH]] < 1492)
@@ -76,6 +78,7 @@ void _CalculatePID()
     nEstimatedRCVal[CH_TYPE_PITCH] -= _gPitchLevelAdjust;
     nEstimatedRCVal[CH_TYPE_PITCH] /= 3.0;
 
+    nEstimatedRCVal[CH_TYPE_YAW] = 0.0;
     if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_THROTTLE]] > 1050)
     {
         if(_gCompensatedRCVal[_gRCChMap[CH_TYPE_YAW]] > 1508)
@@ -157,17 +160,22 @@ void _CalculateThrottleVal()
     
     if(DRONESTATUS_START == _gDroneStatus)
     {
-        int                 nRollBalance    = (int)(_gRPY_PID[0].nBalance);
-        int                 nPitchBalance   = (int)(_gRPY_PID[1].nBalance);
-        int                 nYawBalance     = (int)(_gRPY_PID[2].nBalance);
+        const int           nRollBalance    = (int)(_gRPY_PID[0].nBalance);
+        const int           nPitchBalance   = (int)(_gRPY_PID[1].nBalance);
+        const int           nYawBalance     = (int)(_gRPY_PID[2].nBalance);
 
         if(1800 < nThrottle)
             nThrottle = 1800;
         
-        _gESCOutput[0] = nThrottle + nRollBalance + nPitchBalance + nYawBalance;
-        _gESCOutput[1] = nThrottle - nRollBalance + nPitchBalance - nYawBalance;
-        _gESCOutput[2] = nThrottle - nRollBalance - nPitchBalance + nYawBalance;
-        _gESCOutput[3] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
+        _gESCOutput[0] = nThrottle - nRollBalance - nPitchBalance + nYawBalance;
+        _gESCOutput[1] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
+        _gESCOutput[2] = nThrottle + nRollBalance + nPitchBalance + nYawBalance;
+        _gESCOutput[3] = nThrottle - nRollBalance + nPitchBalance - nYawBalance;
+
+//        _gESCOutput[0] = nThrottle + nRollBalance + nPitchBalance + nYawBalance;
+//        _gESCOutput[1] = nThrottle - nRollBalance + nPitchBalance - nYawBalance;
+//        _gESCOutput[2] = nThrottle - nRollBalance - nPitchBalance + nYawBalance;
+//        _gESCOutput[3] = nThrottle + nRollBalance - nPitchBalance - nYawBalance;
 
         for(i=0 ; i<4 ; i++)
             _gESCOutput[i] = _Clip3Float(_gESCOutput[i], ESC_ACTUAL_MIN, ESC_ACTUAL_MAX);

@@ -27,7 +27,7 @@ void _ESC_Initialize()
     PORTB &= B11110000;
 
     // Set Value of Digital Port 8, 9, 10, and 11 as Minimun ESC to Initialize ESC For Two Seconds
-    for(i=0 ; i<500 ; i++)
+    for(i=0 ; i<1250 ; i++)
         _ESC_SetDefault();
     
     delay(100);

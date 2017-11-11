@@ -108,6 +108,7 @@
 		8BF96BDB1C50DACE005A028B /* PID_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCE1C50DACE005A028B /* PID_Control.h */; };
 		8BF96BDC1C50DACE005A028B /* RC_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BCF1C50DACE005A028B /* RC_Control.h */; };
 		8BF96BDD1C50DACE005A028B /* SR04_Control.h in Headers */ = {isa = PBXBuildFile; fileRef = 8BF96BD01C50DACE005A028B /* SR04_Control.h */; };
+		C647B1201FADDD1C003E87F2 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = C647B11F1FADDD1C003E87F2 /* main.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -468,6 +469,7 @@
 		8BF96BCE1C50DACE005A028B /* PID_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PID_Control.h; path = ../Arduino/DroneCore/PID_Control.h; sourceTree = "<group>"; };
 		8BF96BCF1C50DACE005A028B /* RC_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RC_Control.h; path = ../Arduino/DroneCore/RC_Control.h; sourceTree = "<group>"; };
 		8BF96BD01C50DACE005A028B /* SR04_Control.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SR04_Control.h; path = ../Arduino/DroneCore/SR04_Control.h; sourceTree = "<group>"; };
+		C647B11F1FADDD1C003E87F2 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		C6F22C901F8BA04E0070A806 /* Event.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Event.h; sourceTree = "<group>"; };
 		C6F22C911F8BA04E0070A806 /* keywords.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = keywords.txt; sourceTree = "<group>"; };
 		C6F22C921F8BA04E0070A806 /* Timer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Timer.cpp; sourceTree = "<group>"; };
@@ -1984,6 +1986,7 @@
 		8B31B84D1BEAE0F1005634F8 = {
 			isa = PBXGroup;
 			children = (
+				C647B11F1FADDD1C003E87F2 /* main.c */,
 				8B367D7C1BEE2E0900CB9B92 /* DroneCore.ino */,
 				8BF96BC41C50DACE005A028B /* AHRS_Control.h */,
 				8BF96BC51C50DACE005A028B /* CommHeader.h */,
@@ -3019,6 +3022,7 @@
 				8B0F2C9C1BF57A7F0044F792 /* ADS1115.cpp in Sources */,
 				8B0F2CAA1BF57A7F0044F792 /* BMP085.cpp in Sources */,
 				8B0F2C9A1BF57A7F0044F792 /* AD7746.cpp in Sources */,
+				C647B1201FADDD1C003E87F2 /* main.c in Sources */,
 				8B0F2CA01BF57A7F0044F792 /* ADXL345.cpp in Sources */,
 				8B0F2CF01BF57A7F0044F792 /* TCA6424A.cpp in Sources */,
 				8B0F2C981BF57A7F0044F792 /* _Stub.cpp in Sources */,

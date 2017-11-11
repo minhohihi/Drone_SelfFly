@@ -46,8 +46,8 @@
 #define ESC_MIN                             (1000)
 #define ESC_MAX                             (2000)
 #define ESC_TAKEOFF_OFFSET                  (1100)
-#define ESC_ACTUAL_MIN                      (1100)
-#define ESC_ACTUAL_MAX                      (1900)
+#define ESC_ACTUAL_MIN                      (1150)
+#define ESC_ACTUAL_MAX                      (1800)
 
 // RC configuration
 #define RC_CH0_HIGH                         (1884)
@@ -64,7 +64,8 @@
 #define INVERSE_RC_PITCH                    (1)
 #define INVERSE_RC_YAW                      (0)
 
-#define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_500)           // MPU6050_GYRO_FS_250 / MPU6050_GYRO_FS_500 / MPU6050_GYRO_FS_1000 / MPU6050_GYRO_FS_2000
+#define IMU_ADDRESS                         (0x68)                          // MPU6050 Address
+#define GYRO_FS_PRECISIOM                   (MPU6050_GYRO_FS_250)           // MPU6050_GYRO_FS_250 / MPU6050_GYRO_FS_500 / MPU6050_GYRO_FS_1000 / MPU6050_GYRO_FS_2000
 #define GYRO_FS                             (65.5)                          // (2^15 - 1) / (500 * (1 << GYRO_FS_PRECISIOM))
 #define ACCEL_FS_PRECISIOM                  (MPU6050_ACCEL_FS_8)            // MPU6050_ACCEL_FS_2 / MPU6050_ACCEL_FS_4  MPU6050_ACCEL_FS_8  MPU6050_ACCEL_FS_16
 #define ACCEL_FS                            (16384.0 / (1 << ACCEL_FS_PRECISIOM))
@@ -106,8 +107,10 @@
 #define DOUBLE_RADIAN                       (6.283184)                      // = 2 * PI
 #define BARO_SEA_LEVEL_BASE                 (1013.25)                       // Base Sea Level
 
-#define ACCELGYRO_FS                        (0.000076335)                   // 1 / (200Hz / GYRO_FS=65.5)
-#define APPROX_SIN_SCALE                    (0.00000133229)                 // ACCELGYRO_FS * (3.142(PI) / 180degr)
+//#define ACCELGYRO_FS                        (0.000076335)                   // 1 / (200Hz / GYRO_FS=65.5)
+//#define APPROX_SIN_SCALE                    (0.00000133229)                 // ACCELGYRO_FS * (3.142(PI) / 180degr)
+#define ACCELGYRO_FS                        (0.0000611)                     // 1 / (250Hz / GYRO_FS=65.5)
+#define APPROX_SIN_SCALE                    (0.000001066)                   // ACCELGYRO_FS * (3.142(PI) / 180degr)
 
 #define DRONE_STOP_TIME_TH                  (3000)                          // Unit: num of loop() count, About 30 Sec.
 #define RPY_OFFSET_DELAY                    (4000000)                       // Unit: microsecond
@@ -129,16 +132,24 @@
     
 #if USE_PRINT
     #define PRINT_SERIAL                    (0)
-    #define USE_LCD_DISPLAY                 (!PRINT_SERIAL)
+    #define USE_LCD_DISPLAY                 (0)
     #define USE_PROFILE                     (0)
-    #define USE_EXT_SR_READ                 (1)
+    #define USE_EXT_SR_READ                 (0)
     #define SERIAL_BAUDRATE                 (115200)
 #else
     #define PRINT_SERIAL                    (0)
+    #define USE_LCD_DISPLAY                 (!PRINT_SERIAL)
     #define USE_PROFILE                     (0)
-    #define USE_LCD_DISPLAY                 (0)
 #endif
 
+
+#if (USE_PRINT && PRINT_SERIAL)
+    #define SERIAL_PRINT                    Serialprint
+    #define SERIAL_PRINTLN                  Serialprintln
+#else
+    #define SERIAL_PRINT                    Serialprint
+    #define SERIAL_PRINTLN                  Serialprintln
+#endif
 
 // EEPROM Data Address
 typedef enum _EEPROM_DataMap
