@@ -142,13 +142,12 @@
     #define USE_PROFILE                     (0)
 #endif
 
-
 #if (USE_PRINT && PRINT_SERIAL)
-    #define SERIAL_PRINT                    Serialprint
-    #define SERIAL_PRINTLN                  Serialprintln
+    #define Serialprint(...)                Serial.print(__VA_ARGS__)
+    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
 #else
-    #define SERIAL_PRINT                    Serialprint
-    #define SERIAL_PRINTLN                  Serialprintln
+    #define Serialprint(...)
+    #define Serialprintln(...)
 #endif
 
 // EEPROM Data Address
@@ -259,7 +258,61 @@ typedef enum _EEPROM_DataMap
 }EEPROM_DataMap;
 
 
+void _Wait(const unsigned long nBaseTime, unsigned long nMicroTime)
+{
+    while((micros() - nBaseTime) < nMicroTime);
+}
+
+
+float _Clip3Float(const float nValue, const float nMIN, const float nMAX)
+{
+    float               nClipVal = nValue;
+    
+    if(nValue < nMIN)
+        nClipVal = nMIN;
+    else if(nValue > nMAX)
+        nClipVal = nMAX;
+    
+    return nClipVal;
+}
+
+
+int _Clip3Int(const int nValue, const int nMIN, const int nMAX)
+{
+    int                 nClipVal = nValue;
+    
+    if(nValue < nMIN)
+        nClipVal = nMIN;
+    else if(nValue > nMAX)
+        nClipVal = nMAX;
+    
+    return nClipVal;
+}
+
+
+/**
+ * Fast inverse square root implementation
+ * @see http://en.wikipedia.org/wiki/Fast_inverse_square_root
+ */
+float _InvSqrt(float nNumber)
+{
+    long                i = 0;
+    float               x = 0.0f, y = 0.0f;
+    const float         f = 1.5F;
+    
+    x = nNumber * 0.5F;
+    y = nNumber;
+    i = * ( long * ) &y;
+    i = 0x5f375a86 - ( i >> 1 );
+    y = * ( float * ) &i;
+    y = y * ( f - ( x * y * y ) );
+    
+    return y;
+}
+
+
 #endif /* CommHeader_h */
+
 
 
 

@@ -77,35 +77,37 @@ void _GetRawSensorData()
 {
     _gPrevSensorCapTime = _gCurrSensorCapTime;
     _gCurrSensorCapTime = micros();
-
+    
     _gDiffTime = (_gCurrSensorCapTime - _gPrevSensorCapTime) / 1000000.0;
     
     // Get Gyro Raw Data && Accel Raw Data
     // Read Gyro & Accel: 0.67ms -+0.01ms
     if(1 == bIsMPUInitialized)
         _AccelGyro_GetGyroAccelData();
-
+    
     // Get Magnetic Raw Data
     // Read Magnitude   : 0.44ms -+0.01ms
     if(1 == bIsMagnitudeInitialized)
         _Mag_GetData();
-
+    
     // Get Barometer Raw Data
     if(1 == bIsBarometerInitialized)
         //_Barometer_GetData();
-
-    // Get Sonar Raw Data
-    if(1 == bIsSonarInitialized)
-    {
-        //_Sonar_GetData();
-        //_Sonar_GetData_WithPeriod();
-    }
+        
+        // Get Sonar Raw Data
+        if(1 == bIsSonarInitialized)
+        {
+            //_Sonar_GetData();
+            //_Sonar_GetData_WithPeriod();
+        }
 }
 
 
-void _Wait(unsigned long nMicroTime)
+void _Check_BatteryVolt()
 {
-    while((micros() - _gLoopEndTime) < nMicroTime);
+    _gCurrBatteryVolt = (0.92 * _gCurrBatteryVolt) + (analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
+    
+    //Serialprintln(_gCurrBatteryVolt);
 }
 
 
@@ -410,61 +412,8 @@ void _EEPROM_Clear()
         EEPROM.write(i, 0);
 }
 
-void _Check_BatteryVolt()
-{
-    _gCurrBatteryVolt = (0.92 * _gCurrBatteryVolt) + (analogRead(PIN_CHECK_POWER_STAT) + 65) * 0.09853;
-
-    //Serialprintln(_gCurrBatteryVolt);
-}
-
-
-float _Clip3Float(const float nValue, const float nMIN, const float nMAX)
-{
-    float               nClipVal = nValue;
-
-    if(nValue < nMIN)
-        nClipVal = nMIN;
-    else if(nValue > nMAX)
-        nClipVal = nMAX;
-
-    return nClipVal;
-}
-
-
-int _Clip3Int(const int nValue, const int nMIN, const int nMAX)
-{
-    int                 nClipVal = nValue;
-
-    if(nValue < nMIN)
-        nClipVal = nMIN;
-    else if(nValue > nMAX)
-        nClipVal = nMAX;
-
-    return nClipVal;
-}
-
-
-/**
- * Fast inverse square root implementation
- * @see http://en.wikipedia.org/wiki/Fast_inverse_square_root
- */
-float _InvSqrt(float nNumber)
-{
-    long                i = 0;
-    float               x = 0.0f, y = 0.0f;
-    const float         f = 1.5F;
-
-    x = nNumber * 0.5F;
-    y = nNumber;
-    i = * ( long * ) &y;
-    i = 0x5f375a86 - ( i >> 1 );
-    y = * ( float * ) &i;
-    y = y * ( f - ( x * y * y ) );
-
-    return y;
-}
-
 #endif /* Misc_h */
+
 
 
 

@@ -8,7 +8,7 @@
 #ifndef __DEBUGGER__
 #define __DEBUGGER__
 
-#if PRINT_SERIAL || USE_EXT_SR_READ
+#if (USE_PRINT && (PRINT_SERIAL || USE_EXT_SR_READ))
 void _print_EEPRomData()
 {
     int         i = 0;
@@ -133,13 +133,13 @@ void _print_PIDGain()
 {
     Serialprint(F("   //   PIDGain"));
     Serialprint(F("   P:"));
-    Serialprint(nPIDGainTable[0][0]);
+    Serialprint(_gPIDGainTable[0][0]);
     Serialprint(F("   I:"));
-    Serialprint(nPIDGainTable[0][1]);
+    Serialprint(_gPIDGainTable[0][1]);
     Serialprint(F("   D:"));
-    Serialprint(nPIDGainTable[0][2]);
+    Serialprint(_gPIDGainTable[0][2]);
     Serialprint(F("   Rest:"));
-    Serialprint(nPIDGainTable[0][3]);
+    Serialprint(_gPIDGainTable[0][3]);
 }
 
 
@@ -202,6 +202,7 @@ void _print_Data()
 }
 #endif
 #endif /* Debugger */
+
 
 
 

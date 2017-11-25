@@ -7,10 +7,6 @@
 
 #ifndef __PID_CONTROL__
 #define __PID_CONTROL__
-
-float             nPIDGainTable[3][4] = {{1.3, 0.04, 18.00, 400.0},     // P, I, D for Roll
-                                         {1.3, 0.04, 18.00, 400.0},     // P, I, D for Pitch
-                                         {4.00, 0.02, 00.00, 400.0}};   // P, I, D for Yaw
         
 void _Calculate_Altitude(float *pEstimatedThrottle);
 
@@ -25,36 +21,36 @@ void _CalculatePID()
         if(Serial.available())
         {
             char ch = Serial.read();
-            
+            Serial.println(ch);
             if(ch == 'a')
             {
-                nPIDGainTable[0][0] -= 0.01;
-                nPIDGainTable[1][0] -= 0.01;
+                _gPIDGainTable[0][0] -= 0.01;
+                _gPIDGainTable[1][0] -= 0.01;
             }
             else if(ch == 'z')
             {
-                nPIDGainTable[0][0] += 0.01;
-                nPIDGainTable[1][0] += 0.01;
+                _gPIDGainTable[0][0] += 0.01;
+                _gPIDGainTable[1][0] += 0.01;
             }
             else if(ch == 's')
             {
-                nPIDGainTable[0][1] -= 0.01;
-                nPIDGainTable[1][1] -= 0.01;
+                _gPIDGainTable[0][1] -= 0.01;
+                _gPIDGainTable[1][1] -= 0.01;
             }
             else if(ch == 'x')
             {
-                nPIDGainTable[0][1] += 0.01;
-                nPIDGainTable[1][1] += 0.01;
+                _gPIDGainTable[0][1] += 0.01;
+                _gPIDGainTable[1][1] += 0.01;
             }
             else if(ch == 'd')
             {
-                nPIDGainTable[0][2] -= 0.01;
-                nPIDGainTable[1][2] -= 0.01;
+                _gPIDGainTable[0][2] -= 0.01;
+                _gPIDGainTable[1][2] -= 0.01;
             }
             else if(ch == 'c')
             {
-                nPIDGainTable[0][2] += 0.01;
-                nPIDGainTable[1][2] += 0.01;
+                _gPIDGainTable[0][2] += 0.01;
+                _gPIDGainTable[1][2] += 0.01;
             }
         }
     }
@@ -93,13 +89,13 @@ void _CalculatePID()
         // Roll
         nCurrErrRate = _gEstimatedRPY[0] - nEstimatedRCVal[CH_TYPE_ROLL];
         
-        _gRPY_PID[0].nP_ErrRate = nPIDGainTable[0][0] * nCurrErrRate;
-        _gRPY_PID[0].nI_ErrRate += nPIDGainTable[0][1] * nCurrErrRate;
-        _gRPY_PID[0].nI_ErrRate = _Clip3Float(_gRPY_PID[0].nI_ErrRate, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
-        _gRPY_PID[0].nD_ErrRate = nPIDGainTable[0][2] * (nCurrErrRate - _gRPY_PID[0].nPrevErrRate);
+        _gRPY_PID[0].nP_ErrRate = _gPIDGainTable[0][0] * nCurrErrRate;
+        _gRPY_PID[0].nI_ErrRate += _gPIDGainTable[0][1] * nCurrErrRate;
+        _gRPY_PID[0].nI_ErrRate = _Clip3Float(_gRPY_PID[0].nI_ErrRate, -_gPIDGainTable[0][3], _gPIDGainTable[0][3]);
+        _gRPY_PID[0].nD_ErrRate = _gPIDGainTable[0][2] * (nCurrErrRate - _gRPY_PID[0].nPrevErrRate);
         
         _gRPY_PID[0].nBalance   = _gRPY_PID[0].nP_ErrRate + _gRPY_PID[0].nI_ErrRate + _gRPY_PID[0].nD_ErrRate;
-        _gRPY_PID[0].nBalance   = _Clip3Float(_gRPY_PID[0].nBalance, -nPIDGainTable[0][3], nPIDGainTable[0][3]);
+        _gRPY_PID[0].nBalance   = _Clip3Float(_gRPY_PID[0].nBalance, -_gPIDGainTable[0][3], _gPIDGainTable[0][3]);
         
         _gRPY_PID[0].nPrevErrRate = nCurrErrRate;
     }
@@ -108,13 +104,13 @@ void _CalculatePID()
         // Picth
         nCurrErrRate = _gEstimatedRPY[1] - nEstimatedRCVal[CH_TYPE_PITCH];
         
-        _gRPY_PID[1].nP_ErrRate = nPIDGainTable[1][0] * nCurrErrRate;
-        _gRPY_PID[1].nI_ErrRate += nPIDGainTable[1][1] * nCurrErrRate;
-        _gRPY_PID[1].nI_ErrRate = _Clip3Float(_gRPY_PID[1].nI_ErrRate, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
-        _gRPY_PID[1].nD_ErrRate = nPIDGainTable[1][2] * (nCurrErrRate - _gRPY_PID[1].nPrevErrRate);
+        _gRPY_PID[1].nP_ErrRate = _gPIDGainTable[1][0] * nCurrErrRate;
+        _gRPY_PID[1].nI_ErrRate += _gPIDGainTable[1][1] * nCurrErrRate;
+        _gRPY_PID[1].nI_ErrRate = _Clip3Float(_gRPY_PID[1].nI_ErrRate, -_gPIDGainTable[1][3], _gPIDGainTable[1][3]);
+        _gRPY_PID[1].nD_ErrRate = _gPIDGainTable[1][2] * (nCurrErrRate - _gRPY_PID[1].nPrevErrRate);
         
         _gRPY_PID[1].nBalance   = _gRPY_PID[1].nP_ErrRate + _gRPY_PID[1].nI_ErrRate + _gRPY_PID[1].nD_ErrRate;
-        _gRPY_PID[1].nBalance   = _Clip3Float(_gRPY_PID[1].nBalance, -nPIDGainTable[1][3], nPIDGainTable[1][3]);
+        _gRPY_PID[1].nBalance   = _Clip3Float(_gRPY_PID[1].nBalance, -_gPIDGainTable[1][3], _gPIDGainTable[1][3]);
         
         _gRPY_PID[1].nPrevErrRate = nCurrErrRate;
     }
@@ -123,13 +119,13 @@ void _CalculatePID()
         // Yaw
         nCurrErrRate = _gEstimatedRPY[2] - nEstimatedRCVal[CH_TYPE_YAW];
         
-        _gRPY_PID[2].nP_ErrRate = nPIDGainTable[2][0] * nCurrErrRate;
-        _gRPY_PID[2].nI_ErrRate += nPIDGainTable[2][1] * nCurrErrRate;
-        _gRPY_PID[2].nI_ErrRate = _Clip3Float(_gRPY_PID[2].nI_ErrRate, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
-        _gRPY_PID[2].nD_ErrRate = nPIDGainTable[2][2] * (nCurrErrRate - _gRPY_PID[2].nPrevErrRate);
+        _gRPY_PID[2].nP_ErrRate = _gPIDGainTable[2][0] * nCurrErrRate;
+        _gRPY_PID[2].nI_ErrRate += _gPIDGainTable[2][1] * nCurrErrRate;
+        _gRPY_PID[2].nI_ErrRate = _Clip3Float(_gRPY_PID[2].nI_ErrRate, -_gPIDGainTable[2][3], _gPIDGainTable[2][3]);
+        _gRPY_PID[2].nD_ErrRate = _gPIDGainTable[2][2] * (nCurrErrRate - _gRPY_PID[2].nPrevErrRate);
         
         _gRPY_PID[2].nBalance   = _gRPY_PID[2].nP_ErrRate + _gRPY_PID[2].nI_ErrRate + _gRPY_PID[2].nD_ErrRate;
-        _gRPY_PID[2].nBalance   = _Clip3Float(_gRPY_PID[2].nBalance, -nPIDGainTable[2][3], nPIDGainTable[2][3]);
+        _gRPY_PID[2].nBalance   = _Clip3Float(_gRPY_PID[2].nBalance, -_gPIDGainTable[2][3], _gPIDGainTable[2][3]);
         
         _gRPY_PID[2].nPrevErrRate = nCurrErrRate;
     }
@@ -139,13 +135,13 @@ void _CalculatePID()
         int          nIdx = (2 != i) ? i : CH_TYPE_YAW;
         nCurrErrRate = _gEstimatedRPY[i] - nEstimatedRCVal[nIdx];
         
-        _gRPY_PID[i].nP_ErrRate = nPIDGainTable[i][0] * nCurrErrRate;
-        _gRPY_PID[i].nI_ErrRate += nPIDGainTable[i][1] * nCurrErrRate;
-        _gRPY_PID[i].nI_ErrRate = _Clip3Float(_gRPY_PID[i].nI_ErrRate, -nPIDGainTable[i][3], nPIDGainTable[i][3]);
-        _gRPY_PID[i].nD_ErrRate = nPIDGainTable[i][2] * (nCurrErrRate - _gRPY_PID[i].nPrevErrRate);
+        _gRPY_PID[i].nP_ErrRate = _gPIDGainTable[i][0] * nCurrErrRate;
+        _gRPY_PID[i].nI_ErrRate += _gPIDGainTable[i][1] * nCurrErrRate;
+        _gRPY_PID[i].nI_ErrRate = _Clip3Float(_gRPY_PID[i].nI_ErrRate, -_gPIDGainTable[i][3], _gPIDGainTable[i][3]);
+        _gRPY_PID[i].nD_ErrRate = _gPIDGainTable[i][2] * (nCurrErrRate - _gRPY_PID[i].nPrevErrRate);
         
         _gRPY_PID[i].nBalance   = _gRPY_PID[i].nP_ErrRate + _gRPY_PID[i].nI_ErrRate + _gRPY_PID[i].nD_ErrRate;
-        _gRPY_PID[i].nBalance   = _Clip3Float(_gRPY_PID[i].nBalance, -nPIDGainTable[i][3], nPIDGainTable[i][3]);
+        _gRPY_PID[i].nBalance   = _Clip3Float(_gRPY_PID[i].nBalance, -_gPIDGainTable[i][3], _gPIDGainTable[i][3]);
         
         _gRPY_PID[i].nPrevErrRate = nCurrErrRate;
     }
@@ -198,6 +194,7 @@ void _Calculate_Altitude(float *pEstimatedThrottle)
 }
 
 #endif /* PID_Controller_h */
+
 
 
 

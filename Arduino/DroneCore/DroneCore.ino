@@ -22,13 +22,6 @@
 /*----------------------------------------------------------------------------------------
  Macro Definitions
  ----------------------------------------------------------------------------------------*/
-#if USE_PRINT
-    #define Serialprint(...)                Serial.print(__VA_ARGS__)
-    #define Serialprintln(...)              Serial.println(__VA_ARGS__)
-#else
-    #define Serialprint(...)
-    #define Serialprintln(...)
-#endif
 
 
 /*----------------------------------------------------------------------------------------
@@ -68,11 +61,8 @@ float               _gRawAccel[3] = {0.0, 0.0, 0.0};
 float               _gTemperature = 0.0;
 float               _gAccTotalVector = 0.0;
 
-
 float               _gGyro_Roll = 0.0, _gGyro_Pitch = 0.0, _gGyro_Yaw = 0.0;
 float               _gAccel_X = 0.0, _gAccel_Y = 0.0, _gAccel_Z = 0.0;
-
-
 
 float               _gAngleRollAcc = 0.0, _gAnglePitchAcc = 0.0 ,_gAngleYawAcc = 0.0;
 float               _gAngleRoll = 0.0, _gAnglePitch = 0.0 ,_gAngleYaw = 0.0;
@@ -112,6 +102,9 @@ float               _gDistFromGnd = 0.0;                    // Indicate istance 
 
 // For PID Control
 AxisErrRate_T       _gRPY_PID[3] = {0, };
+float               _gPIDGainTable[3][4] = {{1.3, 0.04, 18.00, 400.0},     // P, I, D for Roll
+                                            {1.3, 0.04, 18.00, 400.0},     // P, I, D for Pitch
+                                            {4.00, 0.02, 00.00, 400.0}};   // P, I, D for Yaw
 
 // For Motor Control
 int                 _gRCSignal_L[CH_TYPE_MAX] = {0, };
@@ -129,11 +122,6 @@ int                 _gCompensatedRCVal[CH_TYPE_MAX] = {0, };
 // For Estimated Status of Drone
 float               _gEstRoll = 0.0, _gEstPitch = 0.0, _gEstYaw = 0.0;
 float               _gEstimatedRPY[3] = {0.0, };            // 0:Roll,   1:Pitch,   2:Yaw
-//float               _gFineGyro[3] = {0.0, };
-//float               _gQuat[4] = {0.0, };                  // quaternion
-//float               _gEstGravity[3] = {0.0, };            // estimated gravity direction
-//bool                _gbIsInitializeRPY = 0.0;
-//float               _gRPYOffset[3] = {0.0, };
 
 // For Control Interval
 unsigned long       _gLoopTimer = 0;
@@ -144,8 +132,8 @@ unsigned long       _gLoopStartTime = 0;
 unsigned long       _gLoopEndTime = 0;
 
 #if USE_PROFILE
-unsigned long       _gProfileStartTime = 0;
-unsigned long       _gProfileEndTime = 0;
+    unsigned long       _gProfileStartTime = 0;
+    unsigned long       _gProfileEndTime = 0;
 #endif
 float               _gDiffTime = 0.0;
 
@@ -153,7 +141,7 @@ float               _gDiffTime = 0.0;
 DroneStatus         _gDroneStatus = DRONESTATUS_STOP;
 
 // For Battery Status
-int                 _gCurrBatteryVolt = 0;
+float                _gCurrBatteryVolt = 0;
 
 // For LED Control
 int                 _gLED_Status = 0;
@@ -161,7 +149,6 @@ unsigned long       _gPrevBlinkTime = 0;
 
 // For LCD Control
 #if USE_LCD_DISPLAY
-    //LiquidCrystal_I2C   _gLCDHndl(0x27,16,2);
     LiquidCrystal_I2C   _gLCDHndl(0x3F,16,2);
 #endif
 
@@ -198,7 +185,6 @@ byte                bIsThrottleInitialized = 0;
 /*----------------------------------------------------------------------------------------
  Function Implementation
  ----------------------------------------------------------------------------------------*/
-#include "CommHeader.h"
 #include "LCD_Control.h"
 #include "LED_Control.h"
 #include "ESC_Control.h"
@@ -317,15 +303,8 @@ void loop()
     // Throttle Calculation
     _CalculateThrottleVal();
 
-    //_Wait(4000);
-    //while((micros() - _gLoopEndTime) < 4000);
-    
     // Set Throttle to ESCs
     _ESC_Update();
-
-    _gLoopEndTime = micros();
-
-    Serialprintln(_gLoopEndTime - _gLoopStartTime);
     
     nLoopCnt++;
     
@@ -336,6 +315,10 @@ void loop()
     #if USE_LCD_DISPLAY
         _LCD_DispInfo();
     #endif
+
+    _gLoopEndTime = micros();
+
+    Serial.println(_gLoopEndTime - _gLoopStartTime);
 }
 #else
 void setup()
@@ -349,7 +332,7 @@ void setup()
     // Set I2C Enable
     Wire.begin();
 
-    #if USE_PRINT
+    #if (USE_PRINT && PRINT_SERIAL)
     Serial.begin(SERIAL_BAUDRATE);
     Serial.flush();
     #endif
@@ -495,6 +478,7 @@ void serialEvent()
             _gInputFromHostComplete = true;
     }
 }
+
 
 
 
